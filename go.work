@@ -7,5 +7,4 @@ use (
 	./libraries/memory
 	./libraries/webcore
 	./modules/stunting
-	./tests
 )
