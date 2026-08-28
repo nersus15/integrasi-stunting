@@ -44,6 +44,7 @@ const (
 	JenisRegistrasiLengkap JenisPayload = "REGISTRASI_LENGKAP" // orangtua + anak + kunjungan
 	JenisAnakBaru          JenisPayload = "ANAK_BARU"          // anak + kunjungan
 	JenisKunjunganSaja     JenisPayload = "KUNJUNGAN_SAJA"     // kunjungan
+	JenisKesehatanSaja     JenisPayload = "KESEHATAN_SAJA"     // kesehatan
 )
 
 func DeteksiJenisPayload(p *types.KunjunganNestedPayload) (JenisPayload, *types.KunjunganPayload, error) {
@@ -116,6 +117,99 @@ func DeteksiJenisPayload(p *types.KunjunganNestedPayload) (JenisPayload, *types.
 	}
 
 	return JenisKunjunganSaja, p.Kunjungan, nil
+}
+
+// DeteksiJenisPayloadKesehatan memakai aturan yang sama persis dengan
+// DeteksiJenisPayload, hanya entitas terakhirnya kesehatan. Sengaja ditulis
+// terpisah alih-alih digeneralisasi: keduanya adalah kontrak terhadap jakantro,
+// dan menyatukannya berarti perubahan pada salah satu diam-diam mengubah yang
+// lain.
+func DeteksiJenisPayloadKesehatan(p *types.KesehatanNestedPayload) (JenisPayload, *types.KesehatanPayload, error) {
+	if p == nil {
+		return "", nil, fmt.Errorf("payload kosong")
+	}
+
+	adaNested := p.Orangtua != nil || p.Anak != nil || p.Kesehatan != nil
+	adaFlat := IsStrFilled(p.KesehatanPayload.Id) ||
+		IsStrFilled(p.KesehatanPayload.IDAnak) ||
+		IsStrFilled(p.KesehatanPayload.TanggalPemantauan)
+
+	if adaFlat && adaNested {
+		return "", nil, fmt.Errorf("bentuk flat hanya untuk kesehatan saja, jangan disertai key orangtua, anak, maupun kesehatan")
+	}
+
+	if adaFlat {
+		kesehatan := p.KesehatanPayload
+		if err := wajibKesehatan(&kesehatan); err != nil {
+			return "", nil, err
+		}
+		return JenisKesehatanSaja, &kesehatan, nil
+	}
+
+	if p.Kesehatan == nil {
+		return "", nil, fmt.Errorf("data kesehatan wajib dikirim")
+	}
+	if err := wajibKesehatan(p.Kesehatan); err != nil {
+		return "", nil, err
+	}
+
+	// Key anak wajib membawa id dan id_orangtua, dan harus rujuk-silang dengan kesehatan.
+	if p.Anak != nil {
+		if !IsStrFilled(p.Anak.Id) {
+			return "", nil, fmt.Errorf("anak.id wajib dikirim")
+		}
+		if !IsStrFilled(p.Anak.IDOrangtua) {
+			return "", nil, fmt.Errorf("anak.id_orangtua wajib dikirim")
+		}
+		if strings.TrimSpace(p.Anak.Id) != strings.TrimSpace(p.Kesehatan.IDAnak) {
+			return "", nil, fmt.Errorf("anak.id (%q) tidak sama dengan kesehatan.id_anak (%q)",
+				p.Anak.Id, p.Kesehatan.IDAnak)
+		}
+	}
+
+	// Key orangtua tidak berdiri sendiri: hanya melengkapi key anak.
+	if p.Orangtua != nil {
+		if p.Anak == nil {
+			return "", nil, fmt.Errorf("key orangtua hanya boleh dikirim bersama key anak")
+		}
+		if !IsStrFilled(p.Orangtua.Id) {
+			return "", nil, fmt.Errorf("orangtua.id wajib dikirim")
+		}
+		if strings.TrimSpace(p.Orangtua.Id) != strings.TrimSpace(p.Anak.IDOrangtua) {
+			return "", nil, fmt.Errorf("orangtua.id (%q) tidak sama dengan anak.id_orangtua (%q)",
+				p.Orangtua.Id, p.Anak.IDOrangtua)
+		}
+	}
+
+	anakBaru := p.Anak != nil && (IsFilled(p.Anak.NIK) || IsStrFilled(p.Anak.Nama))
+	ortuBaru := p.Orangtua != nil && (IsStrFilled(p.Orangtua.Nik) || IsStrFilled(p.Orangtua.NoKk))
+
+	switch {
+	case ortuBaru && !anakBaru:
+		return "", nil, fmt.Errorf("orangtua baru harus disertai data anak baru")
+	case ortuBaru:
+		return JenisRegistrasiLengkap, p.Kesehatan, nil
+	case anakBaru:
+		return JenisAnakBaru, p.Kesehatan, nil
+	}
+
+	return JenisKesehatanSaja, p.Kesehatan, nil
+}
+
+func wajibKesehatan(k *types.KesehatanPayload) error {
+	if !IsStrFilled(k.Id) {
+		return fmt.Errorf("kesehatan.id wajib dikirim")
+	}
+	if !IsStrFilled(k.IDAnak) {
+		return fmt.Errorf("kesehatan.id_anak wajib dikirim")
+	}
+	if !IsStrFilled(k.TanggalPemantauan) {
+		return fmt.Errorf("kesehatan.tanggal_pemantauan wajib dikirim")
+	}
+	if !IsValidDate(k.TanggalPemantauan) {
+		return fmt.Errorf("kesehatan.tanggal_pemantauan (%q) harus berformat YYYY-MM-DD", k.TanggalPemantauan)
+	}
+	return nil
 }
 
 func wajibKunjungan(k *types.KunjunganPayload) error {

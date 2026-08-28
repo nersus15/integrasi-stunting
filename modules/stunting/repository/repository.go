@@ -459,6 +459,207 @@ func (d *StuntingRepository) ListKunjunganAnak(id string) (*types.KunjunganAnakA
 	return res.FromEntity(anak), nil
 }
 
+// ListKesehatanAnak mengambil satu anak beserta seluruh riwayat kesehatannya.
+// Memakai bun langsung, bukan lib-sql: relasi has-many tidak bisa dipenuhi
+// lewat Scan(ctx, dest) -- bun menolaknya dan meminta Model.
+func (d *StuntingRepository) ListKesehatanAnak(id string) (*types.KesehatanAnakArray, error) {
+	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
+	defer cancel()
+
+	anak := new(entity.Anak)
+
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		logger.Error("Gagal konversi: objek yang dikirim bukan merupakan *bun.DB")
+		return nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	err := bunDB.NewSelect().Model(anak).
+		Relation("Kesehatan", func(sq *bun.SelectQuery) *bun.SelectQuery {
+			return sq.Order("k.tanggal_pemantauan ASC")
+		}).
+		Where("a.id = ?", id).
+		Scan(ctx)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, exceptions.TidakDitemukan.Messagef("Data Anak dengan id %s tidak ditemukan", id)
+		}
+		logger.Error(fmt.Sprintf("List Kesehatan Anak (id: %s): ", id) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	var res *types.KesehatanAnakArray
+	return res.FromEntity(anak), nil
+}
+
+// SummaryAnak mengambil anak beserta dua riwayatnya sekaligus. Kedua relasi
+// has-many dijalankan bun sebagai query terpisah, jadi biayanya tiga round
+// trip -- masih lebih murah daripada dua panggilan HTTP dari pemanggil.
+func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) {
+	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
+	defer cancel()
+
+	anak := new(entity.Anak)
+
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		logger.Error("Gagal konversi: objek yang dikirim bukan merupakan *bun.DB")
+		return nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	err := bunDB.NewSelect().Model(anak).
+		Relation("Kunjungan", func(sq *bun.SelectQuery) *bun.SelectQuery {
+			return sq.Order("kj.tanggal_pengukuran ASC")
+		}).
+		Relation("Kesehatan", func(sq *bun.SelectQuery) *bun.SelectQuery {
+			return sq.Order("k.tanggal_pemantauan ASC")
+		}).
+		Where("a.id = ?", id).
+		Scan(ctx)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, exceptions.TidakDitemukan.Messagef("Data Anak dengan id %s tidak ditemukan", id)
+		}
+		logger.Error(fmt.Sprintf("Summary Anak (id: %s): ", id) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	var res *types.SummaryAnak
+	return res.FromEntity(anak), nil
+}
+
+func (d *StuntingRepository) FindKunjunganById(id string) (*types.Kunjungan, error) {
+	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
+	defer cancel()
+
+	tmp := new(entity.Kunjungan)
+	filter := []port.DbExpression{
+		{Expr: "id = ?", Args: []any{id}},
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, entity.Kunjungan{}.TableName(), []string{}, filter, map[string]int{})
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, exceptions.TidakDitemukan.Messagef("Data Kunjungan dengan id %s tidak ditemukan", id)
+		}
+		logger.Error(fmt.Sprintf("Find Kunjungan (id: %s): ", id) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	var res *types.Kunjungan
+	return res.FromEntity(tmp), nil
+}
+
+func (d *StuntingRepository) FindKesehatanById(id string) (*types.Kesehatan, error) {
+	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
+	defer cancel()
+
+	tmp := new(entity.Kesehatan)
+	filter := []port.DbExpression{
+		{Expr: "id = ?", Args: []any{id}},
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, entity.Kesehatan{}.TableName(), []string{}, filter, map[string]int{})
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, exceptions.TidakDitemukan.Messagef("Data Kesehatan dengan id %s tidak ditemukan", id)
+		}
+		logger.Error(fmt.Sprintf("Find Kesehatan (id: %s): ", id) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	var res *types.Kesehatan
+	return res.FromEntity(tmp), nil
+}
+
+func (d *StuntingRepository) CreateKesehatan(kesehatan *entity.Kesehatan, ctx context.Context) (*types.Kesehatan, error) {
+	if ctx == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(d.Context.Context, 10*time.Second)
+		defer cancel()
+	}
+
+	var res *types.Kesehatan
+	_, err := d.Connection.InsertOne(ctx, kesehatan.TableName(), kesehatan)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res = res.FromEntity(kesehatan)
+
+	if res == nil || !utils.IsStrFilled(res.Id) {
+		return nil, exceptions.Internal.Messagef("data gagal disimpan")
+	}
+
+	return res, nil
+}
+
+// KesehatanTransaction menyimpan orangtua, anak, dan kesehatan dalam satu
+// transaksi. Kembarannya KunjunganTransaction; bila salah satu gagal, tidak
+// ada data setengah tersimpan.
+func (d *StuntingRepository) KesehatanTransaction(orangtua *entity.Orangtua, anak *entity.Anak, kesehatan *entity.Kesehatan) (*types.Orangtua, *types.Anak, *types.Kesehatan, error) {
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		logger.Error("Gagal konversi: bukan merupakan *bun.DB")
+		return nil, nil, nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	var resOrangtua *types.Orangtua
+	var resAnak *types.Anak
+	var resKesehatan *types.Kesehatan
+
+	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
+	defer cancel()
+
+	err := bunDB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		var err error
+
+		if orangtua != nil {
+			resOrangtua, err = CreateOrangTuaTx(ctx, tx, orangtua)
+			if err != nil {
+				return err
+			}
+			anak.IDOrangtua = resOrangtua.Id
+		}
+
+		if anak != nil {
+			resAnak, err = CreateAnakTx(ctx, tx, anak)
+			if err != nil {
+				return err
+			}
+			kesehatan.IDAnak = resAnak.Id
+		}
+
+		resKesehatan, err = CreateKesehatanTx(ctx, tx, kesehatan)
+		return err
+	})
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return resOrangtua, resAnak, resKesehatan, nil
+}
+
+func CreateKesehatanTx(ctx context.Context, tx bun.IDB, kesehatan *entity.Kesehatan) (*types.Kesehatan, error) {
+	if kesehatan == nil {
+		return nil, nil
+	}
+	var res *types.Kesehatan
+
+	_, err := tx.NewInsert().Model(kesehatan).Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return res.FromEntity(kesehatan), nil
+}
+
 func (d *StuntingRepository) DeleteOrangTua(id *string) error {
 	filter := []port.DbExpression{
 		{

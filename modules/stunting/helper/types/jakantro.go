@@ -135,6 +135,30 @@ type ListAnak struct {
 	Anak []Anak `json:"anak"`
 }
 
+// KesehatanAnak adalah hasil POST /api/kesehatan. Bentuknya mengikuti
+// KunjunganAnak: field orangtua dan anak hanya terisi bila payload memang
+// membawanya, sehingga pemanggil tahu entitas mana yang baru dibuat.
+type KesehatanAnak struct {
+	IdOrangtua *string   `json:"id_orangtua"`
+	IdAnak     *string   `json:"id_anak"`
+	Orangtua   *Orangtua `json:"orangtua"`
+	Anak       *Anak     `json:"anak"`
+	Kesehatan  Kesehatan `json:"kesehatan"`
+}
+
+type KesehatanAnakArray struct {
+	Anak      Anak        `json:"anak"`
+	Kesehatan []Kesehatan `json:"kesehatan"`
+}
+
+// SummaryAnak menggabungkan riwayat kunjungan dan kesehatan satu anak, supaya
+// pemanggil tidak perlu dua request untuk menyusun gambaran utuh.
+type SummaryAnak struct {
+	Anak      Anak        `json:"anak"`
+	Kunjungan []Kunjungan `json:"kunjungan"`
+	Kesehatan []Kesehatan `json:"kesehatan"`
+}
+
 type OrangtuaPayload struct {
 	Id           string     `json:"id"`
 	IdPosyandu   string     `json:"id_posyandu"`
@@ -247,6 +271,15 @@ type KunjunganNestedPayload struct {
 
 	// Kunjungan only without nested
 	KunjunganPayload
+}
+
+type KesehatanNestedPayload struct {
+	Orangtua  *OrangtuaPayload  `json:"orangtua"`
+	Anak      *AnakPayload      `json:"anak"`
+	Kesehatan *KesehatanPayload `json:"kesehatan"`
+
+	// Kesehatan only without nested
+	KesehatanPayload
 }
 
 func (p *KesehatanPayload) ToEntity() *entity.Kesehatan {
@@ -597,4 +630,57 @@ func (k *KunjunganAnakArray) FromEntity(e *entity.Anak) *KunjunganAnakArray {
 		Anak:      *anak,
 		Kunjungan: kunjungan,
 	}
+}
+
+func (k *KesehatanAnakArray) FromEntity(e *entity.Anak) *KesehatanAnakArray {
+	if e == nil {
+		return nil
+	}
+
+	var a *Anak
+	anak := a.FromEntity(e)
+
+	return &KesehatanAnakArray{
+		Anak:      *anak,
+		Kesehatan: daftarKesehatan(e.Kesehatan),
+	}
+}
+
+func (s *SummaryAnak) FromEntity(e *entity.Anak) *SummaryAnak {
+	if e == nil {
+		return nil
+	}
+
+	var a *Anak
+	anak := a.FromEntity(e)
+
+	return &SummaryAnak{
+		Anak:      *anak,
+		Kunjungan: daftarKunjungan(e.Kunjungan),
+		Kesehatan: daftarKesehatan(e.Kesehatan),
+	}
+}
+
+// daftarKunjungan dan daftarKesehatan selalu mengembalikan slice tidak-nil,
+// supaya JSON-nya berupa [] dan bukan null saat anak belum punya riwayat.
+func daftarKunjungan(list []*entity.Kunjungan) []Kunjungan {
+	out := make([]Kunjungan, 0, len(list))
+	for _, e := range list {
+		var tmp *Kunjungan
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+func daftarKesehatan(list []*entity.Kesehatan) []Kesehatan {
+	out := make([]Kesehatan, 0, len(list))
+	for _, e := range list {
+		var tmp *Kesehatan
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
 }

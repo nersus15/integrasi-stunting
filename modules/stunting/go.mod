@@ -10,6 +10,7 @@ require (
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/driver/pgdriver v1.2.18
 	github.com/webcore-go/webcore v0.0.39
+	github.com/yuin/goldmark v1.8.5
 )
 
 require (

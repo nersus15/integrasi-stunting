@@ -162,6 +162,113 @@ func (s *StuntingService) CreateKunjungan(body []byte) (*types.KunjunganAnak, er
 	return res, nil
 }
 
+// CreateKesehatan menerima ketujuh bentuk payload yang sama dengan
+// CreateKunjungan, hanya entitas terakhirnya kesehatan.
+func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, error) {
+	res := new(types.KesehatanAnak)
+
+	var anak *types.Anak
+	var orangtua *types.Orangtua
+	var kesehatan *types.Kesehatan
+
+	var payload *types.KesehatanNestedPayload
+
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	jenis, payloadKesehatan, err := utils.DeteksiJenisPayloadKesehatan(payload)
+	if err != nil {
+		return nil, exceptions.BentukPayload.WithMessage(err.Error(), err)
+	}
+
+	switch jenis {
+	case utils.JenisRegistrasiLengkap, utils.JenisAnakBaru:
+		if jenis == utils.JenisRegistrasiLengkap {
+			if err := utils.ValidateOrangtua(*payload.Orangtua); err != nil {
+				return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+			}
+		}
+
+		if err := utils.ValidateAnak(*payload.Anak); err != nil {
+			return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+		}
+
+		if err := utils.ValidateKesehatan(*payload.Kesehatan); err != nil {
+			return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+		}
+
+		if jenis == utils.JenisAnakBaru {
+			payload.Orangtua = nil
+		}
+
+		orangtua, anak, kesehatan, err = s.Repository.KesehatanTransaction(
+			payload.Orangtua.ToEntity(), payload.Anak.ToEntity(), payload.Kesehatan.ToEntity())
+
+		if err != nil {
+			return nil, exceptions.Classify(err)
+		}
+
+	case utils.JenisKesehatanSaja:
+		if err := utils.ValidateKesehatan(*payloadKesehatan); err != nil {
+			return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+		}
+
+		kesehatan, err = s.Repository.CreateKesehatan(payloadKesehatan.ToEntity(), nil)
+
+		if err != nil {
+			return nil, exceptions.Classify(err)
+		}
+	}
+
+	switch jenis {
+	case utils.JenisKesehatanSaja:
+		res.IdAnak = &payloadKesehatan.IDAnak
+	case utils.JenisAnakBaru:
+		res.IdAnak = &anak.Id
+		res.Anak = anak
+	case utils.JenisRegistrasiLengkap:
+		res.Orangtua = orangtua
+		res.IdOrangtua = &orangtua.Id
+
+		res.IdAnak = &anak.Id
+		res.Anak = anak
+	}
+
+	res.Kesehatan = *kesehatan
+	return res, nil
+}
+
+func (s *StuntingService) KesehatanByAnak(id string) (*types.KesehatanAnakArray, error) {
+	k, err := s.Repository.ListKesehatanAnak(id)
+	if err != nil {
+		return nil, err
+	}
+	if k == nil {
+		return nil, utils.ErrTidakDitemukan
+	}
+	return k, nil
+}
+
+func (s *StuntingService) SummaryAnak(id string) (*types.SummaryAnak, error) {
+	sum, err := s.Repository.SummaryAnak(id)
+	if err != nil {
+		return nil, err
+	}
+	if sum == nil {
+		return nil, utils.ErrTidakDitemukan
+	}
+	return sum, nil
+}
+
+func (s *StuntingService) FindKunjunganById(id string) (*types.Kunjungan, error) {
+	return s.Repository.FindKunjunganById(id)
+}
+
+func (s *StuntingService) FindKesehatanById(id string) (*types.Kesehatan, error) {
+	return s.Repository.FindKesehatanById(id)
+}
+
 func (s *StuntingService) KunjunganByAnak(id string) (*types.KunjunganAnakArray, error) {
 	k, err := s.Repository.ListKunjunganAnak(id)
 

@@ -188,8 +188,26 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "GET",
+		Path:    "/anak/:id/kesehatan",
+		Handler: m.handler.FindKesehatanByIdAnak,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "GET",
+		Path:    "/anak/:id/summary",
+		Handler: m.handler.SummaryAnak,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "GET",
 		Path:    "/anak/kunjungan/:id",
 		Handler: m.handler.FindKunjunganById,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "GET",
+		Path:    "/anak/kesehatan/:id",
+		Handler: m.handler.FindKesehatanById,
 		Root:    root,
 	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
@@ -212,6 +230,13 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.CreateKunjungan,
 		Root:    root,
 	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/kesehatan",
+		Handler: m.handler.CreateKesehatan,
+		Root:    root,
+	})
 }
 
 func (m *Module) registerRootRoute(web *fiber.App) {
@@ -227,6 +252,13 @@ func (m *Module) registerRootRoute(web *fiber.App) {
 		Method:  "GET",
 		Path:    "/info",
 		Handler: m.Info,
+		Root:    moduleRoot,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "GET",
+		Path:    "/docs",
+		Handler: m.Docs,
 		Root:    moduleRoot,
 	})
 }

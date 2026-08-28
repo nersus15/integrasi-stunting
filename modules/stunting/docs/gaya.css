@@ -1,0 +1,94 @@
+/* Palet dan skala tipografi sengaja sama dengan laporan uji, supaya kedua
+   keluaran proyek ini terbaca sebagai satu produk. */
+:root{
+  --ink:#17181C; --ink2:#4A4E58; --ink3:#787D89;
+  --paper:#F5F5F2; --surface:#FFFFFF; --surface2:#FAFAF8;
+  --line:#DEDED8; --line2:#EAEAE4;
+  --accent:#3B4E8F; --accent-soft:#E9EBF5;
+  --ok:#2E7350;
+  --serif:ui-serif,Charter,"Bitstream Charter",Cambria,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#E8E8E3; --ink2:#ABAFB8; --ink3:#7E838E;
+    --paper:#121317; --surface:#1A1C21; --surface2:#15171B;
+    --line:#2C2F36; --line2:#23262C;
+    --accent:#93A1DA; --accent-soft:#22273A;
+    --ok:#6FC293;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+
+.bungkus{max-width:860px;margin:0 auto;padding:0 24px 96px}
+
+/* ---- kepala ---- */
+header{border-bottom:1px solid var(--line);margin-bottom:40px;padding:40px 0 0}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink3);margin:0 0 10px}
+header h1{font-family:var(--serif);font-weight:600;font-size:clamp(26px,4vw,36px);
+  line-height:1.15;letter-spacing:-.015em;margin:0 0 6px;text-wrap:balance}
+header p.ket{color:var(--ink2);margin:0 0 24px;max-width:62ch}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:16px}
+nav a{font-family:var(--mono);font-size:12px;text-decoration:none;
+  padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+  color:var(--ink2);background:var(--surface);transition:border-color .12s,color .12s}
+nav a:hover{border-color:var(--accent);color:var(--accent)}
+nav a[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:#fff}
+nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- prosa ---- */
+main{max-width:72ch}
+main h1{font-family:var(--serif);font-size:28px;font-weight:600;line-height:1.2;
+  letter-spacing:-.012em;margin:48px 0 14px;text-wrap:balance}
+main h2{font-family:var(--serif);font-size:22px;font-weight:600;line-height:1.25;
+  margin:44px 0 12px;padding-top:18px;border-top:1px solid var(--line2);text-wrap:balance}
+main h3{font-size:16px;font-weight:650;margin:30px 0 8px;letter-spacing:-.005em}
+main h1:first-child,main h2:first-child{margin-top:0;border-top:0;padding-top:0}
+p{margin:0 0 16px}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin:5px 0}
+li>p{margin:0 0 8px}
+strong{font-weight:650}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+blockquote{margin:0 0 16px;padding:2px 0 2px 16px;border-left:3px solid var(--accent-soft);
+  color:var(--ink2)}
+blockquote p:last-child{margin-bottom:0}
+
+a{color:var(--accent);text-decoration-thickness:1px;text-underline-offset:2px}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+/* ---- kode ---- */
+code{font-family:var(--mono);font-size:.87em;background:var(--accent-soft);
+  color:var(--ink);padding:1.5px 5px;border-radius:4px;word-break:break-word}
+pre{background:var(--surface2);border:1px solid var(--line2);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;margin:0 0 18px;line-height:1.5}
+pre code{background:none;padding:0;font-size:12.8px;white-space:pre}
+
+/* ---- tabel ----
+   Dokumen ini banyak memakai tabel, dan beberapa lebih lebar dari kolom prosa.
+   Pembungkus bergulir sendiri supaya halaman tidak pernah bergeser mendatar. */
+.tabel{overflow-x:auto;margin:0 0 20px;border:1px solid var(--line);border-radius:8px;
+  background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;
+  font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line2);
+  vertical-align:top}
+thead th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink3);font-weight:600;
+  background:var(--surface2);border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td code{font-size:.92em}
+
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);
+  color:var(--ink3);font-size:13px}
+footer code{font-family:var(--mono)}
+
+@media (max-width:640px){
+  .bungkus{padding:0 18px 72px}
+  body{font-size:15px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

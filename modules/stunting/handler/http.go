@@ -150,6 +150,15 @@ func (h *HttpHandler) CreateKunjungan(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(res)
 }
 
+func (h *HttpHandler) CreateKesehatan(c *fiber.Ctx) error {
+	res, err := h.service.CreateKesehatan(c.Body())
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(res)
+}
+
 func (h *HttpHandler) FindKunjunganByIdAnak(c *fiber.Ctx) error {
 	id := c.Params("id", "")
 
@@ -172,5 +181,81 @@ func (h *HttpHandler) FindKunjunganByIdAnak(c *fiber.Ctx) error {
 }
 
 func (h *HttpHandler) FindKunjunganById(c *fiber.Ctx) error {
-	return nil
+	id := c.Params("id", "")
+
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.New(fmt.Errorf("Parameter id kunjungan harus dikirim")))
+	}
+
+	res, err := h.service.FindKunjunganById(id)
+
+	if errors.Is(err, utils.ErrTidakDitemukan) {
+		return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Kunjungan tidak ditemukan", err))
+	}
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *HttpHandler) FindKesehatanByIdAnak(c *fiber.Ctx) error {
+	id := c.Params("id", "")
+
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.New(fmt.Errorf("Parameter id anak harus dikirim")))
+	}
+
+	res, err := h.service.KesehatanByAnak(id)
+
+	if errors.Is(err, utils.ErrTidakDitemukan) {
+		return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Anak tidak ditemukan", err))
+	}
+	if err != nil {
+		logger.Error("FindKesehatanByIdAnak: " + err.Error())
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *HttpHandler) FindKesehatanById(c *fiber.Ctx) error {
+	id := c.Params("id", "")
+
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.New(fmt.Errorf("Parameter id kesehatan harus dikirim")))
+	}
+
+	res, err := h.service.FindKesehatanById(id)
+
+	if errors.Is(err, utils.ErrTidakDitemukan) {
+		return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Kesehatan tidak ditemukan", err))
+	}
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+// SummaryAnak mengembalikan satu anak beserta seluruh riwayat kunjungan dan
+// kesehatannya, supaya pemanggil tidak perlu dua request.
+func (h *HttpHandler) SummaryAnak(c *fiber.Ctx) error {
+	id := c.Params("id", "")
+
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.New(fmt.Errorf("Parameter id anak harus dikirim")))
+	}
+
+	res, err := h.service.SummaryAnak(id)
+
+	if errors.Is(err, utils.ErrTidakDitemukan) {
+		return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Anak tidak ditemukan", err))
+	}
+	if err != nil {
+		logger.Error("SummaryAnak: " + err.Error())
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
 }

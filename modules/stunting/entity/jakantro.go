@@ -67,6 +67,7 @@ type Anak struct {
 
 	Orangtua  *Orangtua    `bun:"rel:belongs-to,join:id_orangtua=id" json:"orangtua,omitempty"`
 	Kunjungan []*Kunjungan `bun:"rel:has-many,join:id=id_anak" json:"kunjungan,omitempty"`
+	Kesehatan []*Kesehatan `bun:"rel:has-many,join:id=id_anak" json:"kesehatan,omitempty"`
 }
 
 type Kesehatan struct {
@@ -183,6 +184,14 @@ func (e Kunjungan) TableName() string {
 
 func (e Kunjungan) GetPkName() string {
 	return "kj.id"
+}
+
+func (e Kesehatan) TableName() string {
+	return "jakantro.kesehatan"
+}
+
+func (e Kesehatan) GetPkName() string {
+	return "k.id"
 }
 
 func (e Orangtua) TableName() string {
