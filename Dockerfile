@@ -7,12 +7,12 @@ WORKDIR /app
 # Copy source code
 COPY . .
 
+# Remove Tests & tmp
+RUN rm -rf tests/* tmp/*
+
 # Download dependencies.
-#
-# Bukan `go work sync`: perintah itu tidak mengunduh apa pun, melainkan menulis
-# ulang direktif `go` di go.work dan tiap go.mod mengikuti versi toolchain image.
-# Akibatnya versi yang tercatat di repo ikut berubah tanpa disengaja, dan build
-# gagal begitu versi image berbeda dari versi yang tertulis.
+RUN go work sync
+
 RUN go -C app mod download && go -C modules/stunting mod download
 
 # Install Watch tool untuk live reload saat development
