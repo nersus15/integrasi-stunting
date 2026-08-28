@@ -1,0 +1,38 @@
+name: integrasi-stunting
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ildki
+    ports:
+      - "6435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ildki"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  app:
+    image: fathur15/integrasi:latest-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: ildki
+      DATABASE_SCHEMA: jakantro
+      SERVER_PORT: 2025
+    ports:
+      - "2025:2025"
+    working_dir: /app
+
+volumes:
+  pgdata:
+  gomodcache:

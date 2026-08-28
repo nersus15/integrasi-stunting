@@ -43,6 +43,9 @@ var daftarDokumen = map[string]dokumen{
 	},
 }
 
+// nav memuat laporan juga, meski ia bukan markdown dan tidak lewat daftarDokumen.
+var judulLaporan = "Laporan Pengujian"
+
 // md merender markdown ke HTML. GFM dinyalakan karena dokumentasi banyak
 // memakai tabel; auto heading id supaya tiap bagian bisa ditaut langsung.
 // Raw HTML sengaja TIDAK diizinkan -- dokumen ini tidak membutuhkannya, dan
@@ -72,6 +75,12 @@ func (m *Module) Docs(c *fiber.Ctx) error {
 		}
 		c.Set(fiber.HeaderContentType, "text/css; charset=utf-8")
 		return c.Send(gaya)
+	}
+
+	// Laporan pengujian dibangkitkan test suite, bukan ditulis tangan, jadi
+	// tidak ikut daftarDokumen yang di-render dari markdown.
+	if nama == "laporan" || nama == "laporan-gaya" {
+		return m.docsLaporan(c, nama)
 	}
 
 	dok, ok := daftarDokumen[nama]
@@ -124,6 +133,63 @@ func (m *Module) Docs(c *fiber.Ctx) error {
 	return c.SendString(halaman)
 }
 
+// docsLaporan menyajikan laporan pengujian yang dibangkitkan test suite.
+//
+// Laporan aslinya menaruh CSS sebagai <style> inline karena juga diterbitkan
+// sebagai artifact, yang memang menuntut berkas mandiri. Tapi Content-Security-
+// Policy service ("default-src 'self'") menolak style inline, jadi di sini
+// blok itu dipisah dan ditaut sebagai stylesheet same-origin.
+func (m *Module) docsLaporan(c *fiber.Ctx, nama string) error {
+	mentah, err := berkasDocs.ReadFile("docs/laporan.html")
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"httpCode":  fiber.StatusNotFound,
+			"errorCode": 2001,
+			"errorName": "NOT_FOUND",
+			"message": "laporan pengujian belum dibangkitkan; jalankan " +
+				"`go test ./functional/api_stunting/` di direktori tests",
+		})
+	}
+
+	kepala, gaya, badan := belahGaya(string(mentah))
+
+	if nama == "laporan-gaya" {
+		c.Set(fiber.HeaderContentType, "text/css; charset=utf-8")
+		return c.SendString(gaya)
+	}
+
+	halaman := `<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+` + kepala + `<link rel="stylesheet" href="?doc=laporan-gaya">
+</head>
+<body>
+` + badan + `
+</body>
+</html>`
+
+	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
+	return c.SendString(halaman)
+}
+
+// belahGaya memisahkan satu blok <style> dari dokumen. Laporan dibangkitkan
+// dari kerangka yang kita kendalikan sendiri dan hanya punya satu blok, jadi
+// pemisahan sederhana ini memadai. Kalau blok itu tidak ada, dokumen
+// dikembalikan apa adanya.
+func belahGaya(s string) (kepala, gaya, badan string) {
+	awal := strings.Index(s, "<style>")
+	if awal < 0 {
+		return "", "", s
+	}
+	akhir := strings.Index(s, "</style>")
+	if akhir < awal {
+		return "", "", s
+	}
+	return s[:awal], s[awal+len("<style>") : akhir], s[akhir+len("</style>"):]
+}
+
 func (m *Module) docsGagal(c *fiber.Ctx, apa string, err error) error {
 	logger.Error("Docs: gagal " + apa + ": " + err.Error())
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -141,14 +207,14 @@ var urutanDokumen = []string{"index", "errors"}
 func navDokumen(aktif string) string {
 	var b strings.Builder
 	for _, n := range urutanDokumen {
-		tautan := "?doc=" + n
 		aria := ""
 		if n == aktif {
 			aria = ` aria-current="page"`
 		}
-		fmt.Fprintf(&b, `<a href="%s"%s>%s</a>`,
-			html.EscapeString(tautan), aria, html.EscapeString(daftarDokumen[n].judul))
+		fmt.Fprintf(&b, `<a href="?doc=%s"%s>%s</a>`,
+			html.EscapeString(n), aria, html.EscapeString(daftarDokumen[n].judul))
 	}
+	fmt.Fprintf(&b, `<a href="?doc=laporan">%s</a>`, html.EscapeString(judulLaporan))
 	return b.String()
 }
 

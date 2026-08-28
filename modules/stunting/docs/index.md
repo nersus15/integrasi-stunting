@@ -19,12 +19,14 @@ bebas diakses tanpa key.
 Kirim key lewat salah satu header:
 
 ```
-X-API-Key: 4a088f54847956e3f828a2938deee1c1e568b47c088e67bd1d6a1c090131c383
+X-API-Key: <key>
 ```
 
 ```
-Authorization: APIKey 4a088f54847956e3f828a2938deee1c1e568b47c088e67bd1d6a1c090131c383
+Authorization: APIKey <key>
 ```
+
+Key didapat dari pengelola service, tidak bisa di-generate sendiri.
 
 Ada dua cara ditolak, dan bedanya menentukan apa yang harus Anda lakukan.
 
@@ -579,6 +581,32 @@ GET /api/anak/kesehatan/d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5
 ```
 
 Response berupa object kunjungan atau kesehatan, tanpa data anak.
+
+---
+
+## Laporan pengujian
+
+Contoh di halaman ini sengaja dibatasi supaya terbaca. Kalau butuh lebih banyak
+kasus — terutama kombinasi yang ditolak — ada laporan pengujian berisi **136
+skenario** terhadap seluruh endpoint, lengkap dengan payload yang dikirim, status
+code, dan response utuh untuk masing-masing.
+
+[Lihat laporan pengujian](?doc=laporan)
+
+Isinya dikelompokkan per topik: bentuk payload yang diterima, NIK anak opsional,
+kombinasi yang ditolak, validasi tiap field, bentrok database, endpoint GET,
+kesehatan, summary, autentikasi, dan dokumentasi.
+
+Laporan itu dihasilkan dari test yang ditembakkan ke service sungguhan, jadi
+isinya bukan contoh yang diketik tangan — dan versi yang Anda lihat di sini ikut
+tertanam di biner service, jadi selalu sesuai dengan versi yang sedang berjalan.
+
+Untuk membangkitkan ulang:
+
+```bash
+cd tests
+KUNCI_WRITE=<key> KUNCI_READ=<key> go test ./functional/api_stunting/
+```
 
 ---
 

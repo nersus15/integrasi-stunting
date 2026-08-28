@@ -1,6 +1,6 @@
 module github.com/nersus15/integrasi
 
-go 1.26.5
+go 1.25.0
 
 require (
 	github.com/nersus15/lib-authstoredb v0.0.1
@@ -9,6 +9,7 @@ require (
 	github.com/nersus15/lib-sqlchiper v0.1.1
 	github.com/webcore-go/lib-memory v0.1.3
 	github.com/webcore-go/lib-postgres v0.1.14
+	github.com/webcore-go/lib-sql v0.1.16
 	github.com/webcore-go/webcore v0.0.39
 )
 
@@ -53,7 +54,6 @@ require (
 	github.com/valyala/fasthttp v1.73.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/webcore-go/lib-sql v0.1.16 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

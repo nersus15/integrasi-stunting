@@ -1,5 +1,5 @@
 ## DEVELOPMENT STAGE
-FROM golang:1.25-trixie AS development
+FROM golang:1.26-trixie AS development
 
 # Set direktori kerja
 WORKDIR /app
@@ -7,8 +7,13 @@ WORKDIR /app
 # Copy source code
 COPY . .
 
-# Download dependencies
-RUN go work sync
+# Download dependencies.
+#
+# Bukan `go work sync`: perintah itu tidak mengunduh apa pun, melainkan menulis
+# ulang direktif `go` di go.work dan tiap go.mod mengikuti versi toolchain image.
+# Akibatnya versi yang tercatat di repo ikut berubah tanpa disengaja, dan build
+# gagal begitu versi image berbeda dari versi yang tertulis.
+RUN go -C app mod download && go -C modules/stunting mod download
 
 # Install Watch tool untuk live reload saat development
 RUN go install github.com/air-verse/air@latest
@@ -25,7 +30,7 @@ EXPOSE 2025
 CMD ["air", "-c", "/app/air.toml"]
 
 ## BUILD STAGE
-FROM golang:1.25-alpine3.23 AS builder
+FROM golang:1.26-alpine3.23 AS builder
 
 # Install packages required for CGO and librdkafka
 # build-base: Provides GCC, make, and other build tools (equivalent to build-essential in Debian/Ubuntu)
@@ -47,8 +52,13 @@ COPY . .
 # Copy go mod files
 # COPY go.work go.work.sum ./
 
-# Download dependencies
-RUN go work sync
+# Download dependencies.
+#
+# Bukan `go work sync`: perintah itu tidak mengunduh apa pun, melainkan menulis
+# ulang direktif `go` di go.work dan tiap go.mod mengikuti versi toolchain image.
+# Akibatnya versi yang tercatat di repo ikut berubah tanpa disengaja, dan build
+# gagal begitu versi image berbeda dari versi yang tertulis.
+RUN go -C app mod download && go -C modules/stunting mod download
 
 # Build the application
 # Dengan Kafka ditanam ke dalam binary
