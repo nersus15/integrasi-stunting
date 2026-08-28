@@ -704,9 +704,10 @@ func (d *StuntingRepository) StartMigration(DB interface{}, dialect string, serv
 	}
 
 	// Set dialek wajib di sini sebelum eksekusi run
-	if dialect == "sqlite" {
+	switch dialect {
+	case "sqlite":
 		goose.SetDialect("sqlite3")
-	} else if dialect == "postgres" {
+	case "postgres":
 		goose.SetDialect("postgres")
 		logger.Info(fmt.Sprintf("Membuat Schema %s Untuk postgres", d.Context.Config.Database.SchemaName))
 
