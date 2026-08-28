@@ -706,14 +706,15 @@ func (d *StuntingRepository) StartMigration(DB interface{}, dialect string, serv
 	// Set dialek wajib di sini sebelum eksekusi run
 	if dialect == "sqlite" {
 		goose.SetDialect("sqlite3")
-	}else if dialect == "postgres" {
-        goose.SetDialect("postgres")
+	} else if dialect == "postgres" {
+		goose.SetDialect("postgres")
 
-        _, err := bunDB.ExecContext(d.Context.Context, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.Context.Config.Database.Scheme))
-        if err != nil {
-            logger.Error(fmt.Sprintf("Gagal membuat schema jakantro: %v", err))
-            return err
-        }
+		_, err := bunDB.ExecContext(d.Context.Context, fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s;", d.Context.Config.Database.Scheme))
+		if err != nil {
+			logger.Error(fmt.Sprintf("Gagal membuat schema jakantro: %v", err))
+			return err
+		}
+	}
 
 	if service != "" {
 		goose.SetTableName("__migration_" + service + "_logs")

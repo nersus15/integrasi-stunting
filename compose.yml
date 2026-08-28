@@ -18,6 +18,7 @@ services:
 
   app:
     image: fathur15/integrasi:latest-dev
+    pull_policy: always
     depends_on:
       postgres:
         condition: service_healthy
