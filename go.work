@@ -1,0 +1,11 @@
+go 1.26.5
+
+use (
+	./app
+	./libraries/authstoredb
+	./libraries/jwt
+	./libraries/memory
+	./libraries/webcore
+	./modules/stunting
+	./tests
+)
