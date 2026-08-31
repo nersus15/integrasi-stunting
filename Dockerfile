@@ -62,7 +62,9 @@ RUN go -C app mod download && go -C modules/stunting mod download
 
 # Build the application
 # Dengan Kafka ditanam ke dalam binary
-RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o /app/main /app/app/main.go
+RUN CGO_ENABLED=1 GOOS=linux \
+    CGO_CFLAGS="-D_LARGEFILE64_SOURCE -D_GNU_SOURCE" \
+    go build -tags musl -o /app/main /app/app/main.go
 
 # # Jika Tanpa Kafka
 # RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main /app/webcore/main.go
@@ -98,7 +100,7 @@ COPY --from=builder /app/migrate /usr/local/bin/migrate
 # Copy configuration files
 COPY --from=builder /app/config.yaml.example ./config.yaml
 COPY --from=builder /app/access.yaml.example ./access.yaml
-COPY --from=builder /app/webcore/init .
+COPY --from=builder /app/app/init .
 
 # Set ownership of working directory to webcore user
 RUN chown -R webcore:webcore /app
