@@ -10,7 +10,7 @@ import (
 type Orangtua struct {
 	Id           string     `json:"id"`
 	IdSatusehat  *string    `json:"id_satusehat"`
-	IdPosyandu   string     `json:"id_posyandu"`
+	IdPosyandu   *string    `json:"id_posyandu"`
 	NoKk         string     `json:"no_kk"`
 	NamaAyah     string     `json:"nama_ayah"`
 	NamaIbu      string     `json:"nama_ibu"`
@@ -79,6 +79,7 @@ type Kunjungan struct {
 	Id                 string     `json:"id"`
 	IdAnak             string     `json:"id_anak"`
 	TanggalPengukuran  string     `json:"tanggal_pengukuran"`
+	TanggalSelesai     *string    `json:"tanggal_selesai"`
 	CaraUkur           *string    `json:"cara_ukur"`
 	BeratBadan         *float64   `json:"berat_badan"`
 	TinggiBadan        *float64   `json:"tinggi_badan"`
@@ -114,6 +115,135 @@ type Kunjungan struct {
 	SourceData         *string    `json:"source_data"`
 	UpdatedBy          *string    `json:"updated_by"`
 	DeletedBy          *string    `json:"deleted_by"`
+	IdFaskes           *string    `json:"id_faskes"`
+	IdSatusehat        *string    `json:"id_satusehat"`
+	IdEpisode          *string    `json:"id_episode"`
+	RefEpisode         *string    `json:"ref_episode"`
+	IdRujukan          *string    `json:"id_rujukan"`
+	RefRujukan         *string    `json:"ref_rujukan"`
+	Stunting           *int       `json:"stunting"`
+}
+
+type Observasi struct {
+	Id           string     `json:"id"`
+	IdAnak       string     `json:"id_anak"`
+	IdKunjungan  *string    `json:"id_kunjungan"`
+	IdInduk      *string    `json:"id_induk"`
+	RefEncounter *string    `json:"ref_encounter"`
+	IdSatusehat  *string    `json:"id_satusehat"`
+	System       string     `json:"system"`
+	Kode         string     `json:"kode"`
+	Display      *string    `json:"display"`
+	Kategori     *string    `json:"kategori"`
+	NilaiAngka   *float64   `json:"nilai_angka"`
+	Satuan       *string    `json:"satuan"`
+	NilaiTeks    *string    `json:"nilai_teks"`
+	NilaiKode    *string    `json:"nilai_kode"`
+	NilaiSystem  *string    `json:"nilai_kode_system"`
+	NilaiDisplay *string    `json:"nilai_display"`
+	Interpretasi *string    `json:"interpretasi"`
+	Tanggal      *string    `json:"tanggal"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+
+	Component []Observasi `json:"component,omitempty"`
+}
+
+type Diagnosa struct {
+	Id                 string     `json:"id"`
+	IdAnak             string     `json:"id_anak"`
+	IdKunjungan        *string    `json:"id_kunjungan"`
+	RefEncounter       *string    `json:"ref_encounter"`
+	IdSatusehat        *string    `json:"id_satusehat"`
+	Jenis              string     `json:"jenis"`
+	System             string     `json:"system"`
+	Kode               string     `json:"kode"`
+	Display            *string    `json:"display"`
+	Kategori           *string    `json:"kategori"`
+	Kritikalitas       *string    `json:"kritikalitas"`
+	ClinicalStatus     *string    `json:"clinical_status"`
+	VerificationStatus *string    `json:"verification_status"`
+	Onset              *string    `json:"onset"`
+	TanggalCatat       *string    `json:"tanggal_catat"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          *time.Time `json:"updated_at"`
+}
+
+type Layanan struct {
+	Id           string     `json:"id"`
+	IdAnak       string     `json:"id_anak"`
+	IdKunjungan  *string    `json:"id_kunjungan"`
+	RefEncounter *string    `json:"ref_encounter"`
+	IdSatusehat  *string    `json:"id_satusehat"`
+	Jenis        string     `json:"jenis"`
+	System       *string    `json:"system"`
+	Kode         *string    `json:"kode"`
+	Display      *string    `json:"display"`
+	Kategori     *string    `json:"kategori"`
+	Status       *string    `json:"status"`
+	Jumlah       *float64   `json:"jumlah"`
+	Satuan       *string    `json:"satuan"`
+	Tanggal      *string    `json:"tanggal"`
+	Catatan      *string    `json:"catatan"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
+type Faskes struct {
+	Id          string     `json:"id"`
+	IdInduk     *string    `json:"id_induk"`
+	SatusehatId *string    `json:"satusehat_id"`
+	Nama        string     `json:"nama"`
+	Jenis       string     `json:"jenis"`
+	Wilayah     *string    `json:"wilayah"`
+	Alamat      *string    `json:"alamat"`
+	NomorTelpon *string    `json:"nomor_telpon"`
+	Email       *string    `json:"email"`
+	Status      *int16     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+type FaskesDetail struct {
+	Id          string     `json:"id"`
+	Induk       *Faskes    `json:"induk"`
+	SatusehatId *string    `json:"satusehat_id"`
+	Nama        string     `json:"nama"`
+	Jenis       string     `json:"jenis"`
+	Wilayah     *string    `json:"wilayah"`
+	Alamat      *string    `json:"alamat"`
+	NomorTelpon *string    `json:"nomor_telpon"`
+	Email       *string    `json:"email"`
+	Status      *int16     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+type Posyandu struct {
+	Id          string     `json:"id"`
+	IdPuskesmas *string    `json:"id_puskesmas"`
+	Nama        string     `json:"nama"`
+	Telepon     *string    `json:"telepon"`
+	Alamat      *string    `json:"alamat"`
+	IdKelurahan *string    `json:"id_kelurahan"`
+	Rt          string     `json:"rt"`
+	Rw          string     `json:"rw"`
+	NamaPic     *string    `json:"nama_pic"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+}
+
+// faskes beserta posyandu di bawahnya, field faskes di-flatten ke root
+type ListPosyandu struct {
+	Faskes
+	Posyandu []Posyandu `json:"posyandu"`
+}
+
+// posyandu beserta puskesmas induknya, puskesmas bisa nil
+type PosyanduDetail struct {
+	Posyandu
+	Puskesmas *FaskesDetail `json:"puskesmas"`
 }
 
 type KunjunganAnak struct {
@@ -135,9 +265,6 @@ type ListAnak struct {
 	Anak []Anak `json:"anak"`
 }
 
-// KesehatanAnak adalah hasil POST /api/kesehatan. Bentuknya mengikuti
-// KunjunganAnak: field orangtua dan anak hanya terisi bila payload memang
-// membawanya, sehingga pemanggil tahu entitas mana yang baru dibuat.
 type KesehatanAnak struct {
 	IdOrangtua *string   `json:"id_orangtua"`
 	IdAnak     *string   `json:"id_anak"`
@@ -151,12 +278,66 @@ type KesehatanAnakArray struct {
 	Kesehatan []Kesehatan `json:"kesehatan"`
 }
 
-// SummaryAnak menggabungkan riwayat kunjungan dan kesehatan satu anak, supaya
-// pemanggil tidak perlu dua request untuk menyusun gambaran utuh.
-type SummaryAnak struct {
+// riwayat satu anak dari posyandu, puskesmas, dan RS
+type PemeriksaanFaskes struct {
 	Anak      Anak        `json:"anak"`
-	Kunjungan []Kunjungan `json:"kunjungan"`
-	Kesehatan []Kesehatan `json:"kesehatan"`
+	Kunjungan Kunjungan   `json:"kunjungan"`
+	Observasi []Observasi `json:"observasi"`
+	Diagnosa  []Diagnosa  `json:"diagnosa"`
+	Layanan   []Layanan   `json:"layanan"`
+	Rujukan   []Rujukan   `json:"rujukan"`
+	Episode   []Episode   `json:"episode"`
+}
+
+type HasilPemeriksaan struct {
+	IdAnak      string  `json:"id_anak"`
+	IdKunjungan *string `json:"id_kunjungan"`
+}
+
+type SummaryAnak struct {
+	Anak      Anak               `json:"anak"`
+	Episode   []Episode          `json:"episode"`
+	Kunjungan []KunjunganRiwayat `json:"kunjungan"`
+	Kesehatan []Kesehatan        `json:"kesehatan"`
+
+	// diulang datar lintas kunjungan supaya jejaknya bisa dibaca sekali lihat
+	Layanan []Layanan        `json:"layanan"`
+	Rujukan []RujukanRiwayat `json:"rujukan"`
+
+	Menggantung Menggantung `json:"menggantung"`
+}
+
+// Tindakan kosong berarti rujukan belum ditindaklanjuti.
+type RujukanRiwayat struct {
+	Rujukan
+	Tindakan []KunjunganRingkas `json:"tindakan"`
+}
+
+type KunjunganRingkas struct {
+	Id                string  `json:"id"`
+	TanggalPengukuran string  `json:"tanggal_pengukuran"`
+	IdFaskes          *string `json:"id_faskes"`
+	Faskes            *Faskes `json:"faskes"`
+}
+
+type KunjunganRiwayat struct {
+	Kunjungan
+	Faskes  *Faskes  `json:"faskes"`
+	Episode *Episode `json:"episode"`
+	// rujukan yang dipenuhi kunjungan ini, beda dari Rujukan yang diterbitkan di sini
+	AtasRujukan *Rujukan    `json:"atas_rujukan"`
+	Observasi   []Observasi `json:"observasi"`
+	Diagnosa    []Diagnosa  `json:"diagnosa"`
+	Layanan     []Layanan   `json:"layanan"`
+	Rujukan     []Rujukan   `json:"rujukan"`
+}
+
+// sudah tiba tapi Encounter-nya belum
+type Menggantung struct {
+	Observasi []Observasi `json:"observasi"`
+	Diagnosa  []Diagnosa  `json:"diagnosa"`
+	Layanan   []Layanan   `json:"layanan"`
+	Rujukan   []Rujukan   `json:"rujukan"`
 }
 
 type OrangtuaPayload struct {
@@ -183,6 +364,7 @@ type OrangtuaPayload struct {
 
 type AnakPayload struct {
 	Id           string     `json:"id"`
+	SatusehatId  *string    `json:"satusehat_id"`
 	IDOrangtua   string     `json:"id_orangtua"`
 	Nama         string     `json:"nama"`
 	NIK          *string    `json:"nik"`
@@ -262,6 +444,7 @@ type KunjunganPayload struct {
 	CreatedAt          *time.Time `json:"created_at"`
 	UpdatedAt          *time.Time `json:"updated_at"`
 	DeletedAt          *time.Time `json:"deleted_at"`
+	Stunting           *int       `json:"stunting"`
 }
 
 type KunjunganNestedPayload struct {
@@ -271,6 +454,36 @@ type KunjunganNestedPayload struct {
 
 	// Kunjungan only without nested
 	KunjunganPayload
+}
+
+type FaskesPayload struct {
+	Id          string     `json:"id"`
+	IdInduk     *string    `json:"id_induk"`
+	SatusehatId *string    `json:"satusehat_id"`
+	Nama        string     `json:"nama"`
+	Jenis       string     `json:"jenis"`
+	Wilayah     *string    `json:"wilayah"`
+	Alamat      *string    `json:"alamat"`
+	NomorTelpon *string    `json:"nomor_telpon"`
+	Email       *string    `json:"email"`
+	Status      *int16     `json:"status"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+type PosyanduPayload struct {
+	Id          string     `json:"id"`
+	IdPuskesmas *string    `json:"id_puskesmas"`
+	Nama        string     `json:"nama"`
+	Telepon     *string    `json:"telepon"`
+	Alamat      *string    `json:"alamat"`
+	IdKelurahan *string    `json:"id_kelurahan"`
+	Rt          string     `json:"rt"`
+	Rw          string     `json:"rw"`
+	NamaPic     *string    `json:"nama_pic"`
+	CreatedAt   *time.Time `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
 }
 
 type KesehatanNestedPayload struct {
@@ -359,6 +572,7 @@ func (p *KunjunganPayload) ToEntity() *entity.Kunjungan {
 		SourceData:         p.SourceData,
 		UpdatedBy:          p.UpdatedBy,
 		DeletedBy:          p.DeletedBy,
+		Stunting:           p.Stunting,
 	}
 
 	// timestamp dari jakantro; kalau tidak dikirim, database yang mengisi
@@ -384,8 +598,15 @@ func (p *AnakPayload) ToEntity() *entity.Anak {
 		nik = p.NIK
 	}
 
+	// jakantro tidak mengirim satusehat_id, kolomnya ditulis null
+	satusehat := ""
+	if p.SatusehatId != nil {
+		satusehat = strings.TrimSpace(*p.SatusehatId)
+	}
+
 	e := &entity.Anak{
 		ID:           p.Id,
+		SatusehatId:  satusehat,
 		IDOrangtua:   p.IDOrangtua,
 		Nama:         p.Nama,
 		NIK:          nik,
@@ -417,9 +638,14 @@ func (p *OrangtuaPayload) ToEntity() *entity.Orangtua {
 		return nil
 	}
 
+	var idPosyandu *string
+	if p.IdPosyandu != "" {
+		idPosyandu = &p.IdPosyandu
+	}
+
 	e := &entity.Orangtua{
 		ID:           p.Id,
-		IDPosyandu:   p.IdPosyandu,
+		IDPosyandu:   idPosyandu,
 		NoKK:         p.NoKk,
 		NamaAyah:     p.NamaAyah,
 		NamaIbu:      p.NamaIbu,
@@ -446,13 +672,83 @@ func (p *OrangtuaPayload) ToEntity() *entity.Orangtua {
 	return e
 }
 
+func (p *Anak) ToPayload() *AnakPayload {
+	if p == nil {
+		return nil
+	}
+
+	var nik *string
+	if p.Nik != nil && strings.TrimSpace(*p.Nik) == "" {
+		nik = nil
+	} else {
+		nik = p.Nik
+	}
+
+	e := &AnakPayload{
+		Id:           p.Id,
+		SatusehatId:  p.IdSatusehat,
+		IDOrangtua:   p.IdOrangtua,
+		Nama:         p.Nama,
+		NIK:          nik,
+		TanggalLahir: p.TanggalLahir,
+		JenisKelamin: p.JenisKelamin,
+		AnakKe:       p.AnakKe,
+		IMD:          p.Imd,
+		BBLahir:      p.BbLahir,
+		TBLahir:      p.TbLahir,
+		LKLahir:      p.LkLahir,
+		SourceData:   p.SourceData,
+		StatusAktif:  p.StatusAktif,
+		UpdatedBy:    p.UpdatedBy,
+		DeletedBy:    p.DeletedBy,
+		CreatedAt:    &p.CreatedAt,
+		UpdatedAt:    p.UpdatedAt,
+		DeletedAt:    p.DeletedAt,
+	}
+
+	return e
+}
+
+// IdSatusehat tidak ikut terbawa, OrangtuaPayload tidak punya field itu
+func (p *Orangtua) ToPayload() *OrangtuaPayload {
+	if p == nil {
+		return nil
+	}
+
+	idPosyandu := ""
+	if p.IdPosyandu != nil {
+		idPosyandu = *p.IdPosyandu
+	}
+
+	return &OrangtuaPayload{
+		Id:           p.Id,
+		IdPosyandu:   idPosyandu,
+		NoKk:         p.NoKk,
+		NamaAyah:     p.NamaAyah,
+		NamaIbu:      p.NamaIbu,
+		Nik:          p.Nik,
+		Telepon:      p.Telepon,
+		Rt:           p.Rt,
+		Rw:           p.Rw,
+		Alamat:       p.Alamat,
+		Kia:          p.Kia,
+		SourceData:   p.SourceData,
+		UsiaHamil:    p.UsiaHamil,
+		KiaBayiKecil: p.KiaBayiKecil,
+		UpdatedBy:    p.UpdatedBy,
+		DeletedBy:    p.DeletedBy,
+		CreatedAt:    &p.CreatedAt,
+		UpdatedAt:    p.UpdatedAt,
+		DeletedAt:    p.DeletedAt,
+	}
+}
+
 func (o *Orangtua) FromEntity(e *entity.Orangtua) *Orangtua {
 	if e == nil {
 		return nil
 	}
 
-	// id satusehat diisi puskesmas di database, jadi null untuk anak yang
-	// didaftarkan jakantro
+	// null untuk anak yang didaftarkan jakantro
 	var idSatusehat *string
 	if e.SatusehatId != "" {
 		idSatusehat = &e.SatusehatId
@@ -557,6 +853,7 @@ func (kj *Kunjungan) FromEntity(e *entity.Kunjungan) *Kunjungan {
 		Id:                 e.ID,
 		IdAnak:             e.IDAnak,
 		TanggalPengukuran:  e.TanggalPengukuran.Format("2006-01-02"),
+		TanggalSelesai:     teksTanggal(e.TanggalSelesai),
 		CaraUkur:           e.CaraUkur,
 		BeratBadan:         e.BeratBadan,
 		TinggiBadan:        e.TinggiBadan,
@@ -592,6 +889,13 @@ func (kj *Kunjungan) FromEntity(e *entity.Kunjungan) *Kunjungan {
 		SourceData:         e.SourceData,
 		UpdatedBy:          e.UpdatedBy,
 		DeletedBy:          e.DeletedBy,
+		IdFaskes:           e.IDFaskes,
+		IdSatusehat:        e.SatusehatId,
+		IdEpisode:          e.IDEpisode,
+		RefEpisode:         e.RefEpisode,
+		IdRujukan:          e.IDRujukan,
+		RefRujukan:         e.RefRujukan,
+		Stunting:           e.Stunting,
 	}
 }
 
@@ -632,6 +936,159 @@ func (k *KunjunganAnakArray) FromEntity(e *entity.Anak) *KunjunganAnakArray {
 	}
 }
 
+func (p *FaskesPayload) ToEntity() *entity.Faskes {
+	if p == nil {
+		return nil
+	}
+
+	e := &entity.Faskes{
+		ID:          p.Id,
+		IDInduk:     p.IdInduk,
+		SatusehatID: p.SatusehatId,
+		Nama:        p.Nama,
+		Jenis:       p.Jenis,
+		Wilayah:     p.Wilayah,
+		Alamat:      p.Alamat,
+		NomorTelpon: p.NomorTelpon,
+		Email:       p.Email,
+		Status:      p.Status,
+		UpdatedAt:   p.UpdatedAt,
+	}
+
+	// Kalau tidak dikirim, database yang mengisi lewat default.
+	if p.CreatedAt != nil {
+		e.CreatedAt = *p.CreatedAt
+	}
+
+	return e
+}
+
+func (f *Faskes) FromEntity(e *entity.Faskes) *Faskes {
+	if e == nil {
+		return nil
+	}
+
+	return &Faskes{
+		Id:          e.ID,
+		IdInduk:     e.IDInduk,
+		SatusehatId: e.SatusehatID,
+		Nama:        e.Nama,
+		Jenis:       e.Jenis,
+		Wilayah:     e.Wilayah,
+		Alamat:      e.Alamat,
+		NomorTelpon: e.NomorTelpon,
+		Email:       e.Email,
+		Status:      e.Status,
+		CreatedAt:   e.CreatedAt,
+		UpdatedAt:   e.UpdatedAt,
+	}
+}
+
+func (f *FaskesDetail) FromEntity(e *entity.Faskes) *FaskesDetail {
+	if e == nil {
+		return nil
+	}
+	var induk *Faskes
+	return &FaskesDetail{
+		Id:          e.ID,
+		Induk:       induk.FromEntity(e.Induk),
+		SatusehatId: e.SatusehatID,
+		Nama:        e.Nama,
+		Jenis:       e.Jenis,
+		Wilayah:     e.Wilayah,
+		Alamat:      e.Alamat,
+		NomorTelpon: e.NomorTelpon,
+		Email:       e.Email,
+		Status:      e.Status,
+		CreatedAt:   e.CreatedAt,
+		UpdatedAt:   e.UpdatedAt,
+	}
+}
+
+func (p *PosyanduPayload) ToEntity() *entity.Posyandu {
+	if p == nil {
+		return nil
+	}
+
+	e := &entity.Posyandu{
+		ID:          p.Id,
+		IDPuskesmas: p.IdPuskesmas,
+		Nama:        p.Nama,
+		Telepon:     p.Telepon,
+		Alamat:      p.Alamat,
+		IDKelurahan: p.IdKelurahan,
+		RT:          p.Rt,
+		RW:          p.Rw,
+		NamaPic:     p.NamaPic,
+		UpdatedAt:   p.UpdatedAt,
+		DeletedAt:   p.DeletedAt,
+	}
+
+	if p.CreatedAt != nil {
+		e.CreatedAt = *p.CreatedAt
+	}
+
+	return e
+}
+
+func (p *Posyandu) FromEntity(e *entity.Posyandu) *Posyandu {
+	if e == nil {
+		return nil
+	}
+
+	return &Posyandu{
+		Id:          e.ID,
+		IdPuskesmas: e.IDPuskesmas,
+		Nama:        e.Nama,
+		Telepon:     e.Telepon,
+		Alamat:      e.Alamat,
+		IdKelurahan: e.IDKelurahan,
+		Rt:          e.RT,
+		Rw:          e.RW,
+		NamaPic:     e.NamaPic,
+		CreatedAt:   e.CreatedAt,
+		UpdatedAt:   e.UpdatedAt,
+		DeletedAt:   e.DeletedAt,
+	}
+}
+
+func (l *ListPosyandu) FromEntity(e *entity.Faskes) *ListPosyandu {
+	if e == nil {
+		return nil
+	}
+
+	var f *Faskes
+	return &ListPosyandu{
+		Faskes:   *f.FromEntity(e),
+		Posyandu: daftarPosyandu(e.Posyandu),
+	}
+}
+
+func (d *PosyanduDetail) FromEntity(e *entity.Posyandu) *PosyanduDetail {
+	if e == nil {
+		return nil
+	}
+
+	var p *Posyandu
+	var f *FaskesDetail
+	return &PosyanduDetail{
+		Posyandu:  *p.FromEntity(e),
+		Puskesmas: f.FromEntity(e.Puskesmas),
+	}
+}
+
+// selalu tidak-nil supaya JSON-nya [] bukan null
+func daftarPosyandu(list []*entity.Posyandu) []Posyandu {
+	out := make([]Posyandu, 0, len(list))
+	for _, e := range list {
+		var tmp *Posyandu
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
 func (k *KesehatanAnakArray) FromEntity(e *entity.Anak) *KesehatanAnakArray {
 	if e == nil {
 		return nil
@@ -654,15 +1111,169 @@ func (s *SummaryAnak) FromEntity(e *entity.Anak) *SummaryAnak {
 	var a *Anak
 	anak := a.FromEntity(e)
 
-	return &SummaryAnak{
-		Anak:      *anak,
-		Kunjungan: daftarKunjungan(e.Kunjungan),
-		Kesehatan: daftarKesehatan(e.Kesehatan),
+	// disaring di sini, jadi tidak perlu query kedua
+	semuaLayanan := daftarLayanan(e.Layanan)
+	semuaRujukan := daftarRujukan(e.Rujukan)
+
+	// tindak lanjut dikumpulkan dari kunjungan yang sudah dimuat, tanpa query lagi
+	tindakan := map[string][]KunjunganRingkas{}
+	for _, k := range e.Kunjungan {
+		if k == nil || k.IDRujukan == nil {
+			continue
+		}
+		var f *Faskes
+		tindakan[*k.IDRujukan] = append(tindakan[*k.IDRujukan], KunjunganRingkas{
+			Id:                k.ID,
+			TanggalPengukuran: k.TanggalPengukuran.Format("2006-01-02"),
+			IdFaskes:          k.IDFaskes,
+			Faskes:            f.FromEntity(k.Faskes),
+		})
 	}
+
+	riwayatRujukan := make([]RujukanRiwayat, 0, len(semuaRujukan))
+	for _, r := range semuaRujukan {
+		riwayatRujukan = append(riwayatRujukan, RujukanRiwayat{
+			Rujukan:  r,
+			Tindakan: append([]KunjunganRingkas{}, tindakan[r.Id]...),
+		})
+	}
+
+	res := &SummaryAnak{
+		Anak:      *anak,
+		Episode:   daftarEpisode(e.Episode),
+		Kunjungan: make([]KunjunganRiwayat, 0, len(e.Kunjungan)),
+		Kesehatan: daftarKesehatan(e.Kesehatan),
+		Layanan:   semuaLayanan,
+		Rujukan:   riwayatRujukan,
+		Menggantung: Menggantung{
+			Observasi: belumBerkunjungObservasi(daftarObservasi(e.Observasi)),
+			Diagnosa:  belumBerkunjungDiagnosa(daftarDiagnosa(e.Diagnosa)),
+			Layanan:   belumBerkunjungLayanan(semuaLayanan),
+			Rujukan:   belumBerkunjungRujukan(semuaRujukan),
+		},
+	}
+
+	for _, k := range e.Kunjungan {
+		var tmp *Kunjungan
+		dasar := tmp.FromEntity(k)
+		if dasar == nil {
+			continue
+		}
+
+		var f *Faskes
+		var ep *Episode
+		var rj *Rujukan
+		res.Kunjungan = append(res.Kunjungan, KunjunganRiwayat{
+			Kunjungan:   *dasar,
+			Faskes:      f.FromEntity(k.Faskes),
+			Episode:     ep.FromEntity(k.Episode),
+			AtasRujukan: rj.FromEntity(k.AtasRujukan),
+			Observasi:   daftarObservasi(k.Observasi),
+			Diagnosa:    daftarDiagnosa(k.Diagnosa),
+			Layanan:     daftarLayanan(k.Layanan),
+			Rujukan:     daftarRujukan(k.Rujukan),
+		})
+	}
+
+	return res
 }
 
-// daftarKunjungan dan daftarKesehatan selalu mengembalikan slice tidak-nil,
-// supaya JSON-nya berupa [] dan bukan null saat anak belum punya riwayat.
+func belumBerkunjungObservasi(list []Observasi) []Observasi {
+	out := make([]Observasi, 0)
+	for _, v := range list {
+		if v.IdKunjungan == nil {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func belumBerkunjungDiagnosa(list []Diagnosa) []Diagnosa {
+	out := make([]Diagnosa, 0)
+	for _, v := range list {
+		if v.IdKunjungan == nil {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func belumBerkunjungLayanan(list []Layanan) []Layanan {
+	out := make([]Layanan, 0)
+	for _, v := range list {
+		if v.IdKunjungan == nil {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func belumBerkunjungRujukan(list []Rujukan) []Rujukan {
+	out := make([]Rujukan, 0)
+	for _, v := range list {
+		if v.IdKunjungan == nil {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func daftarObservasi(list []*entity.Observasi) []Observasi {
+	out := make([]Observasi, 0, len(list))
+	for _, e := range list {
+		var tmp *Observasi
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+func daftarDiagnosa(list []*entity.Diagnosa) []Diagnosa {
+	out := make([]Diagnosa, 0, len(list))
+	for _, e := range list {
+		var tmp *Diagnosa
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+func daftarLayanan(list []*entity.Layanan) []Layanan {
+	out := make([]Layanan, 0, len(list))
+	for _, e := range list {
+		var tmp *Layanan
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+func daftarRujukan(list []*entity.Rujukan) []Rujukan {
+	out := make([]Rujukan, 0, len(list))
+	for _, e := range list {
+		var tmp *Rujukan
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+func daftarEpisode(list []*entity.Episode) []Episode {
+	out := make([]Episode, 0, len(list))
+	for _, e := range list {
+		var tmp *Episode
+		if t := tmp.FromEntity(e); t != nil {
+			out = append(out, *t)
+		}
+	}
+	return out
+}
+
+// selalu tidak-nil supaya JSON-nya [] bukan null
 func daftarKunjungan(list []*entity.Kunjungan) []Kunjungan {
 	out := make([]Kunjungan, 0, len(list))
 	for _, e := range list {
@@ -683,4 +1294,332 @@ func daftarKesehatan(list []*entity.Kesehatan) []Kesehatan {
 		}
 	}
 	return out
+}
+
+// kebalikan waktuDariString, supaya bentuk JSON-nya sama dengan yang masuk
+func teksWaktu(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format(time.RFC3339)
+	return &s
+}
+
+func teksTanggal(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format("2006-01-02")
+	return &s
+}
+
+func (ob *Observasi) FromEntity(e *entity.Observasi) *Observasi {
+	if e == nil {
+		return nil
+	}
+
+	o := &Observasi{
+		Id:           e.ID,
+		IdAnak:       e.IDAnak,
+		IdKunjungan:  e.IDKunjungan,
+		IdInduk:      e.IDInduk,
+		RefEncounter: e.RefEncounter,
+		IdSatusehat:  e.SatusehatId,
+		System:       e.System,
+		Kode:         e.Kode,
+		Display:      e.Display,
+		Kategori:     e.Kategori,
+		NilaiAngka:   e.NilaiAngka,
+		Satuan:       e.Satuan,
+		NilaiTeks:    e.NilaiTeks,
+		NilaiKode:    e.NilaiKode,
+		NilaiSystem:  e.NilaiKodeSystem,
+		NilaiDisplay: e.NilaiDisplay,
+		Interpretasi: e.Interpretasi,
+		Tanggal:      teksWaktu(e.Tanggal),
+		CreatedAt:    e.CreatedAt,
+		UpdatedAt:    e.UpdatedAt,
+	}
+
+	for _, c := range e.Component {
+		var tmp *Observasi
+		if t := tmp.FromEntity(c); t != nil {
+			o.Component = append(o.Component, *t)
+		}
+	}
+
+	return o
+}
+
+func (d *Diagnosa) FromEntity(e *entity.Diagnosa) *Diagnosa {
+	if e == nil {
+		return nil
+	}
+	return &Diagnosa{
+		Id:                 e.ID,
+		IdAnak:             e.IDAnak,
+		IdKunjungan:        e.IDKunjungan,
+		RefEncounter:       e.RefEncounter,
+		IdSatusehat:        e.SatusehatId,
+		Jenis:              e.Jenis,
+		System:             e.System,
+		Kode:               e.Kode,
+		Display:            e.Display,
+		Kategori:           e.Kategori,
+		Kritikalitas:       e.Kritikalitas,
+		ClinicalStatus:     e.ClinicalStatus,
+		VerificationStatus: e.VerificationStatus,
+		Onset:              teksTanggal(e.Onset),
+		TanggalCatat:       teksTanggal(e.TanggalCatat),
+		CreatedAt:          e.CreatedAt,
+		UpdatedAt:          e.UpdatedAt,
+	}
+}
+
+func (l *Layanan) FromEntity(e *entity.Layanan) *Layanan {
+	if e == nil {
+		return nil
+	}
+	return &Layanan{
+		Id:           e.ID,
+		IdAnak:       e.IDAnak,
+		IdKunjungan:  e.IDKunjungan,
+		RefEncounter: e.RefEncounter,
+		IdSatusehat:  e.SatusehatId,
+		Jenis:        e.Jenis,
+		System:       e.System,
+		Kode:         e.Kode,
+		Display:      e.Display,
+		Kategori:     e.Kategori,
+		Status:       e.Status,
+		Jumlah:       e.Jumlah,
+		Satuan:       e.Satuan,
+		Tanggal:      teksWaktu(e.Tanggal),
+		Catatan:      e.Catatan,
+		CreatedAt:    e.CreatedAt,
+		UpdatedAt:    e.UpdatedAt,
+	}
+}
+
+func (r *Rujukan) FromEntity(e *entity.Rujukan) *Rujukan {
+	if e == nil {
+		return nil
+	}
+	return &Rujukan{
+		Id:              e.ID,
+		IdAnak:          e.IDAnak,
+		IdKunjungan:     e.IDKunjungan,
+		RefEncounter:    e.RefEncounter,
+		IdSatusehat:     e.SatusehatId,
+		Jenis:           e.Jenis,
+		IdFaskesAsal:    e.IDFaskesAsal,
+		IdFaskesTujuan:  e.IDFaskesTujuan,
+		RefFaskesAsal:   e.RefFaskesAsal,
+		RefFaskesTujuan: e.RefFaskesTujuan,
+		System:          e.System,
+		Kode:            e.Kode,
+		Display:         e.Display,
+		Status:          e.Status,
+		Prioritas:       e.Prioritas,
+		Alasan:          e.Alasan,
+		Tanggal:         teksWaktu(e.Tanggal),
+		CreatedAt:       e.CreatedAt,
+		UpdatedAt:       e.UpdatedAt,
+	}
+}
+
+func (ep *Episode) FromEntity(e *entity.Episode) *Episode {
+	if e == nil {
+		return nil
+	}
+	return &Episode{
+		Id:          e.ID,
+		IdAnak:      e.IDAnak,
+		IdFaskes:    e.IDFaskes,
+		IdSatusehat: e.SatusehatId,
+		System:      e.System,
+		Kode:        e.Kode,
+		Display:     e.Display,
+		Status:      e.Status,
+		Mulai:       teksTanggal(e.Mulai),
+		Selesai:     teksTanggal(e.Selesai),
+		CreatedAt:   e.CreatedAt,
+		UpdatedAt:   e.UpdatedAt,
+	}
+}
+
+func (p *Observasi) ToEntity() *entity.Observasi {
+	if p == nil {
+		return nil
+	}
+
+	return &entity.Observasi{
+		ID:              p.Id,
+		IDAnak:          p.IdAnak,
+		IDKunjungan:     p.IdKunjungan,
+		IDInduk:         p.IdInduk,
+		RefEncounter:    p.RefEncounter,
+		SatusehatId:     p.IdSatusehat,
+		System:          p.System,
+		Kode:            p.Kode,
+		Display:         p.Display,
+		Kategori:        p.Kategori,
+		NilaiAngka:      p.NilaiAngka,
+		Satuan:          p.Satuan,
+		NilaiTeks:       p.NilaiTeks,
+		NilaiKode:       p.NilaiKode,
+		NilaiKodeSystem: p.NilaiSystem,
+		NilaiDisplay:    p.NilaiDisplay,
+		Interpretasi:    p.Interpretasi,
+		Tanggal:         waktuDariString(p.Tanggal),
+	}
+}
+
+func (p *Diagnosa) ToEntity() *entity.Diagnosa {
+	if p == nil {
+		return nil
+	}
+
+	jenis := p.Jenis
+	if jenis == "" {
+		jenis = entity.DiagnosaDiagnosis
+	}
+
+	return &entity.Diagnosa{
+		ID:                 p.Id,
+		IDAnak:             p.IdAnak,
+		IDKunjungan:        p.IdKunjungan,
+		RefEncounter:       p.RefEncounter,
+		SatusehatId:        p.IdSatusehat,
+		Jenis:              jenis,
+		System:             p.System,
+		Kode:               p.Kode,
+		Display:            p.Display,
+		Kategori:           p.Kategori,
+		Kritikalitas:       p.Kritikalitas,
+		ClinicalStatus:     p.ClinicalStatus,
+		VerificationStatus: p.VerificationStatus,
+		Onset:              waktuDariString(p.Onset),
+		TanggalCatat:       waktuDariString(p.TanggalCatat),
+	}
+}
+
+func (p *Layanan) ToEntity() *entity.Layanan {
+	if p == nil {
+		return nil
+	}
+
+	return &entity.Layanan{
+		ID:           p.Id,
+		IDAnak:       p.IdAnak,
+		IDKunjungan:  p.IdKunjungan,
+		RefEncounter: p.RefEncounter,
+		SatusehatId:  p.IdSatusehat,
+		Jenis:        p.Jenis,
+		System:       p.System,
+		Kode:         p.Kode,
+		Display:      p.Display,
+		Kategori:     p.Kategori,
+		Status:       p.Status,
+		Jumlah:       p.Jumlah,
+		Satuan:       p.Satuan,
+		Tanggal:      waktuDariString(p.Tanggal),
+		Catatan:      p.Catatan,
+	}
+}
+
+// waktuDariString menerima dateTime FHIR maupun tanggal saja.
+func waktuDariString(s *string) *time.Time {
+	if s == nil || *s == "" {
+		return nil
+	}
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, *s); err == nil {
+			return &t
+		}
+	}
+	return nil
+}
+
+type Rujukan struct {
+	Id              string     `json:"id"`
+	IdAnak          string     `json:"id_anak"`
+	IdKunjungan     *string    `json:"id_kunjungan"`
+	RefEncounter    *string    `json:"ref_encounter"`
+	IdSatusehat     *string    `json:"id_satusehat"`
+	Jenis           string     `json:"jenis"`
+	IdFaskesAsal    *string    `json:"id_faskes_asal"`
+	IdFaskesTujuan  *string    `json:"id_faskes_tujuan"`
+	RefFaskesAsal   *string    `json:"ref_faskes_asal"`
+	RefFaskesTujuan *string    `json:"ref_faskes_tujuan"`
+	System          *string    `json:"system"`
+	Kode            *string    `json:"kode"`
+	Display         *string    `json:"display"`
+	Status          *string    `json:"status"`
+	Prioritas       *string    `json:"prioritas"`
+	Alasan          *string    `json:"alasan"`
+	Tanggal         *string    `json:"tanggal"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at"`
+}
+
+func (p *Rujukan) ToEntity() *entity.Rujukan {
+	if p == nil {
+		return nil
+	}
+
+	return &entity.Rujukan{
+		ID:              p.Id,
+		IDAnak:          p.IdAnak,
+		IDKunjungan:     p.IdKunjungan,
+		RefEncounter:    p.RefEncounter,
+		SatusehatId:     p.IdSatusehat,
+		Jenis:           p.Jenis,
+		IDFaskesAsal:    p.IdFaskesAsal,
+		IDFaskesTujuan:  p.IdFaskesTujuan,
+		RefFaskesAsal:   p.RefFaskesAsal,
+		RefFaskesTujuan: p.RefFaskesTujuan,
+		System:          p.System,
+		Kode:            p.Kode,
+		Display:         p.Display,
+		Status:          p.Status,
+		Prioritas:       p.Prioritas,
+		Alasan:          p.Alasan,
+		Tanggal:         waktuDariString(p.Tanggal),
+	}
+}
+
+type Episode struct {
+	Id          string     `json:"id"`
+	IdAnak      string     `json:"id_anak"`
+	IdFaskes    *string    `json:"id_faskes"`
+	RefFaskes   *string    `json:"ref_faskes"`
+	IdSatusehat *string    `json:"id_satusehat"`
+	System      *string    `json:"system"`
+	Kode        *string    `json:"kode"`
+	Display     *string    `json:"display"`
+	Status      *string    `json:"status"`
+	Mulai       *string    `json:"mulai"`
+	Selesai     *string    `json:"selesai"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+func (p *Episode) ToEntity() *entity.Episode {
+	if p == nil {
+		return nil
+	}
+
+	return &entity.Episode{
+		ID:          p.Id,
+		IDAnak:      p.IdAnak,
+		IDFaskes:    p.IdFaskes,
+		SatusehatId: p.IdSatusehat,
+		System:      p.System,
+		Kode:        p.Kode,
+		Display:     p.Display,
+		Status:      p.Status,
+		Mulai:       waktuDariString(p.Mulai),
+		Selesai:     waktuDariString(p.Selesai),
+	}
 }
