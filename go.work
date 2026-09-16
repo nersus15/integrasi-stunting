@@ -1,9 +1,11 @@
-go 1.25.0
+go 1.26.5
 
 use (
 	./app
 	./libraries/authstoredb
+	./libraries/fhir
 	./libraries/jwt
+	./libraries/lib-sql
 	./libraries/memory
 	./libraries/webcore
 	./modules/stunting
