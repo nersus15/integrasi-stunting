@@ -7,10 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
 	"github.com/nersus15/integrasi/mod-stunting/handler"
+	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/repository"
 	"github.com/nersus15/integrasi/mod-stunting/service"
 	backgroundworker "github.com/nersus15/lib-background-worker"
 	cron "github.com/nersus15/lib-go-cron"
+	kafka "github.com/webcore-go/lib-kafka"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/helper"
 	appConfig "github.com/webcore-go/webcore/infra/config"
@@ -33,6 +35,7 @@ type Module struct {
 	memory     port.ICacheMemory
 	cron       *cron.CronLibrary
 	background *backgroundworker.BackgroundWorker
+	kafka      *handler.KafkaHandler
 }
 
 // NewModule creates a new Module instance
@@ -69,6 +72,8 @@ func (m *Module) Init(ctx *core.AppContext) error {
 		return fmt.Errorf("Gagal memuat instance Memory")
 	}
 
+	utils.SetDumpAktif(ctx.Config.App.Logging.Level)
+
 	m.memory = libMem.(port.ICacheMemory)
 	lib, ok := core.Instance().Context.GetDefaultSingletonInstance("database")
 
@@ -100,7 +105,27 @@ func (m *Module) Init(ctx *core.AppContext) error {
 	logger.Info("Background Stats: " + helper.ToLogJSON(m.background.Stats()))
 
 	m.service = service.NewStuntingService(ctx, m.config, m.repository, m.background)
-	m.handler = handler.NewHandler(ctx, m.config, m.service, m.background)
+
+	streamService := service.NewStreamService(ctx, m.service, m.config, m.repository, m.background)
+	m.handler = handler.NewHttpHandler(ctx, m.config, m.service, streamService, m.background, m.memory)
+
+	if ctx.Config.Kafka.Enabled {
+		m.kafka = handler.NewKafkaHandler(ctx, m.service, streamService, m.config, m.background, &m.memory)
+		kafkaLoader, err := core.Instance().Context.GetDefaultLibraryLoader("kafka:consumer")
+
+		if err != nil {
+			return err
+		}
+
+		libkakfka, err := core.Instance().Context.LoadSingletonInstance(kafkaLoader, ctx.Config.Kafka, m.kafka)
+		if err != nil {
+			return err
+		}
+
+		kafkaConsumer := libkakfka.(*kafka.KafkaConsumer)
+
+		go kafkaConsumer.Run(ctx.Context)
+	}
 
 	// Register routes
 	m.registerModuleRoute(ctx.Root)
@@ -223,6 +248,12 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.CreateAnak,
 		Root:    root,
 	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "PUT",
+		Path:    "/anak",
+		Handler: m.handler.UpdateAnak,
+		Root:    root,
+	})
 
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "POST",
@@ -235,6 +266,13 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Method:  "POST",
 		Path:    "/kesehatan",
 		Handler: m.handler.CreateKesehatan,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/faskes/pemeriksaan",
+		Handler: m.handler.SimpanPemeriksaanFaskes,
 		Root:    root,
 	})
 }
