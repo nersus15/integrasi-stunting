@@ -1,12 +1,13 @@
 module github.com/nersus15/integrasi/mod-stunting
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.15
 	github.com/nersus15/lib-background-worker v0.0.0-20260819073430-1d51ec2d840f
 	github.com/nersus15/lib-go-cron v0.1.0
 	github.com/pressly/goose/v3 v3.27.3
+	github.com/samply/golang-fhir-models/fhir-models v0.3.2
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/driver/pgdriver v1.2.18
 	github.com/webcore-go/webcore v0.0.39
