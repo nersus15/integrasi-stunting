@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
@@ -15,20 +17,55 @@ import (
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/out"
 	"github.com/webcore-go/webcore/infra/logger"
+	"github.com/webcore-go/webcore/port"
+	"github.com/webcore-go/webcore/port/auth"
 )
 
 type HttpHandler struct {
 	service    *service.StuntingService
+	stream     *service.StreamService
 	config     *config.ModuleConfig
 	background *backgroundworker.BackgroundWorker
+	memory     port.ICacheMemory
 }
 
-func NewHandler(wctx *core.AppContext, cfg *config.ModuleConfig, service *service.StuntingService, backgroundWorker *backgroundworker.BackgroundWorker) *HttpHandler {
+func NewHttpHandler(wctx *core.AppContext, cfg *config.ModuleConfig, service *service.StuntingService, stream *service.StreamService, backgroundWorker *backgroundworker.BackgroundWorker, memory port.ICacheMemory) *HttpHandler {
 	return &HttpHandler{
 		service:    service,
+		stream:     stream,
 		config:     cfg,
 		background: backgroundWorker,
+		memory:     memory,
 	}
+}
+
+// faskes diambil dari API key, id_faskes di body diabaikan
+func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
+	orgid, err := h.GetOrgid(c)
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+	if orgid == nil || *orgid == "jakantro" {
+		return h.kirimError(c, exceptions.Forbidden.WithMessage(
+			"endpoint ini hanya untuk faskes, bukan jakantro", nil))
+	}
+
+	p := new(types.PemeriksaanFaskes)
+	if err := c.BodyParser(p); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+
+	if err := utils.ValidatePemeriksaanFaskes(p); err != nil {
+		return h.kirimError(c, exceptions.BentukPayload.WithMessage(err.Error(), err))
+	}
+
+	res, err := h.stream.SimpanPemeriksaanFaskes(p, *orgid)
+	if err != nil {
+		logger.Error("SimpanPemeriksaanFaskes: " + err.Error())
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(res)
 }
 
 func (h *HttpHandler) kirimError(c *fiber.Ctx, err error) error {
@@ -62,6 +99,37 @@ func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(res)
 }
 
+func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
+	var orangtua types.OrangtuaPayload
+
+	if err := c.BodyParser(&orangtua); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+
+	if err := utils.ValidateOrangtua(orangtua); err != nil {
+		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
+	}
+
+	orgid, err := h.GetOrgid(c)
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	err = h.service.VerifyAccess(&orangtua.IdPosyandu, orgid)
+
+	if err != nil {
+		logger.ErrorJson("VerifyAccess", err)
+		return h.kirimError(c, err)
+	}
+
+	res, err := h.service.CreateOrangTua(orangtua.ToEntity())
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(res)
+}
+
 func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 	id := c.Params("id", "")
 	nik := c.Query("nik", "")
@@ -81,6 +149,18 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
+	orgid, err := h.GetOrgid(c)
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	err = h.service.VerifyAccess(orangtua.IdPosyandu, orgid)
+
+	if err != nil {
+		logger.ErrorJson("VerifyAccess", err)
+		return h.kirimError(c, err)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(orangtua)
 }
 
@@ -96,6 +176,37 @@ func (h *HttpHandler) CreateAnak(c *fiber.Ctx) error {
 	}
 
 	res, err := h.service.CreateAnak(anak.ToEntity())
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(res)
+}
+func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
+	var anak types.AnakPayload
+
+	if err := c.BodyParser(&anak); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+
+	if err := utils.ValidateAnak(anak); err != nil {
+		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
+	}
+
+	orgid, err := h.GetOrgid(c)
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	err = h.service.VerifyAccessByIdOrangtua(anak.IDOrangtua, orgid)
+
+	if err != nil {
+		logger.ErrorJson("VerifyAccess", err)
+		return h.kirimError(c, err)
+	}
+
+	res, err := h.service.UpdateAnakById(anak.ToEntity(), orgid)
+
 	if err != nil {
 		return h.kirimError(c, err)
 	}
@@ -132,15 +243,29 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 
 	anak, err := h.service.FindAnak(&id, nil, nil, nil)
 
-	if errors.Is(err, utils.ErrTidakDitemukan) {
-		return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Anak tidak ditemukan", err))
+	if err != nil {
+		if errors.Is(err, utils.ErrTidakDitemukan) {
+			return h.kirimError(c, exceptions.TidakDitemukan.WithMessage("Data Anak tidak ditemukan", err))
+		}
+		return h.kirimError(c, err)
 	}
+
+	orgid, err := h.GetOrgid(c)
 	if err != nil {
 		return h.kirimError(c, err)
 	}
+
+	err = h.service.VerifyAccessByIdOrangtua(anak.IdOrangtua, orgid)
+
+	if err != nil {
+		logger.ErrorJson("VerifyAccess", err)
+		return h.kirimError(c, err)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(anak)
 
 }
+
 func (h *HttpHandler) CreateKunjungan(c *fiber.Ctx) error {
 	res, err := h.service.CreateKunjungan(c.Body())
 	if err != nil {
@@ -258,4 +383,51 @@ func (h *HttpHandler) SummaryAnak(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *HttpHandler) GetOrgid(c *fiber.Ctx) (*string, error) {
+	// Cek permission
+	var orgid string
+	memorgid := new("")
+	apikey := auth.GetAPIKey(c)
+	memkey := "USERORGID::" + apikey
+
+	if ok := h.memory.Get(memkey, memorgid); !ok {
+		groups := auth.GetUserGroups(c)
+		if groups == nil {
+			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
+		}
+		ada := false
+
+		for _, g := range groups {
+			if g == "jakantro" {
+				ada = true
+				orgid = g
+				break
+			} else if strings.Contains(g, "orgid:") {
+				ada = true
+				orgid = strings.Replace(g, "orgid:", "", 1)
+				break
+			}
+		}
+
+		if !ada {
+			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user", nil)
+		}
+
+		err := h.memory.Set(memkey, orgid, 24*time.Minute)
+
+		if err != nil {
+			logger.Error("CacheOrgid", err)
+		}
+	} else {
+		logger.Info("Orgid dari cache: " + *memorgid)
+		orgid = *memorgid
+	}
+
+	if !utils.IsStrFilled(orgid) {
+		return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
+	}
+
+	return &orgid, nil
 }
