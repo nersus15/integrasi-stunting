@@ -1,6 +1,6 @@
 module github.com/nersus15/integrasi
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/nersus15/lib-authstoredb v0.0.1
@@ -9,7 +9,7 @@ require (
 	github.com/nersus15/lib-sqlchiper v0.1.1
 	github.com/webcore-go/lib-memory v0.1.3
 	github.com/webcore-go/lib-postgres v0.1.14
-	github.com/webcore-go/lib-sql v0.1.16
+	github.com/webcore-go/lib-sql v0.1.22
 	github.com/webcore-go/webcore v0.0.39
 )
 
@@ -17,6 +17,7 @@ require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/confluentinc/confluent-kafka-go/v2 v2.13.3 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
@@ -54,6 +55,7 @@ require (
 	github.com/valyala/fasthttp v1.73.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	github.com/webcore-go/lib-kafka v0.1.8 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
