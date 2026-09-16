@@ -64,6 +64,8 @@ var (
 	ReferensiHilang   = Kind{400, 1005, "REFERENCE_NOT_FOUND", "Referensi tidak ditemukan"}
 	Constraint        = Kind{400, 1006, "CONSTRAINT_VIOLATION", "Data tidak memenuhi aturan database"}
 	ParameterRequired = Kind{400, 1007, "PARAM_REQUIRED", "Parameter harus dikirim"}
+	Forbidden         = Kind{403, 1008, "FORBIDDEN", "User tidak memiliki akses"}
+	Unauthorized      = Kind{401, 1009, "UNAUTHORIZED", "Authorization required"}
 )
 
 // 2xxx — tidak ditemukan
@@ -81,6 +83,11 @@ var (
 
 	AnakMilikOrangtuaLain = Kind{409, 3006, "ANAK_TERDAFTAR_DI_ORANGTUA_LAIN",
 		"nik anak sudah terdaftar pada orangtua yang berbeda"}
+)
+
+// 6xxx — payload sah tapi sengaja tidak disimpan
+var (
+	TidakDisimpan = Kind{422, 6001, "TIDAK_DISIMPAN", "Data tidak memenuhi kriteria pemantauan stunting"}
 )
 
 // 5xxx — masalah di sisi layanan
@@ -105,9 +112,7 @@ func Classify(err error) *Error {
 		return TidakTersedia.New(err)
 	}
 
-	// sql.ErrNoRows ikut ditangani di sini sebagai jaring pengaman: repository
-	// yang lupa menerjemahkannya ke ErrTidakDitemukan tetap menghasilkan 404,
-	// bukan 500.
+	// jaring pengaman supaya ErrNoRows tetap 404, bukan 500
 	if errors.Is(err, utils.ErrTidakDitemukan) || errors.Is(err, databasesql.ErrNoRows) {
 		return TidakDitemukan.New(err)
 	}
