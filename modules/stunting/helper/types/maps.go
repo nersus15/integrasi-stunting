@@ -21,10 +21,6 @@ var (
 	}
 )
 
-func stringPtr(s string) *string {
-	return &s
-}
-
 func (m Mapper) ToLabel(key any) *string {
 	if val, ok := m.Map[key]; ok && val != nil {
 		str := fmt.Sprint(val)
