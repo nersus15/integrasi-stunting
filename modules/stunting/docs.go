@@ -36,6 +36,26 @@ var daftarDokumen = map[string]dokumen{
 		judul:  "Dokumentasi API",
 		ket:    "Autentikasi, daftar endpoint, dan bentuk payload yang diterima layanan.",
 	},
+	"jakantro": {
+		berkas: "docs/jakantro.md",
+		judul:  "Jalur Jakantro",
+		ket:    "Endpoint kirim untuk posyandu: kunjungan, kesehatan, orangtua, dan anak.",
+	},
+	"faskes": {
+		berkas: "docs/faskes.md",
+		judul:  "Jalur Faskes",
+		ket:    "Endpoint kirim untuk puskesmas dan RS, alternatif dari jalur SatuSehat.",
+	},
+	"baca": {
+		berkas: "docs/baca.md",
+		judul:  "Pembacaan",
+		ket:    "Endpoint GET, termasuk riwayat lengkap anak lintas posyandu, puskesmas, dan RS.",
+	},
+	"contoh": {
+		berkas: "docs/contoh.md",
+		judul:  "Contoh Payload",
+		ket:    "Payload lengkap siap salin untuk setiap endpoint POST.",
+	},
 	"errors": {
 		berkas: "docs/errors.md",
 		judul:  "Katalog Error",
@@ -68,6 +88,15 @@ func (m *Module) Docs(c *fiber.Ctx) error {
 	// <style> inline: webcore memasang Content-Security-Policy "default-src
 	// 'self'" yang menolak style inline, tetapi mengizinkan stylesheet
 	// same-origin. Kerangka menautnya dengan href relatif "?doc=gaya".
+	if nama == "cari" {
+		js, err := berkasDocs.ReadFile("docs/cari.js")
+		if err != nil {
+			return m.docsGagal(c, "membaca cari.js", err)
+		}
+		c.Set(fiber.HeaderContentType, "application/javascript; charset=utf-8")
+		return c.Send(js)
+	}
+
 	if nama == "gaya" {
 		gaya, err := berkasDocs.ReadFile("docs/gaya.css")
 		if err != nil {
@@ -124,9 +153,10 @@ func (m *Module) Docs(c *fiber.Ctx) error {
 		"__JUDUL__", html.EscapeString(dok.judul),
 		"__KET__", html.EscapeString(dok.ket),
 		"__NAV__", navDokumen(nama),
-		"__ISI__", bungkusTabel(isi.String()),
+		"__ISI__", sorotKotak(bungkusTabel(isi.String())),
 		"__SUMBER__", html.EscapeString(dok.berkas),
 		"__VERSI__", html.EscapeString(ModuleVersion),
+		"__HALAMAN__", daftarHalamanJSON(),
 	).Replace(string(kerangka))
 
 	c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
@@ -202,7 +232,22 @@ func (m *Module) docsGagal(c *fiber.Ctx, apa string, err error) error {
 
 // urutanDokumen menentukan urutan tampil di nav. Sengaja ditulis manual, bukan
 // diurut abjad: index adalah pintu masuk dan harus memimpin.
-var urutanDokumen = []string{"index", "errors"}
+var urutanDokumen = []string{"index", "jakantro", "faskes", "baca", "contoh", "errors"}
+
+// daftarHalamanJSON dipakai skrip pencarian untuk tahu halaman apa saja yang
+// boleh diambil versi mentahnya.
+func daftarHalamanJSON() string {
+	var b strings.Builder
+	b.WriteByte('[')
+	for i, n := range urutanDokumen {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		fmt.Fprintf(&b, `{"nama":%q,"judul":%q}`, n, daftarDokumen[n].judul)
+	}
+	b.WriteByte(']')
+	return b.String()
+}
 
 func navDokumen(aktif string) string {
 	var b strings.Builder
@@ -216,6 +261,22 @@ func navDokumen(aktif string) string {
 	}
 	fmt.Fprintf(&b, `<a href="?doc=laporan">%s</a>`, html.EscapeString(judulLaporan))
 	return b.String()
+}
+
+// sorotKotak memberi warna pada blockquote yang diawali penanda, supaya hal
+// penting tidak tenggelam. Blockquote lain dibiarkan apa adanya.
+func sorotKotak(s string) string {
+	for penanda, kelas := range map[string]string{
+		"<strong>Penting.</strong>":   "penting",
+		"<strong>Awas.</strong>":      "awas",
+		"<strong>Perhatian.</strong>": "awas",
+		"<strong>Catatan.</strong>":   "catatan",
+	} {
+		s = strings.ReplaceAll(s,
+			"<blockquote>\n<p>"+penanda,
+			`<blockquote class="`+kelas+`">`+"\n<p>"+penanda)
+	}
+	return s
 }
 
 // bungkusTabel membungkus setiap tabel dengan pembungkus bergulir, supaya tabel
