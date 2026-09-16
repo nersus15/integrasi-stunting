@@ -13,6 +13,10 @@
   <h1>__JUDUL__</h1>
   <p class="ket">__KET__</p>
   <nav>__NAV__</nav>
+  <div class="cari-kotak">
+    <input id="cari" type="search" placeholder="Cari di seluruh dokumentasi&nbsp;&nbsp;/" autocomplete="off" spellcheck="false">
+    <div id="hasil-cari" class="cari-hasil" hidden></div>
+  </div>
 </header>
 <main>
 __ISI__
@@ -22,5 +26,7 @@ __ISI__
   versi modul <code>__VERSI__</code>
 </footer>
 </div>
+<script type="application/json" id="daftar-halaman">__HALAMAN__</script>
+<script src="?doc=cari" defer></script>
 </body>
 </html>

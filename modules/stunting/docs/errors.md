@@ -36,6 +36,7 @@ Digit pertama `errorCode` menunjukkan apa yang perlu Anda lakukan:
 | `3xxx` | bentrok dengan data tersimpan | selesaikan duplikasinya |
 | `4xxx` | key atau role | `4001` perbaiki key, `4002` minta role — jangan retry |
 | `5xxx` | masalah di sisi service | `5002` boleh retry, `5001` laporkan |
+| `6xxx` | payload sah tapi sengaja tidak disimpan | bukan kesalahan Anda, jangan retry |
 
 ---
 
@@ -263,3 +264,52 @@ Transaksi dibatalkan, tidak ada data setengah tersimpan.
 
 **Tindakan.** Boleh dicoba ulang setelah jeda. Satu-satunya kode yang memang
 dirancang untuk diulang.
+
+---
+
+## 6xxx — payload sah tapi sengaja tidak disimpan
+
+### `6001` TIDAK_DISIMPAN · HTTP 422
+
+> Data tidak memenuhi kriteria pemantauan stunting
+
+Payload Anda benar dan lolos validasi, tapi service memang tidak menyimpannya.
+Hanya muncul di `POST /api/faskes/pemeriksaan`.
+
+Tiga sebab, dan pesannya menyebutkan yang mana:
+
+```json
+{
+  "httpCode": 422,
+  "errorCode": 6001,
+  "errorName": "TIDAK_DISIMPAN",
+  "message": "anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun"
+}
+```
+
+```json
+{
+  "httpCode": 422,
+  "errorCode": 6001,
+  "errorName": "TIDAK_DISIMPAN",
+  "message": "tidak ada tanda stunting dan riwayat terakhir bukan stunting"
+}
+```
+
+```json
+{
+  "httpCode": 422,
+  "errorCode": 6001,
+  "errorName": "TIDAK_DISIMPAN",
+  "message": "tidak ada tanda stunting dan anak belum punya riwayat"
+}
+```
+
+Penolakan tidak meninggalkan apa pun di database — anak baru tidak jadi dibuat.
+
+Service ini hanya menyimpan data medis anak yang sedang dipantau: bundle yang
+membawa tanda stunting, atau anak yang kunjungan terakhirnya berstatus stunting.
+Pemeriksaan anak sehat memang tidak disimpan.
+
+**Tindakan.** Bukan kesalahan Anda dan tidak bisa diperbaiki dengan mengubah
+payload. Jangan retry. Perlakukan sebagai "diterima, tidak relevan".

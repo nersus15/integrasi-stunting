@@ -6,6 +6,7 @@
   --line:#DEDED8; --line2:#EAEAE4;
   --accent:#3B4E8F; --accent-soft:#E9EBF5;
   --ok:#2E7350;
+  --sorot:#FCE79A; --sorot-lembut:#FDF6DD; --awas-lembut:#FBEAE7;
   --serif:ui-serif,Charter,"Bitstream Charter",Cambria,Georgia,serif;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
   --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
@@ -17,6 +18,7 @@
     --line:#2C2F36; --line2:#23262C;
     --accent:#93A1DA; --accent-soft:#22273A;
     --ok:#6FC293;
+    --sorot:#6B5A1E; --sorot-lembut:#2A2515; --awas-lembut:#2E1D1A;
   }
 }
 *{box-sizing:border-box}
@@ -92,3 +94,37 @@ footer code{font-family:var(--mono)}
   body{font-size:15px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- lebar ---- */
+.bungkus{max-width:1180px}
+
+/* ---- pencarian ---- */
+.cari-kotak{position:relative;margin:18px 0 22px}
+#cari{width:100%;padding:10px 14px;font:inherit;font-size:14px;
+  color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px}
+#cari:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+#cari::placeholder{color:var(--ink3)}
+
+.cari-hasil{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 6px);
+  max-height:60vh;overflow-y:auto;background:var(--surface);
+  border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 10px 34px rgba(0,0,0,.14);padding:6px}
+.cari-ringkas,.cari-kosong{margin:6px 10px;font-size:12px;color:var(--ink3);
+  font-family:var(--mono)}
+.cari-item{display:block;padding:9px 10px;border-radius:7px;text-decoration:none;color:var(--ink)}
+.cari-item:hover{background:var(--accent-soft)}
+.cari-lokasi{display:block;font-size:11px;font-family:var(--mono);
+  color:var(--accent);letter-spacing:.02em;margin-bottom:3px}
+.cari-cuplikan{display:block;font-size:13px;color:var(--ink2);line-height:1.5}
+mark{background:var(--sorot);color:var(--ink);border-radius:2px;padding:0 2px}
+
+/* ---- sorotan ---- */
+blockquote.penting,blockquote.awas,blockquote.catatan{
+  border-left:3px solid var(--tepi);background:var(--latar);
+  margin:20px 0;padding:12px 16px;border-radius:0 8px 8px 0;color:var(--ink)}
+blockquote.penting{--tepi:#B8860B;--latar:var(--sorot-lembut)}
+blockquote.awas{--tepi:#C0392B;--latar:var(--awas-lembut)}
+blockquote.catatan{--tepi:var(--accent);--latar:var(--accent-soft)}
+blockquote.penting p:first-child strong,
+blockquote.awas p:first-child strong,
+blockquote.catatan p:first-child strong{letter-spacing:.01em}
