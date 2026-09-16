@@ -7,8 +7,6 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 )
 
-// ValidateCariOrangtua memastikan pencarian membawa minimal satu kata kunci.
-// Nilai yang hanya berisi spasi dianggap tidak diisi.
 func ValidateCariOrangtua(id, nik, nokk, namaAyah, namaIbu string) error {
 	if !IsStrFilled(id) && !IsStrFilled(nik) && !IsStrFilled(nokk) &&
 		!IsStrFilled(namaAyah) && !IsStrFilled(namaIbu) {
@@ -81,12 +79,29 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 	return nil
 }
 
-func ValidateAnak(p types.AnakPayload) error {
+// versi longgar untuk data dari Kafka
+func ValidateOrangtuaStream(p types.OrangtuaPayload) error {
 	if !IsStrFilled(p.Id) {
 		return fmt.Errorf("id tidak boleh kosong")
 	}
-	if !IsStrFilled(p.IDOrangtua) {
-		return fmt.Errorf("id_orangtua tidak boleh kosong")
+
+	if !IsStrFilled(p.Nik) {
+		return fmt.Errorf("nik tidak boleh kosong")
+	} else if !IsDigitsLen(p.Nik, 16) {
+		return fmt.Errorf("nik harus 16 digit angka")
+	}
+
+	if !IsStrFilled(p.NamaAyah) && !IsStrFilled(p.NamaIbu) {
+		return fmt.Errorf("nama_ayah atau nama_ibu harus terisi salah satu")
+	}
+
+	return nil
+}
+
+// identitas anak, berlaku untuk semua sumber data
+func validateAnakDasar(p types.AnakPayload) error {
+	if !IsStrFilled(p.Id) {
+		return fmt.Errorf("id tidak boleh kosong")
 	}
 	if !IsStrFilled(p.Nama) {
 		return fmt.Errorf("nama tidak boleh kosong")
@@ -105,6 +120,19 @@ func ValidateAnak(p types.AnakPayload) error {
 	jk := strings.ToUpper(strings.TrimSpace(p.JenisKelamin))
 	if jk != "L" && jk != "P" {
 		return fmt.Errorf("jenis_kelamin harus 'L' atau 'P'")
+	}
+
+	return nil
+}
+
+// versi ketat untuk data dari jakantro
+func ValidateAnak(p types.AnakPayload) error {
+	if err := validateAnakDasar(p); err != nil {
+		return err
+	}
+
+	if !IsStrFilled(p.IDOrangtua) {
+		return fmt.Errorf("id_orangtua tidak boleh kosong")
 	}
 
 	if p.AnakKe <= 0 {
@@ -129,6 +157,11 @@ func ValidateAnak(p types.AnakPayload) error {
 	}
 
 	return nil
+}
+
+// versi longgar untuk data dari Kafka
+func ValidateAnakStream(p types.AnakPayload) error {
+	return validateAnakDasar(p)
 }
 
 func ValidateKesehatan(p types.KesehatanPayload) error {
@@ -220,6 +253,62 @@ func ValidateKunjungan(p types.KunjunganPayload) error {
 	for fieldName, val := range asiFlags {
 		if val != nil && *val != 0 && *val != 1 {
 			return fmt.Errorf("%s harus bernilai 0 atau 1", fieldName)
+		}
+	}
+
+	return nil
+}
+
+func ValidateWilayahKerja(org string, data any) error {
+
+	return nil
+}
+
+func ValidatePemeriksaanFaskes(p *types.PemeriksaanFaskes) error {
+	if p == nil {
+		return fmt.Errorf("payload kosong")
+	}
+
+	if !IsFilled(p.Anak.IdSatusehat) && !IsFilled(p.Anak.Nik) {
+		return fmt.Errorf("anak.satusehat_id atau anak.nik wajib diisi salah satu")
+	}
+	if IsFilled(p.Anak.Nik) && !IsDigitsLen(*p.Anak.Nik, 16) {
+		return fmt.Errorf("anak.nik harus 16 digit angka")
+	}
+
+	// faskes tidak menentukan id; pencocokan lewat satusehat id
+	if !IsFilled(p.Kunjungan.IdSatusehat) {
+		return fmt.Errorf("kunjungan.id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+	if !IsStrFilled(p.Kunjungan.TanggalPengukuran) {
+		return fmt.Errorf("kunjungan.tanggal_pengukuran wajib dikirim")
+	}
+	if !IsValidDate(p.Kunjungan.TanggalPengukuran) {
+		return fmt.Errorf("kunjungan.tanggal_pengukuran (%q) harus berformat YYYY-MM-DD", p.Kunjungan.TanggalPengukuran)
+	}
+	if p.Kunjungan.TanggalSelesai != nil && !IsValidDate(*p.Kunjungan.TanggalSelesai) {
+		return fmt.Errorf("kunjungan.tanggal_selesai (%q) harus berformat YYYY-MM-DD", *p.Kunjungan.TanggalSelesai)
+	}
+
+	for i, o := range p.Observasi {
+		if !IsStrFilled(o.Kode) {
+			return fmt.Errorf("observasi[%d].kode wajib dikirim", i)
+		}
+		if !IsStrFilled(o.System) {
+			return fmt.Errorf("observasi[%d].system wajib dikirim, supaya kodenya bisa dipetakan", i)
+		}
+	}
+	for i, d := range p.Diagnosa {
+		if !IsStrFilled(d.Kode) {
+			return fmt.Errorf("diagnosa[%d].kode wajib dikirim", i)
+		}
+		if d.Jenis != "" && d.Jenis != DiagnosaDiagnosis && d.Jenis != DiagnosaAlergi {
+			return fmt.Errorf("diagnosa[%d].jenis harus %q atau %q", i, DiagnosaDiagnosis, DiagnosaAlergi)
+		}
+	}
+	for i, l := range p.Layanan {
+		if !IsStrFilled(l.Jenis) {
+			return fmt.Errorf("layanan[%d].jenis wajib dikirim", i)
 		}
 	}
 
