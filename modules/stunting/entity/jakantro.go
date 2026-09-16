@@ -2,6 +2,7 @@ package entity
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -14,12 +15,12 @@ type Entity interface {
 }
 
 type Orangtua struct {
-	bun.BaseModel `bun:"table:jakantro.orangtua,alias:o"`
+	bun.BaseModel `bun:"table:stunting.orangtua,alias:o"`
 
-	ID           string     `bun:"id,pk,type:char(36)" json:"id"`
-	SatusehatId  string     `bun:"satusehat_id,type:char(36),default:null" json:"satusehat_id"`
-	IDPosyandu   string     `bun:"id_posyandu,type:char(36),notnull" json:"id_posyandu"`
-	NoKK         string     `bun:"no_kk,type:varchar(16),notnull,unique" json:"no_kk"`
+	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),default:null" json:"satusehat_id"`
+	IDPosyandu   *string    `bun:"id_posyandu,type:varchar(36),nullzero" json:"id_posyandu"`
+	NoKK         string     `bun:"no_kk,type:varchar(16),nullzero,unique" json:"no_kk"`
 	NamaAyah     string     `bun:"nama_ayah,type:varchar(255),notnull" json:"nama_ayah"`
 	NamaIbu      string     `bun:"nama_ibu,type:varchar(255),notnull" json:"nama_ibu"`
 	NIK          string     `bun:"nik,type:varchar(16),notnull,unique" json:"nik"`
@@ -41,14 +42,12 @@ type Orangtua struct {
 }
 
 type Anak struct {
-	bun.BaseModel `bun:"table:jakantro.anak,alias:a"`
+	bun.BaseModel `bun:"table:stunting.anak,alias:a"`
 
-	ID          string `bun:"id,pk,type:char(36)" json:"id"`
-	SatusehatId string `bun:"satusehat_id,type:char(36),default:null" json:"satusehat_id"`
-	IDOrangtua  string `bun:"id_orangtua,type:char(36),notnull" json:"id_orangtua"`
-	Nama        string `bun:"nama,type:varchar(255),notnull" json:"nama"`
-	// nik anak opsional: nullzero membuat string kosong tersimpan sebagai NULL,
-	// sehingga banyak anak tanpa nik tidak saling bentrok di UNIQUE
+	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),default:null" json:"satusehat_id"`
+	IDOrangtua   string     `bun:"id_orangtua,type:varchar(36),nullzero" json:"id_orangtua"`
+	Nama         string     `bun:"nama,type:varchar(255),notnull" json:"nama"`
 	NIK          *string    `bun:"nik,type:varchar(16),nullzero,unique" json:"nik"`
 	TanggalLahir time.Time  `bun:"tanggal_lahir,type:date,notnull" json:"tanggal_lahir"`
 	JenisKelamin string     `bun:"jenis_kelamin,type:char(1),notnull" json:"jenis_kelamin"`
@@ -68,13 +67,18 @@ type Anak struct {
 	Orangtua  *Orangtua    `bun:"rel:belongs-to,join:id_orangtua=id" json:"orangtua,omitempty"`
 	Kunjungan []*Kunjungan `bun:"rel:has-many,join:id=id_anak" json:"kunjungan,omitempty"`
 	Kesehatan []*Kesehatan `bun:"rel:has-many,join:id=id_anak" json:"kesehatan,omitempty"`
+	Episode   []*Episode   `bun:"rel:has-many,join:id=id_anak" json:"episode,omitempty"`
+	Observasi []*Observasi `bun:"rel:has-many,join:id=id_anak" json:"observasi,omitempty"`
+	Diagnosa  []*Diagnosa  `bun:"rel:has-many,join:id=id_anak" json:"diagnosa,omitempty"`
+	Layanan   []*Layanan   `bun:"rel:has-many,join:id=id_anak" json:"layanan,omitempty"`
+	Rujukan   []*Rujukan   `bun:"rel:has-many,join:id=id_anak" json:"rujukan,omitempty"`
 }
 
 type Kesehatan struct {
-	bun.BaseModel `bun:"table:jakantro.kesehatan,alias:k"`
+	bun.BaseModel `bun:"table:stunting.kesehatan,alias:k"`
 
-	ID                string     `bun:"id,pk,type:char(36)" json:"id"`
-	IDAnak            string     `bun:"id_anak,type:char(36),notnull" json:"id_anak"`
+	ID                string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak            string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	TanggalPemantauan time.Time  `bun:"tanggal_pemantauan,type:date,notnull" json:"tanggal_pemantauan"`
 	TBCBatuk          *int16     `bun:"tbc_batuk,type:smallint" json:"tbc_batuk"`
 	TBCDemam          *int16     `bun:"tbc_demam,type:smallint" json:"tbc_demam"`
@@ -96,12 +100,55 @@ type Kesehatan struct {
 	Anak *Anak `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
 }
 
-type Kunjungan struct {
-	bun.BaseModel `bun:"table:jakantro.kunjungan,alias:kj"`
+// created_at/updated_at snake_case, ikut DDL. Hapus diwakili status = 0.
+type Faskes struct {
+	bun.BaseModel `bun:"table:stunting.faskes,alias:f"`
 
-	ID                 string     `bun:"id,pk,type:char(36)" json:"id"`
-	IDAnak             string     `bun:"id_anak,type:char(36),notnull" json:"id_anak"`
+	ID          string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDInduk     *string    `bun:"id_induk,type:varchar(36)" json:"id_induk"`
+	SatusehatID *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	Nama        string     `bun:"nama,type:varchar(100),notnull" json:"nama"`
+	Jenis       string     `bun:"jenis,type:varchar(36),notnull" json:"jenis"`
+	Wilayah     *string    `bun:"wilayah,type:varchar(13)" json:"wilayah"`
+	Alamat      *string    `bun:"alamat,type:text" json:"alamat"`
+	NomorTelpon *string    `bun:"nomor_telpon,type:varchar(36)" json:"nomor_telpon"`
+	Email       *string    `bun:"email,type:varchar(72)" json:"email"`
+	Status      *int16     `bun:"status,type:smallint" json:"status"`
+	CreatedAt   time.Time  `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt   *time.Time `bun:"updated_at" json:"updated_at"`
+
+	// tanpa foreign key di DDL, relasi ini hanya untuk pembacaan
+	Induk *Faskes `bun:"rel:belongs-to,join:id_induk=id" json:"induk,omitempty"`
+
+	Posyandu []*Posyandu `bun:"rel:has-many,join:id=id_puskesmas" json:"posyandu,omitempty"`
+}
+
+type Posyandu struct {
+	bun.BaseModel `bun:"table:stunting.posyandu,alias:p"`
+
+	ID          string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDPuskesmas *string    `bun:"id_puskesmas,type:varchar(36)" json:"id_puskesmas"`
+	Nama        string     `bun:"nama,type:varchar(255),notnull" json:"nama"`
+	Telepon     *string    `bun:"telepon,type:varchar(255)" json:"telepon"`
+	Alamat      *string    `bun:"alamat,type:varchar(255)" json:"alamat"`
+	IDKelurahan *string    `bun:"id_kelurahan,type:varchar(36)" json:"id_kelurahan"`
+	RT          string     `bun:"rt,type:varchar(3),notnull" json:"rt"`
+	RW          string     `bun:"rw,type:varchar(3),notnull" json:"rw"`
+	NamaPic     *string    `bun:"nama_pic,type:varchar(100)" json:"nama_pic"`
+	CreatedAt   time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt   *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt   *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Puskesmas *Faskes `bun:"rel:belongs-to,join:id_puskesmas=id" json:"puskesmas,omitempty"`
+}
+
+type Kunjungan struct {
+	bun.BaseModel `bun:"table:stunting.kunjungan,alias:kj"`
+
+	ID                 string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak             string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	TanggalPengukuran  time.Time  `bun:"tanggal_pengukuran,type:date,notnull" json:"tanggal_pengukuran"`
+	TanggalSelesai     *time.Time `bun:"tanggal_selesai,type:date,nullzero" json:"tanggal_selesai"`
 	CaraUkur           *string    `bun:"cara_ukur,type:varchar(50)" json:"cara_ukur"`
 	BeratBadan         *float64   `bun:"berat_badan,type:double precision" json:"berat_badan"`
 	TinggiBadan        *float64   `bun:"tinggi_badan,type:double precision" json:"tinggi_badan"`
@@ -137,14 +184,187 @@ type Kunjungan struct {
 	SourceData         *string    `bun:"source_data,type:char(36)" json:"source_data"`
 	UpdatedBy          *string    `bun:"updated_by,type:varchar(100)" json:"updated_by"`
 	DeletedBy          *string    `bun:"deleted_by,type:varchar(100)" json:"deleted_by"`
+	IDFaskes           *string    `bun:"id_faskes,type:varchar(36),nullzero" json:"id_faskes"`
+	SatusehatId        *string    `bun:"satusehat_id,type:varchar(36),nullzero" json:"satusehat_id"`
+	IDEpisode          *string    `bun:"id_episode,type:varchar(36),nullzero" json:"id_episode"`
+	RefEpisode         *string    `bun:"ref_episode,type:varchar(36),nullzero" json:"ref_episode"`
+	IDRujukan          *string    `bun:"id_rujukan,type:varchar(36),nullzero" json:"id_rujukan"`
+	RefRujukan         *string    `bun:"ref_rujukan,type:varchar(36),nullzero" json:"ref_rujukan"`
+	Stunting           *int       `bun:"stunting,type:smallint,nullzero" json:"stunting"`
 
-	Anak *Anak `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Anak    *Anak    `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Faskes  *Faskes  `bun:"rel:belongs-to,join:id_faskes=id" json:"faskes,omitempty"`
+	Episode *Episode `bun:"rel:belongs-to,join:id_episode=id" json:"episode,omitempty"`
+	// rujukan yang dipenuhi kunjungan ini, beda dari Rujukan yang diterbitkan di sini
+	AtasRujukan *Rujukan     `bun:"rel:belongs-to,join:id_rujukan=id" json:"atas_rujukan,omitempty"`
+	Diagnosa    []*Diagnosa  `bun:"rel:has-many,join:id=id_kunjungan" json:"diagnosa,omitempty"`
+	Observasi   []*Observasi `bun:"rel:has-many,join:id=id_kunjungan" json:"observasi,omitempty"`
+	Layanan     []*Layanan   `bun:"rel:has-many,join:id=id_kunjungan" json:"layanan,omitempty"`
+	Rujukan     []*Rujukan   `bun:"rel:has-many,join:id=id_kunjungan" json:"rujukan,omitempty"`
 }
+
+type Diagnosa struct {
+	bun.BaseModel `bun:"table:stunting.diagnosa,alias:d"`
+
+	ID                 string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak             string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
+	IDKunjungan        *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
+	RefEncounter       *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
+	SatusehatId        *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	Jenis              string     `bun:"jenis,type:varchar(20),notnull" json:"jenis"`
+	System             string     `bun:"system,type:varchar(255),notnull" json:"system"`
+	Kode               string     `bun:"kode,type:varchar(50),notnull" json:"kode"`
+	Display            *string    `bun:"display,type:varchar(255)" json:"display"`
+	Kategori           *string    `bun:"kategori,type:varchar(50)" json:"kategori"`
+	Kritikalitas       *string    `bun:"kritikalitas,type:varchar(30)" json:"kritikalitas"`
+	ClinicalStatus     *string    `bun:"clinical_status,type:varchar(30)" json:"clinical_status"`
+	VerificationStatus *string    `bun:"verification_status,type:varchar(30)" json:"verification_status"`
+	Onset              *time.Time `bun:"onset,type:date" json:"onset"`
+	TanggalCatat       *time.Time `bun:"tanggal_catat,type:date" json:"tanggal_catat"`
+	CreatedAt          time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt          *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt          *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Anak      *Anak      `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Kunjungan *Kunjungan `bun:"rel:belongs-to,join:id_kunjungan=id" json:"kunjungan,omitempty"`
+}
+
+type Observasi struct {
+	bun.BaseModel `bun:"table:stunting.observasi,alias:ob"`
+
+	ID              string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak          string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
+	IDKunjungan     *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
+	IDInduk         *string    `bun:"id_induk,type:varchar(36),nullzero" json:"id_induk"`
+	RefEncounter    *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
+	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	System          string     `bun:"system,type:varchar(255),notnull" json:"system"`
+	Kode            string     `bun:"kode,type:varchar(50),notnull" json:"kode"`
+	Display         *string    `bun:"display,type:varchar(255)" json:"display"`
+	Kategori        *string    `bun:"kategori,type:varchar(50)" json:"kategori"`
+	NilaiAngka      *float64   `bun:"nilai_angka,type:numeric(12,4)" json:"nilai_angka"`
+	Satuan          *string    `bun:"satuan,type:varchar(50)" json:"satuan"`
+	NilaiTeks       *string    `bun:"nilai_teks,type:text" json:"nilai_teks"`
+	NilaiKode       *string    `bun:"nilai_kode,type:varchar(50)" json:"nilai_kode"`
+	NilaiKodeSystem *string    `bun:"nilai_kode_system,type:varchar(255)" json:"nilai_kode_system"`
+	NilaiDisplay    *string    `bun:"nilai_display,type:varchar(255)" json:"nilai_display"`
+	Interpretasi    *string    `bun:"interpretasi,type:varchar(50)" json:"interpretasi"`
+	Tanggal         *time.Time `bun:"tanggal" json:"tanggal"`
+	CreatedAt       time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt       *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt       *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Anak      *Anak        `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Kunjungan *Kunjungan   `bun:"rel:belongs-to,join:id_kunjungan=id" json:"kunjungan,omitempty"`
+	Induk     *Observasi   `bun:"rel:belongs-to,join:id_induk=id" json:"induk,omitempty"`
+	Component []*Observasi `bun:"rel:has-many,join:id=id_induk" json:"component,omitempty"`
+}
+
+type Layanan struct {
+	bun.BaseModel `bun:"table:stunting.layanan,alias:l"`
+
+	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak       string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
+	IDKunjungan  *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
+	RefEncounter *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
+	SatusehatId  *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	Jenis        string     `bun:"jenis,type:varchar(30),notnull" json:"jenis"`
+	System       *string    `bun:"system,type:varchar(255)" json:"system"`
+	Kode         *string    `bun:"kode,type:varchar(50)" json:"kode"`
+	Display      *string    `bun:"display,type:varchar(255)" json:"display"`
+	Kategori     *string    `bun:"kategori,type:varchar(50)" json:"kategori"`
+	Status       *string    `bun:"status,type:varchar(30)" json:"status"`
+	Jumlah       *float64   `bun:"jumlah,type:numeric(12,4)" json:"jumlah"`
+	Satuan       *string    `bun:"satuan,type:varchar(50)" json:"satuan"`
+	Tanggal      *time.Time `bun:"tanggal" json:"tanggal"`
+	Catatan      *string    `bun:"catatan,type:text" json:"catatan"`
+	CreatedAt    time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt    *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt    *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Anak      *Anak      `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Kunjungan *Kunjungan `bun:"rel:belongs-to,join:id_kunjungan=id" json:"kunjungan,omitempty"`
+}
+
+const (
+	DiagnosaDiagnosis = "diagnosis"
+	DiagnosaAlergi    = "alergi"
+)
+
+const (
+	LayananProcedure          = "procedure"
+	LayananMedicationDispense = "medication_dispense"
+	LayananNutritionOrder     = "nutrition_order"
+	LayananImmunization       = "immunization"
+)
 
 type Encounter struct {
 	SatusehatId string `bun:"satusehat_id,pk,type:char(36),default:null" json:"satusehat_id"`
 	Anak        string `bun:"anak,type:char(36),default:null" json:"anak"`
 }
+
+type Episode struct {
+	bun.BaseModel `bun:"table:stunting.episode,alias:ep"`
+
+	ID          string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak      string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
+	IDFaskes    *string    `bun:"id_faskes,type:varchar(36),nullzero" json:"id_faskes"`
+	SatusehatId *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	System      *string    `bun:"system,type:varchar(255)" json:"system"`
+	Kode        *string    `bun:"kode,type:varchar(50)" json:"kode"`
+	Display     *string    `bun:"display,type:varchar(255)" json:"display"`
+	Status      *string    `bun:"status,type:varchar(30)" json:"status"`
+	Mulai       *time.Time `bun:"mulai,type:date" json:"mulai"`
+	Selesai     *time.Time `bun:"selesai,type:date" json:"selesai"`
+	CreatedAt   time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt   *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt   *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Anak   *Anak   `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Faskes *Faskes `bun:"rel:belongs-to,join:id_faskes=id" json:"faskes,omitempty"`
+}
+
+type Rujukan struct {
+	bun.BaseModel `bun:"table:stunting.rujukan,alias:rj"`
+
+	ID              string     `bun:"id,pk,type:varchar(36)" json:"id"`
+	IDAnak          string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
+	IDKunjungan     *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
+	RefEncounter    *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
+	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	Jenis           string     `bun:"jenis,type:varchar(20),notnull" json:"jenis"`
+	IDFaskesAsal    *string    `bun:"id_faskes_asal,type:varchar(36),nullzero" json:"id_faskes_asal"`
+	IDFaskesTujuan  *string    `bun:"id_faskes_tujuan,type:varchar(36),nullzero" json:"id_faskes_tujuan"`
+	RefFaskesAsal   *string    `bun:"ref_faskes_asal,type:varchar(36),nullzero" json:"ref_faskes_asal"`
+	RefFaskesTujuan *string    `bun:"ref_faskes_tujuan,type:varchar(36),nullzero" json:"ref_faskes_tujuan"`
+	System          *string    `bun:"system,type:varchar(255)" json:"system"`
+	Kode            *string    `bun:"kode,type:varchar(50)" json:"kode"`
+	Display         *string    `bun:"display,type:varchar(255)" json:"display"`
+	Status          *string    `bun:"status,type:varchar(30)" json:"status"`
+	Prioritas       *string    `bun:"prioritas,type:varchar(20)" json:"prioritas"`
+	Alasan          *string    `bun:"alasan,type:text" json:"alasan"`
+	Tanggal         *time.Time `bun:"tanggal" json:"tanggal"`
+	CreatedAt       time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt       *time.Time `bun:"updatedAt" json:"updated_at"`
+	DeletedAt       *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
+
+	Anak         *Anak      `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
+	Kunjungan    *Kunjungan `bun:"rel:belongs-to,join:id_kunjungan=id" json:"kunjungan,omitempty"`
+	FaskesAsal   *Faskes    `bun:"rel:belongs-to,join:id_faskes_asal=id" json:"faskes_asal,omitempty"`
+	FaskesTujuan *Faskes    `bun:"rel:belongs-to,join:id_faskes_tujuan=id" json:"faskes_tujuan,omitempty"`
+}
+
+func (e Episode) TableName() string { return "stunting.episode" }
+func (e Episode) GetPkName() string { return "ep.id" }
+func (e Rujukan) TableName() string { return "stunting.rujukan" }
+func (e Rujukan) GetPkName() string { return "rj.id" }
+
+const (
+	RujukanKeluar = "rujukan"
+	RujukBalik    = "rujuk_balik"
+	// tanpa faskes tujuan: permintaan lab/radiologi atau kontrol di faskes sama
+	RujukanInternal = "internal"
+)
 
 func (m *Orangtua) BeforeAppendModel(ctx context.Context, query bun.Query) error {
 	if _, ok := query.(*bun.UpdateQuery); ok {
@@ -179,7 +399,7 @@ func (m *Kunjungan) BeforeAppendModel(ctx context.Context, query bun.Query) erro
 }
 
 func (e Kunjungan) TableName() string {
-	return "jakantro.kunjungan"
+	return "stunting.kunjungan"
 }
 
 func (e Kunjungan) GetPkName() string {
@@ -187,15 +407,79 @@ func (e Kunjungan) GetPkName() string {
 }
 
 func (e Kesehatan) TableName() string {
-	return "jakantro.kesehatan"
+	return "stunting.kesehatan"
 }
 
 func (e Kesehatan) GetPkName() string {
 	return "k.id"
 }
 
+func (e Diagnosa) TableName() string {
+	return "stunting.diagnosa"
+}
+
+func (e Diagnosa) GetPkName() string {
+	return "d.id"
+}
+
+func (e Observasi) TableName() string {
+	return "stunting.observasi"
+}
+
+func (e Observasi) GetPkName() string {
+	return "ob.id"
+}
+
+func (e Layanan) TableName() string {
+	return "stunting.layanan"
+}
+
+func (e Layanan) GetPkName() string {
+	return "l.id"
+}
+
+func (m *Diagnosa) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	if _, ok := query.(*bun.UpdateQuery); ok {
+		now := time.Now()
+		m.UpdatedAt = &now
+	}
+	return nil
+}
+
+func (m *Observasi) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	if _, ok := query.(*bun.UpdateQuery); ok {
+		now := time.Now()
+		m.UpdatedAt = &now
+	}
+	return nil
+}
+
+func (m *Layanan) BeforeAppendModel(ctx context.Context, query bun.Query) error {
+	if _, ok := query.(*bun.UpdateQuery); ok {
+		now := time.Now()
+		m.UpdatedAt = &now
+	}
+	return nil
+}
+
+func (e Faskes) TableName() string {
+	return "stunting.faskes"
+}
+
+func (e Faskes) GetPkName() string {
+	return "f.id"
+}
+
+func (e Posyandu) TableName() string {
+	return "stunting.posyandu"
+}
+
+func (e Posyandu) GetPkName() string {
+	return "p.id"
+}
+
 func (e Orangtua) TableName() string {
-	return "jakantro.orangtua"
+	return "stunting.orangtua"
 }
 
 func (e Orangtua) GetPkName() string {
@@ -203,9 +487,83 @@ func (e Orangtua) GetPkName() string {
 }
 
 func (e Anak) TableName() string {
-	return "jakantro.anak"
+	return "stunting.anak"
 }
 
 func (e Anak) GetPkName() string {
 	return "a.id"
+}
+
+func (e *Anak) Override(new Anak, force bool) {
+	valExisting := reflect.ValueOf(e).Elem()
+	valNew := reflect.ValueOf(new)
+
+	skipFields := map[string]bool{
+		"BaseModel": true, // Bun core
+		"ID":        true, // Primary key
+		"CreatedAt": true, // Database audit timestamp
+		"DeletedAt": true, // Soft delete tracking
+		"DeletedBy": true, // Soft delete tracking
+		"Orangtua":  true, // Relational struct
+		"Kunjungan": true, // Relational slice
+		"Kesehatan": true, // Relational slice
+		"Episode":   true, // Relational slice
+		"Observasi": true, // Relational slice
+		"Diagnosa":  true, // Relational slice
+		"Layanan":   true, // Relational slice
+		"Rujukan":   true, // Relational slice
+	}
+
+	for i := 0; i < valNew.NumField(); i++ {
+		fieldType := valNew.Type().Field(i)
+		fieldName := fieldType.Name
+
+		if skipFields[fieldName] {
+			continue
+		}
+
+		fieldNew := valNew.Field(i)
+		fieldExisting := valExisting.FieldByName(fieldName)
+
+		if !fieldExisting.IsValid() || !fieldExisting.CanSet() {
+			continue
+		}
+
+		if (!fieldNew.IsZero() && fieldNew != fieldExisting) || force {
+			fieldExisting.Set(fieldNew)
+		}
+	}
+}
+func (e *Orangtua) Override(new Orangtua, force bool) {
+	valExisting := reflect.ValueOf(e).Elem()
+	valNew := reflect.ValueOf(new)
+
+	skipFields := map[string]bool{
+		"BaseModel": true, // Bun core
+		"ID":        true, // Primary key
+		"CreatedAt": true, // Database audit timestamp
+		"DeletedAt": true, // Soft delete tracking
+		"DeletedBy": true, // Soft delete tracking
+		"Anak":      true, // Relational struct
+	}
+
+	for i := 0; i < valNew.NumField(); i++ {
+		fieldType := valNew.Type().Field(i)
+		fieldName := fieldType.Name
+
+		if skipFields[fieldName] {
+			continue
+		}
+
+		fieldNew := valNew.Field(i)
+		fieldExisting := valExisting.FieldByName(fieldName)
+
+		if !fieldExisting.IsValid() || !fieldExisting.CanSet() {
+			continue
+		}
+
+		if (!fieldNew.IsZero() && fieldNew != fieldExisting) || force {
+			fieldExisting.Set(fieldNew)
+		}
+	}
 }
