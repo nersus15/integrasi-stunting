@@ -4,12 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 )
 
 var ErrTidakDitemukan = errors.New("data tidak ditemukan")
+
+var dumpAktif atomic.Bool
+
+func SetDumpAktif(level string) {
+	dumpAktif.Store(strings.EqualFold(strings.TrimSpace(level), "debug"))
+}
+
+func DumpAktif() bool { return dumpAktif.Load() }
 
 func IsFilled(s *string) bool {
 	return s != nil && strings.TrimSpace(*s) != ""
@@ -119,11 +128,7 @@ func DeteksiJenisPayload(p *types.KunjunganNestedPayload) (JenisPayload, *types.
 	return JenisKunjunganSaja, p.Kunjungan, nil
 }
 
-// DeteksiJenisPayloadKesehatan memakai aturan yang sama persis dengan
-// DeteksiJenisPayload, hanya entitas terakhirnya kesehatan. Sengaja ditulis
-// terpisah alih-alih digeneralisasi: keduanya adalah kontrak terhadap jakantro,
-// dan menyatukannya berarti perubahan pada salah satu diam-diam mengubah yang
-// lain.
+// aturan sama dengan DeteksiJenisPayload, entitas terakhirnya kesehatan
 func DeteksiJenisPayloadKesehatan(p *types.KesehatanNestedPayload) (JenisPayload, *types.KesehatanPayload, error) {
 	if p == nil {
 		return "", nil, fmt.Errorf("payload kosong")
@@ -234,4 +239,55 @@ func Nilai(s *string) string {
 		return "<nil>"
 	}
 	return *s
+}
+
+func Substr(s string, start, length int) string {
+	runes := []rune(s)
+
+	if start < 0 || start >= len(runes) {
+		return ""
+	}
+
+	end := start + length
+	if end > len(runes) {
+		end = len(runes)
+	}
+
+	return string(runes[start:end])
+}
+
+// level wilayah => [0 => Nasional, 1 => Provinsi, 2 => Kab/Kota, 3 => Kecamatan, 4 => Kelurahan, -1 => Invalid]
+func LevelWilayah(kodeWilayah *string) int {
+	if !IsFilled(kodeWilayah) {
+		return -1
+	}
+	arr := strings.Split(*kodeWilayah, ".")
+	level := 0
+
+	for _, s := range arr {
+		if s == "00" || s == "0000" {
+			continue
+		}
+		level += 1
+	}
+
+	return level
+}
+
+// null berarti statusnya belum ditentukan, bukan bukan-stunting
+func SmallintToBool(num *int) bool {
+	return num != nil && *num == 1
+}
+
+func BoolToSmallint(v bool) int {
+	if v {
+		return 1
+	}
+
+	return 0
+}
+
+func BoolToSmallintPtr(v bool) *int {
+	n := BoolToSmallint(v)
+	return &n
 }
