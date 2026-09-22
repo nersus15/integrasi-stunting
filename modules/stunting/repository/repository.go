@@ -40,6 +40,108 @@ func NewStuntingRepository(ctx *core.AppContext, cfg *config.ModuleConfig, conn 
 	}
 }
 
+func (d *StuntingRepository) FindKafkaTransaction(TransactionId string) (*types.KafkaTransaction, error) {
+	filter := []port.DbExpression{
+		{
+			Expr: "transaction_id = ? AND group_id = ? AND resolved_at IS NULL",
+			Args: []any{TransactionId, d.Config.Kafka.GroupID},
+		},
+	}
+
+	tmp := new(entity.FailedTransactions)
+	var res *types.KafkaTransaction
+
+	err := d.Connection.FindOne(d.Context.Context, tmp, tmp.TableName(), []string{"*"}, filter, map[string]int{})
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, utils.ErrTidakDitemukan
+	}
+	if err != nil {
+		logger.Error(fmt.Sprintf("FindKafkaTransaction (%s): ", TransactionId) + err.Error())
+		return nil, err
+	}
+
+	return res.FromEntity(tmp), nil
+}
+
+// patientId opsional untuk menyaring; kolomnya punya indeks sendiri supaya UI
+// tidak perlu menelusuri isi pesan.
+func (d *StuntingRepository) FindKafkaTransactions(patientId *string) ([]*types.KafkaTransaction, error) {
+	filter := []port.DbExpression{
+		{
+			Expr: "group_id = ? AND resolved_at IS NULL",
+			Args: []any{d.Config.Kafka.GroupID},
+		},
+	}
+
+	if utils.IsFilled(patientId) {
+		filter = append(filter, port.DbExpression{Expr: "patient_id = ?", Args: []any{*patientId}})
+	}
+
+	tmp := make([]*entity.FailedTransactions, 0)
+	err := d.Connection.Find(d.Context.Context, &tmp, entity.FailedTransactions{}.TableName(),
+		[]string{"*"}, filter, map[string]int{"createdAt": 1}, 0, 0)
+
+	if err != nil {
+		logger.Error("FindKafkaTransactions: " + err.Error())
+		return nil, err
+	}
+
+	res := make([]*types.KafkaTransaction, 0, len(tmp))
+	for _, v := range tmp {
+		var t *types.KafkaTransaction
+		res = append(res, t.FromEntity(v))
+	}
+
+	return res, nil
+}
+
+func (d *StuntingRepository) SaveKafkaTransaction(data types.KafkaTransactionPayload) error {
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		logger.Error("Gagal konversi: bukan merupakan *bun.DB")
+		return exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	e := data.ToEntity()
+
+	_, err := bunDB.NewInsert().Model(e).
+		On("CONFLICT (transaction_id, group_id) DO UPDATE").
+		Set("message = EXCLUDED.message").
+		Set("error = EXCLUDED.error").
+		Set("patient_id = EXCLUDED.patient_id").
+		Set("attempt = tx.attempt + 1").
+		Set("resolved_at = NULL").
+		Set(`"updatedAt" = ?`, time.Now()).
+		Exec(d.Context.Context)
+
+	if err != nil {
+		logger.Error(fmt.Sprintf("SaveKafkaTransaction (%s): ", data.TransactionId) + err.Error())
+	}
+
+	return err
+}
+
+func (d *StuntingRepository) TandaiKafkaTransactionSelesai(transactionId string) error {
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		return exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	_, err := bunDB.NewUpdate().Model((*entity.FailedTransactions)(nil)).
+		Set("resolved_at = ?", time.Now()).
+		Set("error = NULL").
+		Set(`"updatedAt" = ?`, time.Now()).
+		Where("transaction_id = ? AND group_id = ?", transactionId, d.Config.Kafka.GroupID).
+		Exec(d.Context.Context)
+
+	if err != nil {
+		logger.Error(fmt.Sprintf("TandaiKafkaTransactionBeres (%s): ", transactionId) + err.Error())
+	}
+
+	return err
+}
+
 func (d *StuntingRepository) UpdateOrangTuaById(orangtua *entity.Orangtua, ctx context.Context, cariDulu bool) (*types.Orangtua, error) {
 	if orangtua == nil {
 		return nil, exceptions.BodyRusak.New(nil)
@@ -88,6 +190,8 @@ func (d *StuntingRepository) UpdateOrangTuaById(orangtua *entity.Orangtua, ctx c
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
 
+	d.lupakanOrangtua(orangtua)
+
 	return res, nil
 }
 
@@ -100,7 +204,12 @@ func (d *StuntingRepository) FindAnakBySatusehatId(satusehatId string) (*types.A
 	defer cancel()
 
 	tmp := new(entity.Anak)
-	var res *types.Anak
+	res := new(types.Anak)
+
+	memkey := keyAnakSatusehat(satusehatId)
+	if ok := d.Memory.Get(memkey, res); ok {
+		return res, nil
+	}
 
 	filter := []port.DbExpression{
 		{
@@ -119,7 +228,10 @@ func (d *StuntingRepository) FindAnakBySatusehatId(satusehatId string) (*types.A
 		return nil, err
 	}
 
-	return res.FromEntity(tmp), nil
+	res = res.FromEntity(tmp)
+	d.Memory.Set(memkey, res, ttlPanjang)
+
+	return res, nil
 }
 
 // mengisi id_orangtua pada anak yang masih kosong, idempoten
@@ -149,7 +261,17 @@ func (d *StuntingRepository) HubungkanAnakKeOrangTua(satusehatIdAnak string, idO
 		"updatedAt":   time.Now(),
 	}
 
-	return d.Connection.Update(ctx, entity.Anak{}.TableName(), filter, data)
+	jml, err := d.Connection.Update(ctx, entity.Anak{}.TableName(), filter, data)
+	if err == nil && jml > 0 {
+		// id_orangtua ikut tersimpan di cache anak, jadi semua jalan masuk ke
+		// baris itu perlu dibuang -- termasuk yang berkunci nik dan urutan
+		d.lupakan(keyAnakSatusehat(satusehatIdAnak), keyListAnak(idOrangtua))
+		if a, e := d.FindAnakBySatusehatId(satusehatIdAnak); e == nil && a != nil {
+			d.lupakanAnakTypes(a)
+		}
+	}
+
+	return jml, err
 }
 
 func (d *StuntingRepository) CreateOrangTua(orangtua *entity.Orangtua, ctx context.Context) (*types.Orangtua, error) {
@@ -177,6 +299,9 @@ func (d *StuntingRepository) CreateOrangTua(orangtua *entity.Orangtua, ctx conte
 	if res == nil || !utils.IsStrFilled(res.Id) {
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
+
+	d.lupakanOrangtua(orangtua)
+
 	return res, nil
 }
 
@@ -211,6 +336,8 @@ func (d *StuntingRepository) CreateAnak(anak *entity.Anak, ctx context.Context) 
 	if res == nil || !utils.IsStrFilled(res.Id) {
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
+
+	d.lupakanAnak(anak)
 
 	return res, nil
 }
@@ -263,6 +390,8 @@ func (d *StuntingRepository) UpdateAnakById(anak *entity.Anak, ctx context.Conte
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
 
+	d.lupakanAnak(anak)
+
 	return res, nil
 }
 
@@ -285,6 +414,9 @@ func (d *StuntingRepository) CreateKunjungan(kunjungan *entity.Kunjungan, ctx co
 	if res == nil || !utils.IsStrFilled(res.Id) {
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
+
+	d.lupakanRiwayatAnak(kunjungan.IDAnak)
+	d.lupakan(keyKunjunganId(kunjungan.ID))
 
 	return res, nil
 }
@@ -336,6 +468,13 @@ func (d *StuntingRepository) KunjunganTransaction(orangtua *entity.Orangtua, ana
 
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	d.lupakanOrangtua(orangtua)
+	d.lupakanAnak(anak)
+	if kunjungan != nil {
+		d.lupakanRiwayatAnak(kunjungan.IDAnak)
+		d.lupakan(keyKunjunganId(kunjungan.ID))
 	}
 
 	return resOrangtua, resAnak, resKunjungan, nil
@@ -429,6 +568,11 @@ func CreateKunjunganTx(ctx context.Context, tx bun.IDB, kunjungan *entity.Kunjun
 }
 
 func (d *StuntingRepository) FindOrangTuaByNik(nik string) (*types.Orangtua, error) {
+	memkey := keyOrangtuaNik(nik)
+	if cached := new(types.Orangtua); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
+
 	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
 	defer cancel()
 
@@ -453,7 +597,10 @@ func (d *StuntingRepository) FindOrangTuaByNik(nik string) (*types.Orangtua, err
 		return nil, err
 	}
 
-	return res.FromEntity(orangtua), nil
+	res = res.FromEntity(orangtua)
+	d.Memory.Set(memkey, res, ttlPanjang)
+
+	return res, nil
 }
 
 func (d *StuntingRepository) FindOrangTuaById(id string) (*types.Orangtua, error) {
@@ -464,7 +611,7 @@ func (d *StuntingRepository) FindOrangTuaById(id string) (*types.Orangtua, error
 	res := new(types.Orangtua)
 
 	// Cari di cache
-	memkey := "OrangtuaByID::" + id
+	memkey := keyOrangtuaId(id)
 
 	if ok := d.Memory.Get(memkey, res); ok {
 		return res, nil
@@ -488,7 +635,7 @@ func (d *StuntingRepository) FindOrangTuaById(id string) (*types.Orangtua, error
 	}
 
 	// simpan ke cache
-	d.Memory.Set(memkey, res.FromEntity(orangtua), 24*time.Hour)
+	d.Memory.Set(memkey, res.FromEntity(orangtua), ttlPanjang)
 
 	return res.FromEntity(orangtua), nil
 }
@@ -499,6 +646,7 @@ func (d *StuntingRepository) FindAnak(id *string, nik *string, orangtua *string,
 
 	res := new(types.Anak)
 	tmp := new(entity.Anak)
+	var memkey string
 
 	filter := make([]port.DbExpression, 0)
 
@@ -507,11 +655,13 @@ func (d *StuntingRepository) FindAnak(id *string, nik *string, orangtua *string,
 			Expr: "id",
 			Args: []any{id},
 		})
+		memkey = keyAnakId(*id)
 	} else if utils.IsFilled(nik) {
 		filter = append(filter, port.DbExpression{
 			Expr: "nik",
 			Args: []any{nik},
 		})
+		memkey = keyAnakNik(*nik)
 	} else {
 		if !utils.IsFilled(orangtua) || urutan == nil {
 			return nil, exceptions.Validasi.Messagef("untuk mencari anak sebutkan id anak, nik anak, atau id orangtua beserta urutan anak")
@@ -521,9 +671,15 @@ func (d *StuntingRepository) FindAnak(id *string, nik *string, orangtua *string,
 			Expr: "id_orangtua = ? AND anak_ke = ?",
 			Args: []any{orangtua, urutan},
 		})
+		memkey = keyAnakUrutan(*orangtua, *urutan)
 	}
 	sort := map[string]int{
 		"anak_ke": 1,
+	}
+
+	// Cari dari cache
+	if ok := d.Memory.Get(memkey, res); ok {
+		return res, nil
 	}
 
 	err := d.Connection.FindOne(ctx, tmp, entity.Anak{}.TableName(), []string{}, filter, sort)
@@ -536,8 +692,14 @@ func (d *StuntingRepository) FindAnak(id *string, nik *string, orangtua *string,
 		logger.Error(fmt.Sprintf("Find Anak (id=%v, nik=%v, id_orangtua=%v, anak_ke=%v): ", utils.Nilai(id), utils.Nilai(nik), utils.Nilai(orangtua), urutan) + helper.ToLogJSON(err))
 		return nil, err
 	}
+	res = res.FromEntity(tmp)
 
-	return res.FromEntity(tmp), nil
+	// simpan di cache
+	if err := d.Memory.Set(memkey, res, ttlPanjang); err != nil {
+		logger.Error("FindAnak:Memory.Set: "+memkey, "detail", err)
+	}
+
+	return res, nil
 }
 
 func (d *StuntingRepository) ListAnak(orangtua, nikorangtua, nokk *string) (*types.ListAnak, error) {
@@ -564,6 +726,16 @@ func (d *StuntingRepository) ListAnak(orangtua, nikorangtua, nokk *string) (*typ
 			Expr: "o.no_kk",
 			Args: []any{nokk},
 		})
+	}
+
+	// hanya pencarian lewat id orangtua yang di-cache; nik dan no_kk jarang
+	// dipakai dan tidak punya jalur invalidasi sendiri
+	var memkey string
+	if utils.IsFilled(orangtua) && !utils.IsFilled(nikorangtua) && !utils.IsFilled(nokk) {
+		memkey = keyListAnak(*orangtua)
+		if cached := new(types.ListAnak); d.Memory.Get(memkey, cached) {
+			return cached, nil
+		}
 	}
 
 	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
@@ -596,12 +768,20 @@ func (d *StuntingRepository) ListAnak(orangtua, nikorangtua, nokk *string) (*typ
 	var a *types.ListAnak
 
 	res := a.FromEntity(tmp)
+	if memkey != "" {
+		d.Memory.Set(memkey, res, ttlPanjang)
+	}
 	return res, nil
 }
 
 func (d *StuntingRepository) ListKunjunganAnak(id string) (*types.KunjunganAnakArray, error) {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
+
+	memkey := keyListKunjungan(id)
+	if cached := new(types.KunjunganAnakArray); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
 
 	anak := new(entity.Anak)
 	filter := []port.DbExpression{
@@ -635,13 +815,20 @@ func (d *StuntingRepository) ListKunjunganAnak(id string) (*types.KunjunganAnakA
 		return nil, err
 	}
 	var res *types.KunjunganAnakArray
-	return res.FromEntity(anak), nil
+	hasil := res.FromEntity(anak)
+	d.Memory.Set(memkey, hasil, ttlSedang)
+	return hasil, nil
 }
 
 // pakai bun langsung, lib-sql tidak bisa memenuhi relasi has-many
 func (d *StuntingRepository) ListKesehatanAnak(id string) (*types.KesehatanAnakArray, error) {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
+
+	memkey := keyListKesehatan(id)
+	if cached := new(types.KesehatanAnakArray); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
 
 	anak := new(entity.Anak)
 
@@ -667,12 +854,19 @@ func (d *StuntingRepository) ListKesehatanAnak(id string) (*types.KesehatanAnakA
 	}
 
 	var res *types.KesehatanAnakArray
-	return res.FromEntity(anak), nil
+	hasil := res.FromEntity(anak)
+	d.Memory.Set(memkey, hasil, ttlPanjang)
+	return hasil, nil
 }
 
 func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
+
+	memkey := keySummaryAnak(id)
+	if cached := new(types.SummaryAnak); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
 
 	anak := new(entity.Anak)
 
@@ -737,12 +931,19 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 	}
 
 	var res *types.SummaryAnak
-	return res.FromEntity(anak), nil
+	hasil := res.FromEntity(anak)
+	d.Memory.Set(memkey, hasil, ttlPendek)
+	return hasil, nil
 }
 
 func (d *StuntingRepository) FindKunjunganById(id string) (*types.Kunjungan, error) {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
+
+	memkey := keyKunjunganId(id)
+	if cached := new(types.Kunjungan); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
 
 	tmp := new(entity.Kunjungan)
 	filter := []port.DbExpression{
@@ -760,7 +961,9 @@ func (d *StuntingRepository) FindKunjunganById(id string) (*types.Kunjungan, err
 	}
 
 	var res *types.Kunjungan
-	return res.FromEntity(tmp), nil
+	hasil := res.FromEntity(tmp)
+	d.Memory.Set(memkey, hasil, ttlSedang)
+	return hasil, nil
 }
 
 func (d *StuntingRepository) FindKunjunganByIdAnak(idanak string) (*types.Kunjungan, error) {
@@ -814,6 +1017,11 @@ func (d *StuntingRepository) FindKesehatanById(id string) (*types.Kesehatan, err
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
 
+	memkey := keyKesehatanId(id)
+	if cached := new(types.Kesehatan); d.Memory.Get(memkey, cached) {
+		return cached, nil
+	}
+
 	tmp := new(entity.Kesehatan)
 	filter := []port.DbExpression{
 		{Expr: "id = ?", Args: []any{id}},
@@ -830,7 +1038,9 @@ func (d *StuntingRepository) FindKesehatanById(id string) (*types.Kesehatan, err
 	}
 
 	var res *types.Kesehatan
-	return res.FromEntity(tmp), nil
+	hasil := res.FromEntity(tmp)
+	d.Memory.Set(memkey, hasil, ttlPanjang)
+	return hasil, nil
 }
 
 func (d *StuntingRepository) CreateKesehatan(kesehatan *entity.Kesehatan, ctx context.Context) (*types.Kesehatan, error) {
@@ -852,6 +1062,9 @@ func (d *StuntingRepository) CreateKesehatan(kesehatan *entity.Kesehatan, ctx co
 	if res == nil || !utils.IsStrFilled(res.Id) {
 		return nil, exceptions.Internal.Messagef("data gagal disimpan")
 	}
+
+	d.lupakanRiwayatAnak(kesehatan.IDAnak)
+	d.lupakan(keyKesehatanId(kesehatan.ID))
 
 	return res, nil
 }
@@ -898,6 +1111,13 @@ func (d *StuntingRepository) KesehatanTransaction(orangtua *entity.Orangtua, ana
 		return nil, nil, nil, err
 	}
 
+	d.lupakanOrangtua(orangtua)
+	d.lupakanAnak(anak)
+	if kesehatan != nil {
+		d.lupakanRiwayatAnak(kesehatan.IDAnak)
+		d.lupakan(keyKesehatanId(kesehatan.ID))
+	}
+
 	return resOrangtua, resAnak, resKesehatan, nil
 }
 
@@ -930,6 +1150,8 @@ func (d *StuntingRepository) DeleteOrangTua(id *string) error {
 		return err
 	}
 
+	d.lupakan(keyOrangtuaId(*id), keyListAnak(*id))
+
 	return nil
 }
 
@@ -947,6 +1169,9 @@ func (d *StuntingRepository) DeleteAnak(id *string) error {
 		logger.Error(fmt.Sprintf("Delete Anak (%s): ", *id) + helper.ToLogJSON(err))
 		return err
 	}
+
+	d.lupakan(keyAnakId(*id))
+	d.lupakanRiwayatAnak(*id)
 
 	return nil
 }
@@ -980,7 +1205,7 @@ func (d *StuntingRepository) FindPosyanduDetail(id string) (*types.PosyanduDetai
 	}
 
 	// save ke cache
-	d.Memory.Set(memkey, posyandu.FromEntity(posyanduEntity), time.Hour*24)
+	d.Memory.Set(memkey, posyandu.FromEntity(posyanduEntity), ttlPanjang)
 
 	return posyandu.FromEntity(posyanduEntity), nil
 }
@@ -1013,7 +1238,7 @@ func (d *StuntingRepository) FindFaskesByOrgid(orgid string) (*types.Faskes, err
 	}
 
 	// save ke cache
-	d.Memory.Set(memkey, faskes.FromEntity(faskesEntity), time.Hour*24)
+	d.Memory.Set(memkey, faskes.FromEntity(faskesEntity), ttlPanjang)
 
 	return faskes.FromEntity(faskesEntity), nil
 }
@@ -1078,6 +1303,34 @@ func (d *StuntingRepository) FindKunjunganBySatusehatId(satusehatId string) (*ty
 	}
 	if err != nil {
 		logger.Error(fmt.Sprintf("FindKunjunganBySatusehatId (%v): ", satusehatId) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	return res.FromEntity(tmp), nil
+}
+
+func (d *StuntingRepository) FindObservasiBySatusehatId(satusehatId string) (*types.Observasi, error) {
+	if !utils.IsStrFilled(satusehatId) {
+		return nil, exceptions.Validasi.Messagef("satusehat id observation tidak boleh kosong")
+	}
+
+	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
+	defer cancel()
+
+	tmp := new(entity.Observasi)
+	var res *types.Observasi
+
+	filter := []port.DbExpression{
+		{Expr: "satusehat_id = ?", Args: []any{satusehatId}},
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, entity.Observasi{}.TableName(), []string{"*"}, filter, map[string]int{})
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, exceptions.TidakDitemukan.WithMessage("Data Observasi tidak ditemukan", err)
+	}
+	if err != nil {
+		logger.Error(fmt.Sprintf("FindObservasiBySatusehatId (%v): ", satusehatId) + helper.ToLogJSON(err))
 		return nil, err
 	}
 
@@ -1230,7 +1483,7 @@ func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Contex
 		defer cancel()
 	}
 
-	return bunDB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+	err := bunDB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
 		// episode lebih dulu, kunjungan.id_episode menunjuk ke sana
 		if len(data.Episode) > 0 {
 			if _, err := tx.NewInsert().Model(&data.Episode).On("CONFLICT DO NOTHING").Returning("NULL").Exec(ctx); err != nil {
@@ -1324,6 +1577,56 @@ func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Contex
 
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	// sapuan di dalam transaksi bisa menyentuh kunjungan lain, jadi riwayat
+	// anak dibuang seluruhnya -- bukan cuma kunjungan yang barusan ditulis
+	d.lupakanRiwayatAnak(idAnakDataMedis(data))
+	if data.Kunjungan != nil {
+		d.lupakan(keyKunjunganId(data.Kunjungan.ID))
+	}
+	if data.IdKunjunganStatus != nil {
+		d.lupakan(keyKunjunganId(*data.IdKunjunganStatus))
+	}
+
+	return nil
+}
+
+// idAnakDataMedis mencari id anak dari bagian mana pun yang terisi; kunjungan
+// bisa saja nihil saat data medis tiba lebih dulu.
+func idAnakDataMedis(data *DataMedis) string {
+	if data.Kunjungan != nil && data.Kunjungan.IDAnak != "" {
+		return data.Kunjungan.IDAnak
+	}
+	for _, o := range data.Observasi {
+		if o.IDAnak != "" {
+			return o.IDAnak
+		}
+	}
+	for _, dg := range data.Diagnosa {
+		if dg.IDAnak != "" {
+			return dg.IDAnak
+		}
+	}
+	for _, l := range data.Layanan {
+		if l.IDAnak != "" {
+			return l.IDAnak
+		}
+	}
+	for _, r := range data.Rujukan {
+		if r.IDAnak != "" {
+			return r.IDAnak
+		}
+	}
+	for _, e := range data.Episode {
+		if e.IDAnak != "" {
+			return e.IDAnak
+		}
+	}
+	return ""
 }
 
 func (d *StuntingRepository) FindRujukanBySatusehatId(satusehatId string) (*entity.Rujukan, error) {
@@ -1366,4 +1669,229 @@ func (d *StuntingRepository) CreateRujukan(rujukan *entity.Rujukan, ctx context.
 		return nil, err
 	}
 	return rujukan, nil
+}
+
+func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan) (*types.Kunjungan, error) {
+	if data == nil {
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+
+	lama, err := d.FindKunjunganBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return nil, err
+	}
+
+	// Encounter hanya membawa periode kunjungan. Antropometri datang dari
+	// Observation, jadi tidak boleh ikut ditulis di sini -- kalau ikut, PUT
+	// Encounter akan menghapus berat dan tinggi badan yang sudah tersimpan.
+	err = d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, map[string]any{
+		"tanggal_pengukuran": data.TanggalPengukuran,
+		"tanggal_selesai":    data.TanggalSelesai,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	d.lupakan(keyKunjunganId(lama.Id))
+
+	return d.FindKunjunganBySatusehatId(*data.SatusehatId)
+}
+
+func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi) (*types.Observasi, error) {
+	if data == nil {
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+
+	lama, err := d.FindObservasiBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return nil, err
+	}
+
+	err = d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, map[string]any{
+		"system":            data.System,
+		"kode":              data.Kode,
+		"display":           data.Display,
+		"kategori":          data.Kategori,
+		"nilai_angka":       data.NilaiAngka,
+		"satuan":            data.Satuan,
+		"nilai_teks":        data.NilaiTeks,
+		"nilai_kode":        data.NilaiKode,
+		"nilai_kode_system": data.NilaiKodeSystem,
+		"nilai_display":     data.NilaiDisplay,
+		"interpretasi":      data.Interpretasi,
+		"tanggal":           data.Tanggal,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return d.FindObservasiBySatusehatId(*data.SatusehatId)
+}
+
+func (d *StuntingRepository) FindDiagnosaBySatusehatId(satusehatId string) (*entity.Diagnosa, error) {
+	if !utils.IsStrFilled(satusehatId) {
+		return nil, exceptions.Validasi.Messagef("satusehat id diagnosa tidak boleh kosong")
+	}
+
+	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
+	defer cancel()
+
+	tmp := new(entity.Diagnosa)
+	filter := []port.DbExpression{
+		{Expr: "satusehat_id = ?", Args: []any{satusehatId}},
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, entity.Diagnosa{}.TableName(), []string{"*"}, filter, map[string]int{})
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, exceptions.TidakDitemukan.WithMessage("Data Diagnosa tidak ditemukan", err)
+	}
+	if err != nil {
+		logger.Error(fmt.Sprintf("FindDiagnosaBySatusehatId (%v): ", satusehatId) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	return tmp, nil
+}
+
+func (d *StuntingRepository) FindLayananBySatusehatId(satusehatId string) (*entity.Layanan, error) {
+	if !utils.IsStrFilled(satusehatId) {
+		return nil, exceptions.Validasi.Messagef("satusehat id layanan tidak boleh kosong")
+	}
+
+	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
+	defer cancel()
+
+	tmp := new(entity.Layanan)
+	filter := []port.DbExpression{
+		{Expr: "satusehat_id = ?", Args: []any{satusehatId}},
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, entity.Layanan{}.TableName(), []string{"*"}, filter, map[string]int{})
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, exceptions.TidakDitemukan.WithMessage("Data Layanan tidak ditemukan", err)
+	}
+	if err != nil {
+		logger.Error(fmt.Sprintf("FindLayananBySatusehatId (%v): ", satusehatId) + helper.ToLogJSON(err))
+		return nil, err
+	}
+
+	return tmp, nil
+}
+
+// updateBySatusehatId menulis hanya kolom yang memang dibawa resource FHIR.
+// Memakai struct utuh berbahaya: bun menulis SEMUA kolom, sehingga kolom
+// penghubung internal seperti id_anak dan id_kunjungan -- yang tidak ada di
+// payload FHIR -- ikut tertimpa kosong dan melanggar foreign key.
+func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *string, idAnak string, kolom map[string]any) error {
+	if !utils.IsFilled(satusehatId) {
+		return exceptions.KolomWajib.Messagef("Id satusehat harus sudah terisi")
+	}
+	if len(kolom) == 0 {
+		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+
+	kolom["updatedAt"] = time.Now()
+
+	filter := []port.DbExpression{
+		{Expr: "satusehat_id = ?", Args: []any{*satusehatId}},
+	}
+
+	if _, err := d.Connection.Update(d.Context.Context, tabel, filter, kolom); err != nil {
+		logger.Error(fmt.Sprintf("updateBySatusehatId %s (%s): ", tabel, *satusehatId) + err.Error())
+		return err
+	}
+
+	d.lupakanRiwayatAnak(idAnak)
+
+	return nil
+}
+
+func (d *StuntingRepository) UpdateDiagnosaBySatusehatId(data *entity.Diagnosa) error {
+	if data == nil {
+		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+	lama, err := d.FindDiagnosaBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return err
+	}
+
+	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
+		"jenis":               data.Jenis,
+		"system":              data.System,
+		"kode":                data.Kode,
+		"display":             data.Display,
+		"kategori":            data.Kategori,
+		"kritikalitas":        data.Kritikalitas,
+		"clinical_status":     data.ClinicalStatus,
+		"verification_status": data.VerificationStatus,
+		"onset":               data.Onset,
+		"tanggal_catat":       data.TanggalCatat,
+	})
+}
+
+func (d *StuntingRepository) UpdateLayananBySatusehatId(data *entity.Layanan) error {
+	if data == nil {
+		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+	lama, err := d.FindLayananBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return err
+	}
+
+	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
+		"jenis":    data.Jenis,
+		"system":   data.System,
+		"kode":     data.Kode,
+		"display":  data.Display,
+		"kategori": data.Kategori,
+		"status":   data.Status,
+		"jumlah":   data.Jumlah,
+		"satuan":   data.Satuan,
+		"tanggal":  data.Tanggal,
+		"catatan":  data.Catatan,
+	})
+}
+
+func (d *StuntingRepository) UpdateRujukanBySatusehatId(data *entity.Rujukan) error {
+	if data == nil {
+		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+	lama, err := d.FindRujukanBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return err
+	}
+
+	// faskes asal dan tujuan sengaja tidak ikut: id internalnya diselesaikan
+	// saat penyimpanan pertama, bukan diturunkan ulang dari payload
+	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
+		"jenis":     data.Jenis,
+		"system":    data.System,
+		"kode":      data.Kode,
+		"display":   data.Display,
+		"status":    data.Status,
+		"prioritas": data.Prioritas,
+		"alasan":    data.Alasan,
+		"tanggal":   data.Tanggal,
+	})
+}
+
+func (d *StuntingRepository) UpdateEpisodeBySatusehatId(data *entity.Episode) error {
+	if data == nil {
+		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+	}
+	lama, err := d.FindEpisodeBySatusehatId(utils.Nilai(data.SatusehatId))
+	if err != nil {
+		return err
+	}
+
+	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
+		"system":  data.System,
+		"kode":    data.Kode,
+		"display": data.Display,
+		"status":  data.Status,
+		"mulai":   data.Mulai,
+		"selesai": data.Selesai,
+	})
 }
