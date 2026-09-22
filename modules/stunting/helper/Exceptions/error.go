@@ -58,12 +58,12 @@ func (k Kind) Messagef(format string, args ...any) *Error {
 // 1xxx — payload perlu diperbaiki
 var (
 	BodyRusak         = Kind{400, 1001, "BODY_INVALID", "Body tidak bisa dibaca sebagai JSON"}
-	Validasi          = Kind{400, 1002, "VALIDATION_ERROR", "Data tidak memenuhi aturan"}
-	BentukPayload     = Kind{400, 1003, "PAYLOAD_SHAPE_INVALID", "Bentuk payload tidak dikenali"}
-	KolomWajib        = Kind{400, 1004, "REQUIRED_FIELD_MISSING", "Kolom wajib tidak boleh kosong"}
-	ReferensiHilang   = Kind{400, 1005, "REFERENCE_NOT_FOUND", "Referensi tidak ditemukan"}
-	Constraint        = Kind{400, 1006, "CONSTRAINT_VIOLATION", "Data tidak memenuhi aturan database"}
-	ParameterRequired = Kind{400, 1007, "PARAM_REQUIRED", "Parameter harus dikirim"}
+	Validasi          = Kind{422, 1002, "VALIDATION_ERROR", "Data tidak memenuhi aturan"}
+	BentukPayload     = Kind{422, 1003, "PAYLOAD_SHAPE_INVALID", "Bentuk payload tidak dikenali"}
+	KolomWajib        = Kind{422, 1004, "REQUIRED_FIELD_MISSING", "Kolom wajib tidak boleh kosong"}
+	ReferensiHilang   = Kind{422, 1005, "REFERENCE_NOT_FOUND", "Referensi tidak ditemukan"}
+	Constraint        = Kind{422, 1006, "CONSTRAINT_VIOLATION", "Data tidak memenuhi aturan database"}
+	ParameterRequired = Kind{422, 1007, "PARAM_REQUIRED", "Parameter harus dikirim"}
 	Forbidden         = Kind{403, 1008, "FORBIDDEN", "User tidak memiliki akses"}
 	Unauthorized      = Kind{401, 1009, "UNAUTHORIZED", "Authorization required"}
 )
