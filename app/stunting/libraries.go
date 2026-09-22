@@ -8,12 +8,14 @@ import (
 	kafka "github.com/webcore-go/lib-kafka"
 	memory "github.com/webcore-go/lib-memory"
 	postgres "github.com/webcore-go/lib-postgres"
+	redis "github.com/webcore-go/lib-redis"
 	"github.com/webcore-go/webcore/adapter/auth/apikey"
 	"github.com/webcore-go/webcore/app/core"
 )
 
 var APP_LIBRARIES = map[string]core.LibraryLoader{
 	"cache:memory":          &memory.MemoryLoader{},
+	"cache:redis":           &redis.RedisLoader{},
 	"database:sqlite":       &sqlite.SqliteLoader{},
 	"database:postgres":     &postgres.PostgresLoader{},
 	"authstorage:db":        &authstoragedb.DBLoader{},

@@ -67,9 +67,9 @@ func (m *Module) Init(ctx *core.AppContext) error {
 	}
 
 	// Register services and repositories
-	libMem, ok := core.Instance().Context.GetDefaultSingletonInstance("cache:memory")
+	libMem, ok := core.Instance().Context.GetDefaultSingletonInstance("cache:redis")
 	if !ok {
-		return fmt.Errorf("Gagal memuat instance Memory")
+		return fmt.Errorf("Gagal memuat instance Redis")
 	}
 
 	utils.SetDumpAktif(ctx.Config.App.Logging.Level)
@@ -187,6 +187,24 @@ func (m *Module) Repositories() map[string]any {
 
 // registerRoutes registers the module's routes
 func (m *Module) registerModuleRoute(root fiber.Router) {
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "GET",
+		Path:    "/kafka/gagal",
+		Handler: m.handler.DaftarKafkaGagal,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/kafka/gagal/retry",
+		Handler: m.handler.RetrySemuaKafkaGagal,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/kafka/gagal/:id/retry",
+		Handler: m.handler.RetryKafkaGagal,
+		Root:    root,
+	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "GET",
 		Path:    "/orangtua/:id?",
