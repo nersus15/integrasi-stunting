@@ -743,6 +743,52 @@ func (p *Orangtua) ToPayload() *OrangtuaPayload {
 	}
 }
 
+func (p *Kunjungan) ToPayload() *KunjunganPayload {
+	if p == nil {
+		return nil
+	}
+
+	return &KunjunganPayload{
+		Id:                 p.Id,
+		IDAnak:             p.IdAnak,
+		TanggalPengukuran:  p.TanggalPengukuran,
+		CaraUkur:           p.CaraUkur,
+		BeratBadan:         p.BeratBadan,
+		TinggiBadan:        p.TinggiBadan,
+		LingkarLengan:      p.LingkarLengan,
+		LingkarKepala:      p.LingkarKepala,
+		LingkarDada:        p.LingkarDada,
+		ASIBulan0:          p.AsiBulan0,
+		ASIBulan1:          p.AsiBulan1,
+		ASIBulan2:          p.AsiBulan2,
+		ASIBulan3:          p.AsiBulan3,
+		ASIBulan4:          p.AsiBulan4,
+		ASIBulan5:          p.AsiBulan5,
+		ASIBulan6:          p.AsiBulan6,
+		VitBiru:            p.VitBiru,
+		VitMerah:           p.VitMerah,
+		PittingEdema:       p.PittingEdema,
+		KelasIbuBalita:     p.KelasIbuBalita,
+		StatusBBUSigizi:    p.StatusBbuSigizi,
+		StatusTBUSigizi:    p.StatusTbuSigizi,
+		StatusBBTBSigizi:   p.StatusBbtbSigizi,
+		ZScoreBBUSigizi:    p.ZscoreBbuSigizi,
+		ZScoreTBUSigizi:    p.ZscoreTbuSigizi,
+		ZScoreBBTBSigizi:   p.ZscoreBbtbSigizi,
+		StatusBBUWhoAntro:  p.StatusBbuWhoantro,
+		StatusTBUWhoAntro:  p.StatusTbuWhoantro,
+		StatusBBTBWhoAntro: p.StatusBbtbWhoantro,
+		ZScoreBBUWhoAntro:  p.ZscoreBbuWhoantro,
+		ZScoreTBUWhoAntro:  p.ZscoreTbuWhoantro,
+		ZScoreBBTBWhoAntro: p.ZscoreBbtbWhoantro,
+		SourceData:         p.SourceData,
+		UpdatedBy:          p.UpdatedBy,
+		DeletedBy:          p.DeletedBy,
+		UpdatedAt:          p.UpdatedAt,
+		Stunting:           p.Stunting,
+	}
+}
+
 func (o *Orangtua) FromEntity(e *entity.Orangtua) *Orangtua {
 	if e == nil {
 		return nil
