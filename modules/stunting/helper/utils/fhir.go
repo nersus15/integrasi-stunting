@@ -138,6 +138,8 @@ const (
 )
 
 const (
+	SystemNIK = "https://fhir.kemkes.go.id/id/nik"
+
 	DiagnosaDiagnosis = "diagnosis"
 	DiagnosaAlergi    = "alergi"
 )
@@ -480,7 +482,7 @@ func FindNik(identifiers []fhir.Identifier) string {
 			continue
 		}
 
-		if *identifier.System == "https://fhir.kemkes.go.id/id/nik" && identifier.Value != nil {
+		if *identifier.System == SystemNIK && identifier.Value != nil {
 			nik = *identifier.Value
 			break
 		}
