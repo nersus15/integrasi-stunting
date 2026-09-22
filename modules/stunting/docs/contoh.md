@@ -168,40 +168,363 @@ Membuat anak pada orangtua yang sudah ada.
 
 ## POST /api/faskes/pemeriksaan
 
-Satu kunjungan beserta seluruh data medisnya. Kirim setelah data Anda diterima
-SatuSehat, supaya `id_satusehat` tiap resource bisa disertakan — itu yang
-membuat kiriman ulang tidak menggandakan.
+Satu kunjungan beserta seluruh data medisnya. Payload di bawah sengaja dibuat
+selengkap mungkin: setiap array terisi, setiap varian nilai observasi muncul,
+kedua jenis diagnosa ada, keempat jenis layanan ada.
 
-`id` tidak dikirim: faskes tidak menentukan id, sistem yang membangkitkannya.
+> **Penting.** Kirim setelah data Anda diterima SatuSehat, supaya `id_satusehat`
+> tiap resource bisa disertakan — itu yang membuat kiriman ulang tidak
+> menggandakan. `id` tidak dikirim: faskes tidak menentukan id, sistem yang
+> membangkitkannya.
 
 ```json
 {
-  "anak": {
-    "nik": "3175042003240007",
-    "id_satusehat": "P99001100022",
-    "nama": "Siti Aminah",
-    "tanggal_lahir": "2024-05-20",
-    "jenis_kelamin": "P"
+ "anak": {
+  "id_satusehat": "P99001100022",
+  "nik": "3175042003240007",
+  "nama": "Siti Aminah",
+  "tanggal_lahir": "2024-05-20",
+  "jenis_kelamin": "P",
+  "anak_ke": 1
+ },
+ "kunjungan": {
+  "id_satusehat": "enc-lengkap-01",
+  "tanggal_pengukuran": "2026-05-12",
+  "tanggal_selesai": "2026-05-15",
+  "cara_ukur": "telentang",
+  "berat_badan": 8.9,
+  "tinggi_badan": 76.4,
+  "lingkar_lengan": 12.1,
+  "lingkar_kepala": 45.3,
+  "lingkar_dada": 46.0,
+  "ref_episode": "ep-lengkap-01",
+  "status_tbu_whoantro": "Sangat Pendek",
+  "zscore_tbu_whoantro": -3.21,
+  "status_bbu_whoantro": "Berat Badan Sangat Kurang",
+  "zscore_bbu_whoantro": -3.05,
+  "status_bbtb_whoantro": "Gizi Kurang",
+  "zscore_bbtb_whoantro": -1.94
+ },
+ "episode": [
+  {
+   "id_satusehat": "ep-lengkap-01",
+   "ref_faskes": "100011",
+   "system": "http://terminology.kemkes.go.id/CodeSystem/episodeofcare-type",
+   "kode": "TB-SO",
+   "display": "Tuberkulosis Sensitif Obat",
+   "status": "active",
+   "mulai": "2026-05-12",
+   "selesai": "2026-11-12"
+  }
+ ],
+ "observasi": [
+  {
+   "id_satusehat": "obs-lkp-bb",
+   "system": "http://loinc.org",
+   "kode": "29463-7",
+   "display": "Body weight",
+   "kategori": "vital-signs",
+   "nilai_angka": 8.9,
+   "satuan": "kg",
+   "interpretasi": "OI000007",
+   "tanggal": "2026-05-12T02:10:00Z"
   },
-  "kunjungan": {
-    "id_satusehat": "enc-langsung-01",
-    "tanggal_pengukuran": "2026-04-10",
-    "tanggal_selesai": "2026-04-10",
-    "cara_ukur": "telentang",
-    "berat_badan": 8.4,
-    "tinggi_badan": 75.2
+  {
+   "id_satusehat": "obs-lkp-tb",
+   "system": "http://loinc.org",
+   "kode": "8306-3",
+   "display": "Body height (lying)",
+   "kategori": "vital-signs",
+   "nilai_angka": 76.4,
+   "satuan": "cm",
+   "interpretasi": "OI000011",
+   "tanggal": "2026-05-12T02:10:00Z"
   },
-  "observasi": [
-    { "id_satusehat": "obs-langsung-bb", "system": "http://loinc.org", "kode": "29463-7",
-      "nilai_angka": 8.4, "satuan": "kg", "interpretasi": "OI000007" }
-  ],
-  "diagnosa": [
-    { "id_satusehat": "cond-01", "jenis": "diagnosis",
-      "system": "http://hl7.org/fhir/sid/icd-10", "kode": "E45" }
-  ],
-  "layanan":  [ ],
-  "rujukan":  [ ],
-  "episode":  [ ]
+  {
+   "id_satusehat": "obs-lkp-lk",
+   "system": "http://loinc.org",
+   "kode": "9843-4",
+   "display": "Head circumference",
+   "kategori": "vital-signs",
+   "nilai_angka": 45.3,
+   "satuan": "cm",
+   "tanggal": "2026-05-12T02:10:00Z"
+  },
+  {
+   "id_satusehat": "obs-lkp-kode",
+   "system": "http://snomed.info/sct",
+   "kode": "363870007",
+   "display": "Mental state, behavior / psychosocial function observable",
+   "kategori": "survey",
+   "nilai_kode": "OV000318",
+   "nilai_kode_system": "http://terminology.kemkes.go.id/CodeSystem/clinical-term",
+   "nilai_display": "Dilakukan stimulasi tumbuh kembang",
+   "tanggal": "2026-05-12T02:20:00Z"
+  },
+  {
+   "id_satusehat": "obs-lkp-teks",
+   "system": "http://loinc.org",
+   "kode": "75275-8",
+   "display": "Nutrition assessment note",
+   "kategori": "survey",
+   "nilai_teks": "Nafsu makan menurun sejak dua minggu terakhir",
+   "tanggal": "2026-05-12T02:25:00Z"
+  },
+  {
+   "id_satusehat": "obs-lkp-panel",
+   "system": "http://snomed.info/sct",
+   "kode": "1156892006",
+   "display": "Nutrition assessment",
+   "kategori": "survey",
+   "tanggal": "2026-05-12T02:30:00Z",
+   "component": [
+    {
+     "id_satusehat": "obs-lkp-c1",
+     "system": "http://snomed.info/sct",
+     "kode": "709261005",
+     "display": "Assessment of breastfeeding",
+     "nilai_angka": 1
+    },
+    {
+     "id_satusehat": "obs-lkp-c2",
+     "system": "http://snomed.info/sct",
+     "kode": "710999009",
+     "display": "Monitoring food intake",
+     "nilai_angka": 0
+    }
+   ]
+  }
+ ],
+ "diagnosa": [
+  {
+   "id_satusehat": "cond-lkp-01",
+   "jenis": "diagnosis",
+   "system": "http://hl7.org/fhir/sid/icd-10",
+   "kode": "E45",
+   "display": "Nutritional stunting",
+   "kategori": "encounter-diagnosis",
+   "clinical_status": "active",
+   "verification_status": "confirmed",
+   "onset": "2026-03-01",
+   "tanggal_catat": "2026-05-12"
+  },
+  {
+   "id_satusehat": "alg-lkp-01",
+   "jenis": "alergi",
+   "system": "http://snomed.info/sct",
+   "kode": "227493005",
+   "display": "Cow milk",
+   "kategori": "food",
+   "kritikalitas": "high",
+   "clinical_status": "active",
+   "verification_status": "confirmed",
+   "onset": "2026-02-01",
+   "tanggal_catat": "2026-02-02"
+  }
+ ],
+ "layanan": [
+  {
+   "id_satusehat": "proc-lkp-01",
+   "jenis": "procedure",
+   "system": "http://snomed.info/sct",
+   "kode": "441041000124100",
+   "display": "Counseling about nutrition",
+   "kategori": "409063005",
+   "status": "completed",
+   "tanggal": "2026-05-12T03:00:00Z",
+   "catatan": "Konseling gizi bersama ibu"
+  },
+  {
+   "id_satusehat": "md-lkp-01",
+   "jenis": "medication_dispense",
+   "system": "http://sys-ids.kemkes.go.id/kfa",
+   "kode": "93000271",
+   "display": "F-100 Therapeutic Milk",
+   "status": "completed",
+   "jumlah": 30,
+   "satuan": "SAC",
+   "tanggal": "2026-05-12T03:30:00Z"
+  },
+  {
+   "id_satusehat": "no-lkp-01",
+   "jenis": "nutrition_order",
+   "system": "http://snomed.info/sct",
+   "kode": "435801000124108",
+   "display": "High protein diet",
+   "status": "active",
+   "tanggal": "2026-05-12T03:40:00Z"
+  },
+  {
+   "id_satusehat": "imm-lkp-01",
+   "jenis": "immunization",
+   "system": "http://sys-ids.kemkes.go.id/kfa",
+   "kode": "93000148",
+   "display": "Vitamin A 200.000 IU",
+   "status": "completed",
+   "jumlah": 1,
+   "satuan": "KAP",
+   "tanggal": "2026-05-12T03:50:00Z"
+  }
+ ],
+ "rujukan": [
+  {
+   "id_satusehat": "sr-lkp-keluar",
+   "jenis": "rujukan",
+   "ref_faskes_asal": "100011",
+   "ref_faskes_tujuan": "200022",
+   "system": "http://snomed.info/sct",
+   "kode": "737481003",
+   "display": "Inpatient care management",
+   "status": "active",
+   "prioritas": "urgent",
+   "alasan": "Nutritional stunting",
+   "tanggal": "2026-05-15T01:00:00Z"
+  }
+ ]
 }
 ```
 
+### Penjelasan setiap key
+
+> **Penting.** `id`, `id_anak`, `id_kunjungan`, dan `ref_encounter` **tidak
+> dikirim** di jalur faskes — sistem yang mengisinya. Kalau Anda menyertakannya,
+> nilainya diabaikan dan ditimpa. Ini kebalikan dari jalur jakantro.
+
+#### `anak`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `satusehat_id` | salah satu | IHS Number pasien. Kunci pencocokan utama |
+| `nik` | salah satu | 16 digit angka. Dipakai kalau `satusehat_id` belum ada |
+| `nama` | — | dipakai saat anak belum terdaftar |
+| `tanggal_lahir` | — | `YYYY-MM-DD`. Penentu apakah anak masuk kriteria balita |
+| `jenis_kelamin` | — | `L` atau `P` |
+| `anak_ke` | — | urutan kelahiran, diambil dari Observation di jalur SatuSehat |
+
+Minimal salah satu dari `satusehat_id` atau `nik` harus ada — tanpa keduanya
+anak tidak bisa dicocokkan dengan data posyandu.
+
+#### `kunjungan`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `id_satusehat` | ya | id Encounter. Inilah yang membuat kiriman ulang tidak menggandakan |
+| `tanggal_pengukuran` | ya | tanggal kunjungan dimulai |
+| `tanggal_selesai` | — | akhir rawat inap. Kosongkan untuk rawat jalan |
+| `berat_badan` | — | kg. Terisi otomatis kalau ada observasi LOINC `29463-7` |
+| `tinggi_badan` | — | cm. Otomatis dari `8302-2`, `8306-3` (telentang), atau `8308-9` (berdiri) |
+| `lingkar_kepala` | — | cm. Otomatis dari `9843-4` |
+| `lingkar_lengan` | — | cm (LILA) |
+| `lingkar_dada` | — | cm |
+| `cara_ukur` | — | `telentang` atau `berdiri`. Terisi otomatis dari kode tinggi badan |
+| `ref_faskes` | — | `Organization/<id>` faskes tempat kunjungan |
+| `ref_episode` | — | `id_satusehat` salah satu entri di array `episode` |
+| `ref_rujukan` | — | `id_satusehat` rujukan yang mendasari kunjungan ini |
+| `status_*`, `zscore_*` | — | hasil perhitungan antropometri. Bukan tugas service ini |
+| `stunting` | — | `0`/`1`. Kosong berarti belum ditentukan, bukan "tidak stunting" |
+
+#### `observasi[]`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `id_satusehat` | — | id Observation. Tanpa ini, kiriman ulang menggandakan |
+| `system` | ya | URI terminologi, mis. `http://loinc.org` |
+| `kode` | ya | kode di dalam system itu |
+| `display` | — | nama terbaca manusia |
+| `kategori` | — | mis. `vital-signs`, `survey`. Bebas, tidak divalidasi |
+| `nilai_angka` + `satuan` | salah satu | untuk hasil terukur |
+| `nilai_kode` + `nilai_kode_system` + `nilai_display` | salah satu | untuk hasil berupa kode |
+| `nilai_teks` | salah satu | untuk hasil deskriptif |
+| `interpretasi` | — | `N`, `L`, `H`, `A` |
+| `tanggal` | — | waktu pengukuran, kalau berbeda dari tanggal kunjungan |
+| `component[]` | — | anak observasi untuk hasil panel. Isinya struktur yang sama |
+
+Ketiga bentuk nilai bersifat pilih salah satu. Observasi panel boleh tidak
+punya nilai sama sekali — nilainya ada di `component`.
+
+#### `diagnosa[]`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `jenis` | — | `diagnosis` atau `alergi`. Kosong berarti `diagnosis` |
+| `system`, `kode` | ya | ICD-10 untuk diagnosis, SNOMED untuk alergi |
+| `kategori` | — | `encounter-diagnosis` untuk diagnosis; `food`/`medication`/`environment` untuk alergi |
+| `kritikalitas` | — | hanya untuk alergi: `low`, `high`, `unable-to-assess` |
+| `clinical_status` | — | `active`, `recurrence`, `resolved` |
+| `verification_status` | — | `confirmed`, `provisional`, `differential` |
+| `onset` | — | kapan mulai dirasakan |
+| `tanggal_catat` | — | kapan dicatat di rekam medis |
+
+`jenis` diperiksa aplikasi dan penolakannya dijawab `422` `1002
+VALIDATION_ERROR` dengan pesan yang menyebut field bersangkutan, jadi `message`
+bisa dipakai langsung untuk menunjuk kesalahan ke operator.
+
+Nilai enum lain — `kategori`, `status`, `prioritas`, `kritikalitas` — tidak
+diperiksa aplikasi melainkan oleh constraint database, sehingga nilai di luar
+daftar dijawab `422` `1006 CONSTRAINT_VIOLATION`.
+
+#### `layanan[]`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `jenis` | ya | `procedure`, `medication_dispense`, `nutrition_order`, `immunization`, `service_request` |
+| `system`, `kode`, `display` | — | terminologi layanan |
+| `status` | — | `completed`, `active`, `in-progress` |
+| `jumlah` + `satuan` | — | dosis atau kuantitas, untuk obat dan imunisasi |
+| `tanggal` | — | kapan diberikan |
+| `catatan` | — | teks bebas |
+
+#### `rujukan[]`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `jenis` | — | `rujukan`, `rujuk_balik`, atau `internal`. Kosong berarti disimpulkan sendiri |
+| `ref_faskes_asal` | — | `Organization/<id>` faskes perujuk |
+| `ref_faskes_tujuan` | — | `Organization/<id>` faskes tujuan |
+| `system`, `kode`, `display` | — | jenis layanan yang dirujuk |
+| `status` | — | `active`, `completed`, `revoked` |
+| `prioritas` | — | `routine`, `urgent`, `asap`, `stat` |
+| `alasan` | — | indikasi rujukan |
+| `tanggal` | — | tanggal surat rujukan dibuat |
+
+Faskes dirujuk lewat `ref_faskes_*`, bukan id internal ildki — Anda tidak perlu
+tahu id internal kami. Faskes yang belum terdaftar akan dibuatkan barisnya.
+
+Kalau `jenis` dikosongkan, arahnya disimpulkan: tanpa `ref_faskes_tujuan` atau
+tujuannya sama dengan asal jadi `internal`; RS ke puskesmas jadi `rujuk_balik`;
+selebihnya `rujukan`. Sebutkan `jenis` secara eksplisit kalau Anda tahu
+persisnya — nilai yang Anda kirim selalu menang atas kesimpulan itu.
+
+#### `episode[]`
+
+| key | wajib | keterangan |
+|---|---|---|
+| `id_satusehat` | — | id EpisodeOfCare. Dipakai `kunjungan.ref_episode` untuk menyambung |
+| `ref_faskes` | — | `Organization/<id>` pengelola episode |
+| `system`, `kode`, `display` | — | jenis episode |
+| `status` | — | `active`, `finished`, `cancelled` |
+| `mulai`, `selesai` | — | rentang episode |
+
+### Yang ditunjukkan contoh ini
+
+| bagian | isi |
+|---|---|
+| `kunjungan.tanggal_selesai` | berbeda dari `tanggal_pengukuran` — rawat inap 12–15 Mei. Samakan saja untuk rawat jalan |
+| `kunjungan.ref_episode` | menunjuk `episode[0].id_satusehat`; penyambungannya otomatis |
+| `observasi[0..2]` | nilai angka bersatuan. Kode BB/TB/LK yang dikenal ikut terangkat ke kolom kunjungan |
+| `observasi[3]` | nilai berupa **kode**, memakai `nilai_kode` + `nilai_kode_system` + `nilai_display` |
+| `observasi[4]` | nilai berupa **teks bebas**, memakai `nilai_teks` |
+| `observasi[5]` | **panel berkomponen** — induk tanpa nilai, anaknya di `component` |
+| `diagnosa` | `jenis` `diagnosis` dan `alergi`. Alergi memakai `kritikalitas` |
+| `layanan` | empat dari lima `jenis` yang sah; `service_request` tidak ikut karena rujukan sudah punya arraynya sendiri |
+| `rujukan` | `jenis` boleh `rujukan`, `rujuk_balik`, atau `internal`. Faskes tujuan dari `ref_faskes_tujuan`, bukan id internal |
+| `episode` | `EpisodeOfCare`, memakai CodeSystem episodeofcare-type milik Kemkes |
+
+Field yang boleh dihilangkan: seluruh array (`observasi`, `diagnosa`, `layanan`,
+`rujukan`, `episode`) opsional, begitu juga `tanggal_selesai`, `lingkar_*`,
+`cara_ukur`, dan semua `status_*`/`zscore_*`. Yang wajib hanya identitas anak,
+`kunjungan.id_satusehat`, dan `kunjungan.tanggal_pengukuran`.
+
+Payload ini benar-benar dikirim ke service saat dokumentasi ditulis, dan
+menghasilkan 1 kunjungan, 6 observasi induk + 2 komponen, 2 diagnosa, 4 layanan,
+1 rujukan, dan 1 episode.

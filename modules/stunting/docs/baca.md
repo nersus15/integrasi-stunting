@@ -1,12 +1,11 @@
-# Pembacaan
+# Endpoint GET
 
-Berlaku untuk kedua jalur.
+Seluruh endpoint baca, berlaku sama untuk data dari jakantro maupun faskes —
+asal data tidak membedakan cara membacanya.
 
-## GET endpoints
+Semua butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`.
 
-Semua GET butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`.
-
-### GET /api/orangtua/:id
+## GET /api/orangtua/:id
 
 | parameter | tipe | keterangan |
 |---|---|---|
@@ -16,7 +15,7 @@ Semua GET butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`.
 | `nama_ayah` | query | **belum diimplementasikan** — selalu 404 |
 | `nama_ibu` | query | **belum diimplementasikan** — selalu 404 |
 
-Minimal satu harus diisi; kalau kosong semua kena `400` `1002`.
+Minimal satu harus diisi; kalau kosong semua kena `422` `1002`.
 
 ```
 GET /api/orangtua/8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21
@@ -48,7 +47,7 @@ GET /api/orangtua?nik=3175040101900002
 }
 ```
 
-### GET /api/orangtua/:id/anak
+## GET /api/orangtua/:id/anak
 
 Orangtua beserta semua anaknya, urut `anak_ke`.
 
@@ -76,7 +75,7 @@ Orangtua beserta semua anaknya, urut `anak_ke`.
 Field orangtua di-flatten ke root, bukan dibungkus object `orangtua`. Anak tanpa
 riwayat tetap muncul; `anak` berupa `[]` kalau orangtua belum punya anak.
 
-### GET /api/anak/:id
+## GET /api/anak/:id
 
 ```json
 {
@@ -102,7 +101,7 @@ riwayat tetap muncul; `anak` berupa `[]` kalau orangtua belum punya anak.
 }
 ```
 
-### GET /api/anak/:id/kunjungan
+## GET /api/anak/:id/kunjungan
 
 Anak beserta riwayat kunjungannya, urut `createdAt` naik.
 
@@ -130,15 +129,18 @@ Anak beserta riwayat kunjungannya, urut `createdAt` naik.
 Anak tanpa kunjungan tetap `200`, dengan `kunjungan: []`. Yang `404` hanya kalau
 anaknya sendiri tidak ada.
 
-### GET /api/anak/:id/kesehatan
+## GET /api/anak/:id/kesehatan
 
 Bentuknya sama, `kunjungan` diganti `kesehatan`, urut `tanggal_pemantauan` naik.
 
-### GET /api/anak/:id/summary
+## GET /api/anak/:id/summary
 
 Riwayat lengkap satu anak dari ketiga sumber sekaligus: posyandu (jakantro),
 puskesmas, dan RS. Ini endpoint untuk melacak perjalanan penanganan, bukan
 sekadar penghemat round trip.
+
+Dua blok berikut adalah kerangka: `...` menandai isi yang dipangkas, jadi jangan
+disalin mentah-mentah. Payload siap salin ada di [Contoh Payload](?doc=contoh).
 
 ```json
 {
@@ -166,7 +168,7 @@ sekadar penghemat round trip.
 penanganan dan alur rujukan bisa dibaca sekali lihat, tanpa menelusuri satu per
 satu kunjungan. Isinya sama dengan yang tersebar di dalam `kunjungan`.
 
-#### Isi tiap `kunjungan`
+### Isi tiap `kunjungan`
 
 ```json
 {
@@ -214,7 +216,7 @@ satu kunjungan. Isinya sama dengan yang tersebar di dalam `kunjungan`.
 | `diagnosa` | diagnosis **dan** alergi. Bedakan lewat kolom `jenis`: `diagnosis` atau `alergi` |
 | `layanan` | tindakan, obat, imunisasi, order gizi |
 
-#### `rujukan` vs `atas_rujukan`
+### `rujukan` vs `atas_rujukan`
 
 Dua-duanya soal rujukan, tapi arahnya berlawanan:
 
@@ -247,7 +249,7 @@ Satu rujukan bisa dipenuhi **lebih dari satu** kunjungan — konsultasi awal lal
 kontrol lanjutan. Karena itu `atas_rujukan` tunggal di sisi kunjungan, sedangkan
 di daftar `rujukan` tingkat atas tindak lanjutnya berupa array.
 
-#### Isi tiap `rujukan` (tingkat atas)
+### Isi tiap `rujukan` (tingkat atas)
 
 ```json
 {
@@ -279,16 +281,16 @@ Practitioner — jenisnya `internal`, bukan rujukan antar faskes.
 Array `tindakan` yang kosong adalah sinyal paling berguna di endpoint ini: anak
 dirujuk tapi tidak pernah datang.
 
-#### `menggantung`
+### `menggantung`
 
 Data medis bisa tiba sebelum `Encounter`-nya. Baris seperti itu disimpan dengan
 `id_kunjungan` `null` dan ditampung di sini, lalu tersambung sendiri begitu
 Encounter-nya masuk. Kalau tidak ditampilkan, data itu tidak terlihat di mana
 pun.
 
-### GET /api/anak/kunjungan/:id dan GET /api/anak/kesehatan/:id
+## GET /api/anak/kunjungan/:id dan GET /api/anak/kesehatan/:id
 
-Satu record by id. Path param `id` wajib; kalau kosong kena `400` `1007`.
+Satu record by id. Path param `id` wajib; kalau kosong kena `422` `1007`.
 
 ```
 GET /api/anak/kunjungan/c1e48a72-9d35-4b80-a6f3-52d7e9418b04
@@ -296,5 +298,11 @@ GET /api/anak/kesehatan/d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5
 ```
 
 Response berupa object kunjungan atau kesehatan, tanpa data anak.
+
+---
+
+Kode error yang bisa muncul di halaman ini — `404` `2001`, `422` `1002`,
+`422` `1007`, dan `403` `1008` — dijelaskan lengkap di
+[Katalog Error](?doc=errors#tabel-acuan-lengkap).
 
 ---

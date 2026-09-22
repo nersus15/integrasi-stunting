@@ -1,62 +1,42 @@
 # Jalur faskes
 
-Bagian ini untuk puskesmas dan RS. API key Anda harus ber-group
-`orgid:<satusehat id faskes>`; key jakantro ditolak `403`.
+Bagian ini untuk puskesmas dan rumah sakit — jalur masuk langsung, alternatif
+dari SatuSehat → IL → Kafka. Dipakai faskes yang tidak ingin melewatkan datanya
+lewat IL.
+
+Kedua jalur boleh dipakai bersamaan. `id_satusehat` yang membuat datanya
+menyatu, bukan berganda.
 
 ## POST /api/faskes/pemeriksaan
 
-Jalur masuk langsung untuk puskesmas dan RS, alternatif dari jalur SatuSehat →
-IL → Kafka. Dipakai faskes yang tidak ingin melewatkan datanya lewat IL.
+Satu kunjungan beserta seluruh data medisnya, dalam satu transaksi.
 
-> **Penting.** Kirim ini **setelah** data Anda diterima SatuSehat, supaya IHS id
-> tiap resource sudah Anda pegang dan bisa disertakan. Itu yang membuat data dari
-> kedua jalur menyatu, bukan berganda.
+> **Penting.** Kirim **setelah** data Anda diterima SatuSehat. Saat itulah IHS
+> id tiap resource sudah Anda pegang dan bisa disertakan — dan itulah yang
+> membuat kiriman ini menyatu dengan data yang datang lewat Kafka.
 
 > **Awas.** Faskes pengirim diambil dari **API key**, bukan dari body. Key Anda
-> harus milik user ber-group `orgid:<satusehat id faskes>`; `kunjungan.id_faskes`
-> yang Anda kirim diabaikan, dan key jakantro ditolak `403`.
+> harus milik user ber-group `orgid:<satusehat id faskes>`. `kunjungan.id_faskes`
+> yang Anda kirim diabaikan, dan key jakantro ditolak `403` `1008`.
 
-```json
-{
-  "anak": {
-    "nik": "3175042003240007",
-    "id_satusehat": "P99001100022",
-    "nama": "Siti Aminah",
-    "tanggal_lahir": "2024-05-20",
-    "jenis_kelamin": "P"
-  },
-  "kunjungan": {
-    "id_satusehat": "enc-langsung-01",
-    "tanggal_pengukuran": "2026-04-10",
-    "tanggal_selesai": "2026-04-10",
-    "cara_ukur": "telentang",
-    "berat_badan": 8.4,
-    "tinggi_badan": 75.2
-  },
-  "observasi": [
-    { "id_satusehat": "obs-langsung-bb", "system": "http://loinc.org", "kode": "29463-7",
-      "nilai_angka": 8.4, "satuan": "kg", "interpretasi": "OI000007" }
-  ],
-  "diagnosa": [
-    { "id_satusehat": "cond-01", "jenis": "diagnosis",
-      "system": "http://hl7.org/fhir/sid/icd-10", "kode": "E45" }
-  ],
-  "layanan":  [ ],
-  "rujukan":  [ ],
-  "episode":  [ ]
-}
-```
+### Bentuk payload
 
-| key | keterangan |
-|---|---|
-| `anak` | **`nik` atau `id_satusehat` wajib salah satu.** Kalau anaknya belum ada, `nama`, `tanggal_lahir`, dan `jenis_kelamin` juga wajib supaya bisa dibuat |
-| `kunjungan` | **`id_satusehat` dan `tanggal_pengukuran` wajib.** `id` dan `id_faskes` diabaikan |
-| `observasi` | `system` dan `kode` wajib — tanpa `system`, kodenya tidak bisa dipetakan ke kolom kunjungan |
-| `diagnosa` | `kode` wajib. `jenis` `diagnosis` (bawaan) atau `alergi` |
-| `layanan` | `jenis` wajib |
-| `rujukan`, `episode` | opsional, bentuknya sama dengan yang muncul di summary |
+| key | wajib | keterangan |
+|---|---|---|
+| `anak` | ya | `nik` atau `id_satusehat` salah satu. Kalau anaknya belum ada, `nama`, `tanggal_lahir`, dan `jenis_kelamin` juga perlu supaya bisa dibuat |
+| `kunjungan` | ya | `id_satusehat` dan `tanggal_pengukuran` wajib. `id` dan `id_faskes` diabaikan |
+| `observasi` | — | `system` dan `kode` wajib. Tanpa `system`, kodenya tidak bisa dipetakan ke kolom kunjungan |
+| `diagnosa` | — | `kode` wajib. `jenis` `diagnosis` (bawaan) atau `alergi` |
+| `layanan` | — | `jenis` wajib |
+| `rujukan` | — | `jenis` boleh dikosongkan, arahnya disimpulkan dari faskes asal dan tujuan |
+| `episode` | — | disambung ke kunjungan lewat `kunjungan.ref_episode` |
 
-Response `201` — `id` keduanya dibangkitkan sistem:
+Penjelasan setiap key beserta payload lengkap yang sudah diuji ada di
+[Contoh Payload](?doc=contoh#jalur-faskes).
+
+### Response
+
+`201` — kedua `id` dibangkitkan sistem:
 
 ```json
 {
@@ -66,7 +46,7 @@ Response `201` — `id` keduanya dibangkitkan sistem:
 ```
 
 `201` selalu berarti tersimpan. Kalau datanya tidak memenuhi kriteria pemantauan,
-jawabannya `422` `6001 TIDAK_DISIMPAN`, bukan `201`:
+jawabannya `422` `6001`:
 
 ```json
 {
@@ -80,24 +60,23 @@ jawabannya `422` `6001 TIDAK_DISIMPAN`, bukan `201`:
 Yang memicunya: anaknya sudah lewat 5 tahun, atau pemeriksaan ini tidak membawa
 tanda stunting sementara anaknya juga belum pernah berstatus stunting. Bukan
 kesalahan payload — jangan retry. Penolakan tidak meninggalkan apa pun di
-database. Selengkapnya di [katalog error](?doc=errors).
+database.
 
-Kriteria itu sama persis dengan jalur SatuSehat: penentuan stunting, pengangkatan
-observasi ke kolom kunjungan, dan penyambungan rujukan memakai jalan yang sama —
-tidak ada logika terpisah untuk jalur ini.
-
-### Kenapa `id_satusehat` penting
+### Kenapa `id_satusehat` wajib
 
 Kolom `satusehat_id` unik di tabel kunjungan, observasi, diagnosa, layanan, dan
-rujukan. Dengan IHS id disertakan:
+rujukan. Itulah kunci pencocokan yang menggantikan `id` — yang di jalur jakantro
+harus ditentukan pengirim, tapi di sini dibangkitkan sistem.
 
-- kiriman ulang tidak menggandakan data
-- kalau data yang sama juga tiba lewat Kafka, keduanya menyatu ke baris yang sama
-- rujukan dan kunjungan tujuannya tetap bisa saling tertaut
+Konsekuensinya:
 
-Berbeda dari jakantro, **faskes tidak menentukan `id` sendiri**. Jakantro butuh
-itu karena tidak punya satusehat id sehingga tidak bisa mencocokkan data lama.
-Faskes punya, jadi `id` dibangkitkan sistem dan pencocokan memakai
-`id_satusehat` — karena itu ia wajib.
+- kiriman ulang tidak menggandakan data. Payload yang sama persis dikirim
+  berkali-kali tetap dijawab `201`, jumlah barisnya tidak bertambah
+- data yang sama dari Kafka dan dari endpoint ini menyatu ke baris yang sama
+- rujukan dan kunjungan yang memenuhinya tetap bisa saling tertaut
 
----
+### Yang tidak berbeda dari jalur SatuSehat
+
+Penentuan stunting, pengangkatan observasi ke kolom kunjungan, dan penyambungan
+rujukan memakai jalan yang sama persis — tidak ada logika terpisah untuk jalur
+ini. Hasil bacanya pun identik; lihat [endpoint GET](?doc=baca).

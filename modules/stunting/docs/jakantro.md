@@ -3,6 +3,23 @@
 > **Catatan.** Bagian ini untuk posyandu. Kalau Anda puskesmas atau RS, yang
 > berlaku adalah [Jalur faskes](?doc=faskes).
 
+Semua endpoint di halaman ini mewajibkan Anda mengirim `id` sendiri — lihat
+[aturan `id`](?doc=index#aturan-id). Contoh payload siap salin ada di
+[Contoh Payload](?doc=contoh).
+
+## Field wajib per entitas
+
+Yang tidak disebut di sini boleh dikosongkan atau dihilangkan.
+
+| entitas | wajib | aturan tambahan |
+|---|---|---|
+| `orangtua` | `id`, `id_posyandu`, `no_kk`, `nik`, `nama_ayah`, `nama_ibu`, `telepon`, `rt`, `rw`, `alamat`, `kia` | `no_kk` dan `nik` 16 digit angka. `kia` hanya `0`/`1`. `usia_hamil` tidak boleh negatif, `kia_bayi_kecil` hanya `0`/`1` |
+| `anak` | `id`, `id_orangtua`, `nama`, `tanggal_lahir`, `jenis_kelamin`, `anak_ke`, `imd`, `bb_lahir`, `tb_lahir`, `lk_lahir`, `source_data` | `jenis_kelamin` hanya `L`/`P`. `anak_ke`, `bb_lahir`, `tb_lahir`, `lk_lahir` harus > 0. `imd` hanya `0`/`1`. `nik` opsional, tapi kalau dikirim harus 16 digit |
+| `kunjungan` | `id`, `id_anak`, `tanggal_pengukuran` | field ukuran opsional, tapi kalau dikirim harus > 0. `asi_*`, `vit_*`, `pitting_edema`, `kelas_ibu_balita` hanya `0`/`1` |
+| `kesehatan` | `id`, `id_anak`, `tanggal_pemantauan` | `tbc_*`, `layanan_*`, `penyuluhan_*` opsional, hanya `0`/`1` |
+
+---
+
 ## POST /api/kunjungan
 
 Endpoint utama. Menerima tiga bentuk payload — service menyimpulkan sendiri
@@ -173,7 +190,7 @@ Keduanya `201` dengan `orangtua` dan `anak` bernilai `null`.
 
 ### Kombinasi yang ditolak
 
-Semuanya `400` dengan `errorCode` `1003`:
+Semuanya `422` dengan `errorCode` `1003`:
 
 | yang salah | pesan |
 |---|---|
@@ -184,7 +201,7 @@ Semuanya `400` dengan `errorCode` `1003`:
 | Key `orangtua` tanpa key `anak` | `key orangtua hanya boleh dikirim bersama key anak` |
 | Orangtua baru (bawa `nik`/`no_kk`) tanpa data anak baru | `orangtua baru harus disertai data anak baru` |
 
-`id_anak` yang tidak ada di database kena `400` `1005 REFERENCE_NOT_FOUND` —
+`id_anak` yang tidak ada di database kena `422` `1005 REFERENCE_NOT_FOUND` —
 itu foreign key, bukan validasi payload.
 
 ### NIK anak boleh kosong
@@ -307,7 +324,3 @@ terhadap NIK.
 `201` mengembalikan object anak. Kalau anak dengan NIK yang sama sudah terdaftar
 di bawah `id_orangtua` berbeda, kena `409` `3006` — itu tanda dua sumber data
 tidak sepakat anak ini milik siapa, jangan di-retry.
-
----
-
----
