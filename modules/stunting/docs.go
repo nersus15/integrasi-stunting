@@ -48,8 +48,8 @@ var daftarDokumen = map[string]dokumen{
 	},
 	"baca": {
 		berkas: "docs/baca.md",
-		judul:  "Pembacaan",
-		ket:    "Endpoint GET, termasuk riwayat lengkap anak lintas posyandu, puskesmas, dan RS.",
+		judul:  "Endpoint GET",
+		ket:    "Seluruh endpoint baca, termasuk riwayat lengkap anak lintas posyandu, puskesmas, dan RS.",
 	},
 	"contoh": {
 		berkas: "docs/contoh.md",
