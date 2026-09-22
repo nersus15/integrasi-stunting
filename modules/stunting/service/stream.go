@@ -2,7 +2,9 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -40,6 +42,117 @@ func NewStreamService(ctx *core.AppContext, stunting *StuntingService, cfg *conf
 	}
 }
 
+func (s *StreamService) RetryKafkaTransaction(key string) error {
+	tr, err := s.repository.FindKafkaTransaction(key)
+	if err != nil {
+		return err
+	}
+
+	err = s.prosesUlang(tr)
+	if err != nil {
+		// simpan error terbaru dan naikkan attempt
+		if e := s.SaveKafkaTransaction(key, []byte(tr.Message), err); e != nil {
+			logger.Error("RetryKafkaTransaction: gagal memperbarui catatan "+key, "error", e)
+		}
+		return err
+	}
+
+	return s.repository.TandaiKafkaTransactionSelesai(key)
+}
+
+func (s *StreamService) RetryAllKafkaTransactions() (berhasil int, gagal int, err error) {
+	daftar, err := s.repository.FindKafkaTransactions(nil)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	for _, tr := range daftar {
+		if tr == nil {
+			continue
+		}
+		if e := s.RetryKafkaTransaction(tr.TransactionId); e != nil {
+			logger.Error("RetryAllKafkaTransactions: "+tr.TransactionId, "error", e)
+			gagal++
+			continue
+		}
+		berhasil++
+	}
+
+	return berhasil, gagal, nil
+}
+
+func (s *StreamService) prosesUlang(tr *types.KafkaTransaction) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("Panic saat memproses ulang transaksi FHIR",
+				"err", r, "stack", string(debug.Stack()))
+			err = exceptions.Internal.Messagef("panic saat memproses ulang: %v", r)
+		}
+	}()
+
+	if tr == nil || len(tr.Message) == 0 {
+		return exceptions.TidakDitemukan.Messagef("pesan kafka kosong, tidak ada yang bisa diproses ulang")
+	}
+
+	transaction := types2.PackMediator{}
+	if e := json.Unmarshal([]byte(tr.Message), &transaction); e != nil {
+		return exceptions.BodyRusak.WithMessage("Gagal Unmarshall Data. Json Invalid", e)
+	}
+
+	bundle, _, e := s.SusunUlangBundle(transaction)
+	if e != nil {
+		return exceptions.Internal.WithMessage("Gagal menerjemahkan data transaksi FHIR: "+e.Error(), e)
+	}
+	if bundle == nil {
+		return exceptions.Internal.Messagef("Bundle transaksi FHIR kosong")
+	}
+
+	return s.ProsesTransaksiFHIR(bundle, transaction.Patient)
+}
+
+// DaftarKafkaTransactionGagal dipakai endpoint/UI untuk menampilkan antrean.
+// patientId opsional untuk menyaring.
+func (s *StreamService) DaftarKafkaTransactionGagal(patientId *string) ([]*types.KafkaTransaction, error) {
+	return s.repository.FindKafkaTransactions(patientId)
+}
+
+func (s *StreamService) SaveKafkaTransaction(key string, message []byte, err error) error {
+	pesan := "tanpa keterangan"
+	if err != nil {
+		pesan = err.Error()
+	}
+
+	eBytes, _ := json.Marshal(pesan)
+	e := json.RawMessage(eBytes)
+
+	patientId := ekstrakPatientId(message)
+
+	data := types.KafkaTransactionPayload{
+		Id:            uuid.NewString(),
+		TransactionId: key,
+		GroupId:       s.Config.Kafka.GroupID,
+		PatientId:     patientId,
+		Message:       string(message),
+		Error:         &e,
+		Attempt:       1,
+		Created:       time.Now(),
+	}
+	return s.repository.SaveKafkaTransaction(data)
+}
+
+func ekstrakPatientId(message []byte) *string {
+	tx := types2.PackMediator{}
+	if err := json.Unmarshal(message, &tx); err != nil {
+		return nil
+	}
+
+	if !utils.IsFilled(tx.Patient) {
+		return nil
+	}
+
+	return tx.Patient
+}
+
 func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *string) error {
 	if utils.DumpAktif() {
 		logger.Debug("Bundle: " + helper.ToLogJSON(bundle))
@@ -64,16 +177,20 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 
 	// Urutkan bundle
 	utils.UrutkanEntry(bundle.Entry)
-
 	payload := types.KunjunganNestedPayload{}
+
 	for _, entry := range bundle.Entry {
-		// entry tanpa id di response: Base-nya kosong
 		if entry.Base == nil || !utils.IsFilled(entry.Base.ResourceType) {
 			continue
 		}
 		if utils.DumpAktif() {
 			logger.Debug("Entry: " + helper.ToLogJSON(entry.Resource))
 		}
+
+		// Untuk Update tidak mungkin entry bundle berisi lebih dari 1, karena tidak ada method PUT untuk resouceType Bundle di satusehat,
+		// jadi PUT harus per resource yang kemudian dibungkus dalam BundlePack ketika dikirim ke Kafka
+		update := entry.Request != nil && entry.Request.Method == fhir.HTTPVerbPUT
+
 		switch strings.ToLower(*entry.Base.ResourceType) {
 		case "patient":
 			tmp, err := utils.PatientToAnak(entry)
@@ -97,6 +214,12 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 					}
 				}
 			} else {
+				if update {
+					if utils.DumpAktif() {
+						logger.Debug("ProsesTransaksiFHIR:Patient:Update:Anak Tidak Ditemukan => continue")
+					}
+					continue
+				}
 				anak = &types.Anak{
 					Nik:          tmp.Nik,
 					IdSatusehat:  tmp.IdSatusehat,
@@ -105,6 +228,7 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 					JenisKelamin: tmp.JenisKelamin,
 				}
 			}
+
 		case "relatedperson":
 			// Orangtua
 			tmp, ihs, err := utils.RelatedPersonToOrangtua(entry)
@@ -129,6 +253,12 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			if orangtua != nil {
 				orangtuaPerluUpdate = timpaDariFHIR(orangtua, tmp)
 			} else {
+				if update {
+					if utils.DumpAktif() {
+						logger.Debug("ProsesTransaksiFHIR:Patient:Update:Orangtua Tidak Ditemukan => continue")
+					}
+					continue
+				}
 				orangtua = tmp
 			}
 
@@ -143,6 +273,11 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			}
 			kunjungan = tmp
 			refFaskes = ihsFaskes
+
+			if update {
+				_, err := s.repository.UpdateKunjunganBySatusehatId(tmp.ToPayload().ToEntity())
+				return abaikanJikaBelumTersimpan(err)
+			}
 
 		case "observation":
 			tmp, resource, ihs, refEnc, err := utils.ObservationToObservasi(entry)
@@ -164,6 +299,11 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			tmp.Induk.RefEncounter = refEnc
 			observasi = append(observasi, *tmp)
 
+			if update {
+				_, err := s.repository.UpdateObservasiBySatusehatId(tmp.Induk.ToEntity())
+				return abaikanJikaBelumTersimpan(err)
+			}
+
 		case "condition":
 			tmp, ihs, refEnc, err := utils.ConditionToDiagnosa(entry)
 			if err != nil {
@@ -175,6 +315,10 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			}
 			tmp.RefEncounter = refEnc
 			diagnosa = append(diagnosa, *tmp)
+
+			if update {
+				return abaikanJikaBelumTersimpan(s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity()))
+			}
 
 		case "procedure", "medicationdispense", "nutritionorder", "immunization":
 			tmp, ihs, refEnc, err := petakanLayanan(entry)
@@ -188,6 +332,10 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			tmp.RefEncounter = refEnc
 			layanan = append(layanan, *tmp)
 
+			if update {
+				return abaikanJikaBelumTersimpan(s.repository.UpdateLayananBySatusehatId(tmp.ToEntity()))
+			}
+
 		case "servicerequest":
 			tmp, ihs, refEnc, err := utils.ServiceRequestToRujukan(entry)
 			if err != nil {
@@ -199,6 +347,10 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			}
 			tmp.RefEncounter = refEnc
 			rujukan = append(rujukan, *tmp)
+
+			if update {
+				return abaikanJikaBelumTersimpan(s.repository.UpdateRujukanBySatusehatId(tmp.ToEntity()))
+			}
 
 		case "episodeofcare":
 			tmp, ihs, ihsFaskes, err := utils.EpisodeOfCareToEpisode(entry)
@@ -212,6 +364,10 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			tmp.RefFaskes = ihsFaskes
 			episode = append(episode, *tmp)
 
+			if update {
+				return abaikanJikaBelumTersimpan(s.repository.UpdateEpisodeBySatusehatId(tmp.ToEntity()))
+			}
+
 		case "allergyintolerance":
 			tmp, ihs, refEnc, err := utils.AllergyIntoleranceToDiagnosa(entry)
 			if err != nil {
@@ -223,6 +379,10 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			}
 			tmp.RefEncounter = refEnc
 			diagnosa = append(diagnosa, *tmp)
+
+			if update {
+				return abaikanJikaBelumTersimpan(s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity()))
+			}
 
 		case "questionnaireresponse":
 			// ditunda: linkId string bebas, bukan kode terminologi
@@ -261,7 +421,14 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 	}
 
 	if kunjungan != nil || len(observasi) > 0 || len(diagnosa) > 0 || len(layanan) > 0 || len(rujukan) > 0 || len(episode) > 0 {
-		_, _, _ = s.simpanDataMedis(anak, idAnakSatusehat, kunjungan, refFaskes, observasi, diagnosa, layanan, rujukan, episode)
+		_, _, alasan, err := s.simpanDataMedis(anak, idAnakSatusehat, kunjungan, refFaskes, observasi, diagnosa, layanan, rujukan, episode)
+
+		if err != nil {
+			return err
+		}
+		if alasan != "" {
+			logger.Info("ProsesTransaksiFHIR: data medis tidak disimpan => " + alasan)
+		}
 	}
 
 	if orangtua != nil {
@@ -575,9 +742,10 @@ func petakanLayanan(entry types2.BundleEntry) (*types.Layanan, *string, *string,
 	return nil, nil, nil, fmt.Errorf("resource %s bukan layanan", *entry.Base.ResourceType)
 }
 
+// alasan hanya terisi kalau sengaja tidak disimpan; kegagalan sebenarnya lewat error
 func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunjungan *types.Kunjungan,
 	refFaskes *string, observasi []utils.HasilObservasi, diagnosa []types.Diagnosa,
-	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode) (*string, bool, string) {
+	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode) (*string, bool, string, error) {
 	idAnak := ""
 	if anak != nil {
 		idAnak = anak.Id
@@ -589,8 +757,8 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 		}
 	}
 	if !utils.IsStrFilled(idAnak) {
-		logger.Error("ProsesTransaksiFHIR:simpanDataMedis => anak tidak ditemukan, data medis dilewati")
-		return nil, false, "anak tidak ditemukan"
+		logger.Info("ProsesTransaksiFHIR:simpanDataMedis => anak tidak ditemukan, data medis dilewati")
+		return nil, false, "anak tidak ditemukan", nil
 	}
 
 	// kunjungan tanpa data klinis punya stunting NULL, tidak jadi acuan
@@ -604,7 +772,7 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 
 	if !stunting && !terakhirStunting {
 		logger.Info(fmt.Sprintf("ProsesTransaksiFHIR:simpanDataMedis => data medis dilewati (%v, %v)", stunting, terakhirStunting))
-		return nil, false, "tidak ada tanda stunting dan riwayat terakhir bukan stunting"
+		return nil, false, "tidak ada tanda stunting dan riwayat terakhir bukan stunting", nil
 	}
 
 	logger.Info(fmt.Sprintf("ProsesTransaksiFHIR:simpanDataMedis => data medis memenuhi syarat (%v, %v)", stunting, terakhirStunting))
@@ -721,10 +889,10 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 
 	if err := s.repository.SimpanDataMedis(data, nil); err != nil {
 		logger.Error("ProsesTransaksiFHIR:SimpanDataMedis => " + err.Error())
-		return nil, false, err.Error()
+		return nil, false, "", err
 	}
 
-	return idKunjungan, true, ""
+	return idKunjungan, true, "", nil
 }
 
 func (s *StreamService) entityKunjungan(idAnak string, k *types.Kunjungan, refFaskes *string) *entity.Kunjungan {
@@ -893,10 +1061,6 @@ func (s *StreamService) faskesDariRef(ref *string) (*string, string) {
 	return &f.Id, strings.ToLower(strings.TrimSpace(f.Jenis))
 }
 
-// arahRujukan: RS ke puskesmas berarti rujuk balik, selain itu rujukan keluar.
-// dariKategori berasal dari ServiceRequest.category dan menang: playbook
-// menandai rujuk balik dengan SR000007, bukan lewat jenis faskes. Sisanya
-// cadangan kalau kategorinya tidak menyebutkan apa-apa.
 func arahRujukan(dariKategori string, refAsal, refTujuan *string, jenisAsal, jenisTujuan string) string {
 	if dariKategori != "" {
 		return dariKategori
@@ -1001,8 +1165,12 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 	kunjungan := p.Kunjungan
 	kunjungan.IdFaskes = &faskes.Id
 
-	idKunjungan, disimpan, alasan := s.simpanDataMedis(anak, anak.IdSatusehat, &kunjungan, &orgid,
+	idKunjungan, disimpan, alasan, err := s.simpanDataMedis(anak, anak.IdSatusehat, &kunjungan, &orgid,
 		observasi, p.Diagnosa, p.Layanan, p.Rujukan, p.Episode)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if !disimpan {
 		return nil, exceptions.TidakDisimpan.Messagef("%s", alasan)
@@ -1012,4 +1180,18 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 		IdAnak:      anak.Id,
 		IdKunjungan: idKunjungan,
 	}, nil
+}
+
+func abaikanJikaBelumTersimpan(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var siap *exceptions.Error
+	if errors.As(err, &siap) && siap.ErrorCode == exceptions.TidakDitemukan.ErrorCode {
+		logger.Info("ProsesTransaksiFHIR:Update => resource tidak ada di database, dilewati")
+		return nil
+	}
+
+	return err
 }
