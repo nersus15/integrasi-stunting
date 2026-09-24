@@ -8,6 +8,7 @@ import (
 
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/uptrace/bun/driver/pgdriver"
+	"github.com/webcore-go/webcore/infra/logger"
 )
 
 // Kind adalah cetakan satu macam kesalahan.
@@ -158,4 +159,18 @@ func Classify(err error) *Error {
 	}
 
 	return Internal.New(err)
+}
+
+func AbaikanJikaBelumTersimpan(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var siap *Error
+	if errors.As(err, &siap) && siap.ErrorCode == TidakDitemukan.ErrorCode {
+		logger.Info("ProsesTransaksiFHIR:Update => resource tidak ada di database, dilewati")
+		return nil
+	}
+
+	return err
 }
