@@ -446,6 +446,7 @@ punya nilai sama sekali — nilainya ada di `component`.
 
 | key | wajib | keterangan |
 |---|---|---|
+| `id_satusehat` | ya | id Condition atau AllergyIntolerance. Kunci pencocokan, wajib untuk pembuatan maupun pembaruan |
 | `jenis` | — | `diagnosis` atau `alergi`. Kosong berarti `diagnosis` |
 | `system`, `kode` | ya | ICD-10 untuk diagnosis, SNOMED untuk alergi |
 | `kategori` | — | `encounter-diagnosis` untuk diagnosis; `food`/`medication`/`environment` untuk alergi |

@@ -26,7 +26,7 @@ Satu kunjungan beserta seluruh data medisnya, dalam satu transaksi.
 | `anak` | ya | `nik` atau `id_satusehat` salah satu. Kalau anaknya belum ada, `nama`, `tanggal_lahir`, dan `jenis_kelamin` juga perlu supaya bisa dibuat |
 | `kunjungan` | ya | `id_satusehat` dan `tanggal_pengukuran` wajib. `id` dan `id_faskes` diabaikan |
 | `observasi` | — | `system` dan `kode` wajib. Tanpa `system`, kodenya tidak bisa dipetakan ke kolom kunjungan |
-| `diagnosa` | — | `kode` wajib. `jenis` `diagnosis` (bawaan) atau `alergi` |
+| `diagnosa` | — | `id_satusehat` dan `kode` wajib. `jenis` `diagnosis` (bawaan) atau `alergi` |
 | `layanan` | — | `jenis` wajib |
 | `rujukan` | — | `jenis` boleh dikosongkan, arahnya disimpulkan dari faskes asal dan tujuan |
 | `episode` | — | disambung ke kunjungan lewat `kunjungan.ref_episode` |
