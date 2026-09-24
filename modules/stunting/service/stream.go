@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -275,8 +274,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			refFaskes = ihsFaskes
 
 			if update {
-				_, err := s.repository.UpdateKunjunganBySatusehatId(tmp.ToPayload().ToEntity())
-				return abaikanJikaBelumTersimpan(err)
+				_, err := s.repository.UpdateKunjunganBySatusehatId(tmp.ToPayload().ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "observation":
@@ -300,8 +299,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			observasi = append(observasi, *tmp)
 
 			if update {
-				_, err := s.repository.UpdateObservasiBySatusehatId(tmp.Induk.ToEntity())
-				return abaikanJikaBelumTersimpan(err)
+				_, err := s.repository.UpdateObservasiBySatusehatId(tmp.Induk.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "condition":
@@ -317,7 +316,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			diagnosa = append(diagnosa, *tmp)
 
 			if update {
-				return abaikanJikaBelumTersimpan(s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity()))
+				_, err := s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "procedure", "medicationdispense", "nutritionorder", "immunization":
@@ -333,7 +333,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			layanan = append(layanan, *tmp)
 
 			if update {
-				return abaikanJikaBelumTersimpan(s.repository.UpdateLayananBySatusehatId(tmp.ToEntity()))
+				_, err := s.repository.UpdateLayananBySatusehatId(tmp.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "servicerequest":
@@ -349,7 +350,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			rujukan = append(rujukan, *tmp)
 
 			if update {
-				return abaikanJikaBelumTersimpan(s.repository.UpdateRujukanBySatusehatId(tmp.ToEntity()))
+				_, err := s.repository.UpdateRujukanBySatusehatId(tmp.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "episodeofcare":
@@ -365,7 +367,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			episode = append(episode, *tmp)
 
 			if update {
-				return abaikanJikaBelumTersimpan(s.repository.UpdateEpisodeBySatusehatId(tmp.ToEntity()))
+				_, err := s.repository.UpdateEpisodeBySatusehatId(tmp.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "allergyintolerance":
@@ -381,7 +384,8 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			diagnosa = append(diagnosa, *tmp)
 
 			if update {
-				return abaikanJikaBelumTersimpan(s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity()))
+				_, err := s.repository.UpdateDiagnosaBySatusehatId(tmp.ToEntity(), true)
+				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
 		case "questionnaireresponse":
@@ -954,7 +958,7 @@ func (s *StreamService) cariEpisode(refEpisode *string) *string {
 	if !utils.IsFilled(refEpisode) {
 		return nil
 	}
-	if e, err := s.repository.FindEpisodeBySatusehatId(*refEpisode); err == nil && e != nil {
+	if e, err := s.repository.FindEpisodeBySatusehatId(*refEpisode, false); err == nil && e != nil {
 		return &e.ID
 	}
 	return nil
@@ -1180,18 +1184,4 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 		IdAnak:      anak.Id,
 		IdKunjungan: idKunjungan,
 	}, nil
-}
-
-func abaikanJikaBelumTersimpan(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	var siap *exceptions.Error
-	if errors.As(err, &siap) && siap.ErrorCode == exceptions.TidakDitemukan.ErrorCode {
-		logger.Info("ProsesTransaksiFHIR:Update => resource tidak ada di database, dilewati")
-		return nil
-	}
-
-	return err
 }
