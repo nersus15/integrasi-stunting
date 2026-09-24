@@ -1405,7 +1405,7 @@ func (d *StuntingRepository) HubungkanKeKunjungan(tabel string, idKunjungan stri
 	return d.Connection.Update(ctx, tabel, filter, data)
 }
 
-func (d *StuntingRepository) FindEpisodeBySatusehatId(satusehatId string) (*entity.Episode, error) {
+func (d *StuntingRepository) FindEpisodeBySatusehatId(satusehatId string, loadFaskes bool) (*entity.Episode, error) {
 	if !utils.IsStrFilled(satusehatId) {
 		return nil, exceptions.Validasi.Messagef("satusehat id episode tidak boleh kosong")
 	}
@@ -1418,7 +1418,13 @@ func (d *StuntingRepository) FindEpisodeBySatusehatId(satusehatId string) (*enti
 		{Expr: "satusehat_id = ?", Args: []any{satusehatId}},
 	}
 
-	err := d.Connection.FindOne(ctx, tmp, entity.Episode{}.TableName(), []string{"*"}, filter, map[string]int{})
+	tabel := entity.Episode{}.TableName()
+
+	if loadFaskes {
+		tabel = "[me],Faskes"
+	}
+
+	err := d.Connection.FindOne(ctx, tmp, tabel, []string{"*"}, filter, map[string]int{})
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, exceptions.TidakDitemukan.WithMessage("Data Episode tidak ditemukan", err)
@@ -1629,6 +1635,24 @@ func idAnakDataMedis(data *DataMedis) string {
 	return ""
 }
 
+func (d *StuntingRepository) OrgIdByEncounterSId(satusehat_id string) (*string, error) {
+	if !utils.IsStrFilled(satusehat_id) {
+		return nil, exceptions.Forbidden.WithMessage("Gagal Verifikasi", nil)
+	}
+	kunjungan := new(entity.Kunjungan)
+	filter := []port.DbExpression{{
+		Expr: "kj.satusehat_id",
+		Args: []any{satusehat_id},
+	},
+	}
+	if err := d.Connection.FindOne(d.Context.Context, kunjungan, "[me],Faskes", []string{"faskes.id", "faskes.id_induk", "faskes.satusehat_id"}, filter, map[string]int{}); err != nil {
+		return nil, exceptions.Classify(err)
+	}
+
+	logger.Info(fmt.Sprintf("OrgIdByEncounterSId (%s): ", satusehat_id) + helper.ToLogJSON(kunjungan))
+	return kunjungan.Faskes.SatusehatID, nil
+}
+
 func (d *StuntingRepository) FindRujukanBySatusehatId(satusehatId string) (*entity.Rujukan, error) {
 	if !utils.IsStrFilled(satusehatId) {
 		return nil, exceptions.Validasi.Messagef("satusehat id rujukan tidak boleh kosong")
@@ -1671,7 +1695,7 @@ func (d *StuntingRepository) CreateRujukan(rujukan *entity.Rujukan, ctx context.
 	return rujukan, nil
 }
 
-func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan) (*types.Kunjungan, error) {
+func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan, stream bool) (*entity.Kunjungan, error) {
 	if data == nil {
 		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
@@ -1681,23 +1705,30 @@ func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan
 		return nil, err
 	}
 
-	// Encounter hanya membawa periode kunjungan. Antropometri datang dari
-	// Observation, jadi tidak boleh ikut ditulis di sini -- kalau ikut, PUT
-	// Encounter akan menghapus berat dan tinggi badan yang sudah tersimpan.
-	err = d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, map[string]any{
-		"tanggal_pengukuran": data.TanggalPengukuran,
-		"tanggal_selesai":    data.TanggalSelesai,
-	})
-	if err != nil {
+	var gabungan *entity.Kunjungan
+	var input map[string]any
+
+	if stream {
+		input = map[string]any{
+			"tanggal_pengukuran": data.TanggalPengukuran,
+			"tanggal_selesai":    data.TanggalSelesai,
+		}
+	} else {
+		gabungan = lama.ToPayload().ToEntity()
+		gabungan.Override(*data, false)
+		input = utils.StructToMap(gabungan)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, input); err != nil {
 		return nil, err
 	}
 
 	d.lupakan(keyKunjunganId(lama.Id))
 
-	return d.FindKunjunganBySatusehatId(*data.SatusehatId)
+	return gabungan, nil
 }
 
-func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi) (*types.Observasi, error) {
+func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi, stream bool) (*entity.Observasi, error) {
 	if data == nil {
 		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
@@ -1707,27 +1738,35 @@ func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi
 		return nil, err
 	}
 
-	err = d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, map[string]any{
-		"system":            data.System,
-		"kode":              data.Kode,
-		"display":           data.Display,
-		"kategori":          data.Kategori,
-		"nilai_angka":       data.NilaiAngka,
-		"satuan":            data.Satuan,
-		"nilai_teks":        data.NilaiTeks,
-		"nilai_kode":        data.NilaiKode,
-		"nilai_kode_system": data.NilaiKodeSystem,
-		"nilai_display":     data.NilaiDisplay,
-		"interpretasi":      data.Interpretasi,
-		"tanggal":           data.Tanggal,
-	})
-	if err != nil {
+	var gabungan *entity.Observasi
+	var input map[string]any
+	if stream {
+		input = map[string]any{
+			"system":            data.System,
+			"kode":              data.Kode,
+			"display":           data.Display,
+			"kategori":          data.Kategori,
+			"nilai_angka":       data.NilaiAngka,
+			"satuan":            data.Satuan,
+			"nilai_teks":        data.NilaiTeks,
+			"nilai_kode":        data.NilaiKode,
+			"nilai_kode_system": data.NilaiKodeSystem,
+			"nilai_display":     data.NilaiDisplay,
+			"interpretasi":      data.Interpretasi,
+			"tanggal":           data.Tanggal,
+		}
+	} else {
+		gabungan = lama.ToEntity()
+		gabungan.Override(*data, false)
+		input = utils.StructToMap(gabungan)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IdAnak, input); err != nil {
 		return nil, err
 	}
 
-	return d.FindObservasiBySatusehatId(*data.SatusehatId)
+	return gabungan, nil
 }
-
 func (d *StuntingRepository) FindDiagnosaBySatusehatId(satusehatId string) (*entity.Diagnosa, error) {
 	if !utils.IsStrFilled(satusehatId) {
 		return nil, exceptions.Validasi.Messagef("satusehat id diagnosa tidak boleh kosong")
@@ -1780,10 +1819,6 @@ func (d *StuntingRepository) FindLayananBySatusehatId(satusehatId string) (*enti
 	return tmp, nil
 }
 
-// updateBySatusehatId menulis hanya kolom yang memang dibawa resource FHIR.
-// Memakai struct utuh berbahaya: bun menulis SEMUA kolom, sehingga kolom
-// penghubung internal seperti id_anak dan id_kunjungan -- yang tidak ada di
-// payload FHIR -- ikut tertimpa kosong dan melanggar foreign key.
 func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *string, idAnak string, kolom map[string]any) error {
 	if !utils.IsFilled(satusehatId) {
 		return exceptions.KolomWajib.Messagef("Id satusehat harus sudah terisi")
@@ -1808,90 +1843,152 @@ func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *stri
 	return nil
 }
 
-func (d *StuntingRepository) UpdateDiagnosaBySatusehatId(data *entity.Diagnosa) error {
+func (d *StuntingRepository) UpdateDiagnosaBySatusehatId(data *entity.Diagnosa, stream bool) (*entity.Diagnosa, error) {
 	if data == nil {
-		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
 	lama, err := d.FindDiagnosaBySatusehatId(utils.Nilai(data.SatusehatId))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
-		"jenis":               data.Jenis,
-		"system":              data.System,
-		"kode":                data.Kode,
-		"display":             data.Display,
-		"kategori":            data.Kategori,
-		"kritikalitas":        data.Kritikalitas,
-		"clinical_status":     data.ClinicalStatus,
-		"verification_status": data.VerificationStatus,
-		"onset":               data.Onset,
-		"tanggal_catat":       data.TanggalCatat,
-	})
+	var input map[string]any
+
+	if stream {
+		input = map[string]any{
+			"jenis":               data.Jenis,
+			"system":              data.System,
+			"kode":                data.Kode,
+			"display":             data.Display,
+			"kategori":            data.Kategori,
+			"kritikalitas":        data.Kritikalitas,
+			"clinical_status":     data.ClinicalStatus,
+			"verification_status": data.VerificationStatus,
+			"onset":               data.Onset,
+			"tanggal_catat":       data.TanggalCatat,
+		}
+	} else {
+		lama.Override(*data, false)
+		input = utils.StructToMap(lama)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+		return nil, err
+	}
+
+	if stream {
+		return nil, nil
+	}
+	return lama, nil
 }
 
-func (d *StuntingRepository) UpdateLayananBySatusehatId(data *entity.Layanan) error {
+func (d *StuntingRepository) UpdateLayananBySatusehatId(data *entity.Layanan, stream bool) (*entity.Layanan, error) {
 	if data == nil {
-		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
 	lama, err := d.FindLayananBySatusehatId(utils.Nilai(data.SatusehatId))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
-		"jenis":    data.Jenis,
-		"system":   data.System,
-		"kode":     data.Kode,
-		"display":  data.Display,
-		"kategori": data.Kategori,
-		"status":   data.Status,
-		"jumlah":   data.Jumlah,
-		"satuan":   data.Satuan,
-		"tanggal":  data.Tanggal,
-		"catatan":  data.Catatan,
-	})
+	var input map[string]any
+
+	if stream {
+		input = map[string]any{
+			"jenis":    data.Jenis,
+			"system":   data.System,
+			"kode":     data.Kode,
+			"display":  data.Display,
+			"kategori": data.Kategori,
+			"status":   data.Status,
+			"jumlah":   data.Jumlah,
+			"satuan":   data.Satuan,
+			"tanggal":  data.Tanggal,
+			"catatan":  data.Catatan,
+		}
+	} else {
+		lama.Override(*data, false)
+		input = utils.StructToMap(lama)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+		return nil, err
+	}
+
+	if stream {
+		return nil, nil
+	}
+	return lama, nil
 }
 
-func (d *StuntingRepository) UpdateRujukanBySatusehatId(data *entity.Rujukan) error {
+func (d *StuntingRepository) UpdateRujukanBySatusehatId(data *entity.Rujukan, stream bool) (*entity.Rujukan, error) {
 	if data == nil {
-		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
 	lama, err := d.FindRujukanBySatusehatId(utils.Nilai(data.SatusehatId))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// faskes asal dan tujuan sengaja tidak ikut: id internalnya diselesaikan
-	// saat penyimpanan pertama, bukan diturunkan ulang dari payload
-	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
-		"jenis":     data.Jenis,
-		"system":    data.System,
-		"kode":      data.Kode,
-		"display":   data.Display,
-		"status":    data.Status,
-		"prioritas": data.Prioritas,
-		"alasan":    data.Alasan,
-		"tanggal":   data.Tanggal,
-	})
+	var input map[string]any
+
+	if stream {
+		input = map[string]any{
+			"jenis":     data.Jenis,
+			"system":    data.System,
+			"kode":      data.Kode,
+			"display":   data.Display,
+			"status":    data.Status,
+			"prioritas": data.Prioritas,
+			"alasan":    data.Alasan,
+			"tanggal":   data.Tanggal,
+		}
+	} else {
+		lama.Override(*data, false)
+		input = utils.StructToMap(lama)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+		return nil, err
+	}
+
+	if stream {
+		return nil, nil
+	}
+	return lama, nil
 }
 
-func (d *StuntingRepository) UpdateEpisodeBySatusehatId(data *entity.Episode) error {
+func (d *StuntingRepository) UpdateEpisodeBySatusehatId(data *entity.Episode, stream bool) (*entity.Episode, error) {
 	if data == nil {
-		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
-	lama, err := d.FindEpisodeBySatusehatId(utils.Nilai(data.SatusehatId))
+	lama, err := d.FindEpisodeBySatusehatId(utils.Nilai(data.SatusehatId), false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, map[string]any{
-		"system":  data.System,
-		"kode":    data.Kode,
-		"display": data.Display,
-		"status":  data.Status,
-		"mulai":   data.Mulai,
-		"selesai": data.Selesai,
-	})
+	var input map[string]any
+
+	if stream {
+		input = map[string]any{
+			"system":  data.System,
+			"kode":    data.Kode,
+			"display": data.Display,
+			"status":  data.Status,
+			"mulai":   data.Mulai,
+			"selesai": data.Selesai,
+		}
+	} else {
+		lama.Override(*data, false)
+		input = utils.StructToMap(lama)
+	}
+
+	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+		return nil, err
+	}
+
+	if stream {
+		return nil, nil
+	}
+	return lama, nil
 }
