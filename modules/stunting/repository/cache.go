@@ -6,6 +6,7 @@ import (
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
+	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 )
 
 const (
@@ -94,4 +95,16 @@ func (d *StuntingRepository) lupakanOrangtua(o *entity.Orangtua) {
 		return
 	}
 	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID))
+}
+
+func (d *StuntingRepository) GetStringByKey(key string) string {
+	out := new(string)
+	if ok := d.Memory.Get(key, out); !ok {
+		return ""
+	}
+	return utils.StrPtr(out)
+}
+
+func (d *StuntingRepository) SetStringByKey(key, value string, ttl time.Duration) {
+	d.Memory.Set(key, value, ttl)
 }
