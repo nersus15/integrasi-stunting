@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 )
 
@@ -277,39 +278,134 @@ func ValidatePemeriksaanFaskes(p *types.PemeriksaanFaskes) error {
 	}
 
 	// faskes tidak menentukan id; pencocokan lewat satusehat id
-	if !IsFilled(p.Kunjungan.IdSatusehat) {
-		return fmt.Errorf("kunjungan.id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
-	}
-	if !IsStrFilled(p.Kunjungan.TanggalPengukuran) {
-		return fmt.Errorf("kunjungan.tanggal_pengukuran wajib dikirim")
-	}
-	if !IsValidDate(p.Kunjungan.TanggalPengukuran) {
-		return fmt.Errorf("kunjungan.tanggal_pengukuran (%q) harus berformat YYYY-MM-DD", p.Kunjungan.TanggalPengukuran)
-	}
-	if p.Kunjungan.TanggalSelesai != nil && !IsValidDate(*p.Kunjungan.TanggalSelesai) {
-		return fmt.Errorf("kunjungan.tanggal_selesai (%q) harus berformat YYYY-MM-DD", *p.Kunjungan.TanggalSelesai)
+	if err := ValidateKunjunganFaskes(*p.Kunjungan.ToPayload()); err != nil {
+		return err
 	}
 
 	for i, o := range p.Observasi {
-		if !IsStrFilled(o.Kode) {
-			return fmt.Errorf("observasi[%d].kode wajib dikirim", i)
-		}
-		if !IsStrFilled(o.System) {
-			return fmt.Errorf("observasi[%d].system wajib dikirim, supaya kodenya bisa dipetakan", i)
+		if err := ValidateObservasiFaskes(o); err != nil {
+			return fmt.Errorf("observasi[%d]: %s", i, err.Error())
 		}
 	}
 	for i, d := range p.Diagnosa {
-		if !IsStrFilled(d.Kode) {
-			return fmt.Errorf("diagnosa[%d].kode wajib dikirim", i)
-		}
-		if d.Jenis != "" && d.Jenis != DiagnosaDiagnosis && d.Jenis != DiagnosaAlergi {
-			return fmt.Errorf("diagnosa[%d].jenis harus %q atau %q", i, DiagnosaDiagnosis, DiagnosaAlergi)
+		if err := ValidateDiagnosaFaskes(d); err != nil {
+			return fmt.Errorf("diagnosa[%d]: %s", i, err.Error())
 		}
 	}
 	for i, l := range p.Layanan {
-		if !IsStrFilled(l.Jenis) {
-			return fmt.Errorf("layanan[%d].jenis wajib dikirim", i)
+		if err := ValidateLayananFaskes(l); err != nil {
+			return fmt.Errorf("layanan[%d]: %s", i, err.Error())
 		}
+	}
+	for i, r := range p.Rujukan {
+		if err := ValidateRujukanFaskes(r); err != nil {
+			return fmt.Errorf("rujukan[%d]: %s", i, err.Error())
+		}
+	}
+	for i, e := range p.Episode {
+		if err := ValidateEpisodeFaskes(e); err != nil {
+			return fmt.Errorf("episode[%d]: %s", i, err.Error())
+		}
+	}
+
+	return nil
+}
+
+func ValidateKunjunganFaskes(kunjungan types.KunjunganPayload) error {
+	if !IsFilled(kunjungan.SatusehatId) {
+		return fmt.Errorf("kunjungan.id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+	if !IsStrFilled(kunjungan.TanggalPengukuran) {
+		return fmt.Errorf("kunjungan.tanggal_pengukuran wajib dikirim")
+	}
+	if !IsValidDate(kunjungan.TanggalPengukuran) {
+		return fmt.Errorf("kunjungan.tanggal_pengukuran (%q) harus berformat YYYY-MM-DD", kunjungan.TanggalPengukuran)
+	}
+	if kunjungan.TanggalSelesai != nil && !IsValidDate(*kunjungan.TanggalSelesai) {
+		return fmt.Errorf("kunjungan.tanggal_selesai (%q) harus berformat YYYY-MM-DD", *kunjungan.TanggalSelesai)
+	}
+
+	return nil
+}
+
+func ValidateDiagnosaFaskes(diagnosa types.Diagnosa) error {
+	if !IsFilled(diagnosa.IdSatusehat) {
+		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+	if !IsStrFilled(diagnosa.Kode) {
+		return fmt.Errorf("kode wajib dikirim")
+	}
+	if diagnosa.Jenis != "" && diagnosa.Jenis != DiagnosaDiagnosis && diagnosa.Jenis != DiagnosaAlergi {
+		return fmt.Errorf("jenis harus %q atau %q", DiagnosaDiagnosis, DiagnosaAlergi)
+	}
+
+	return nil
+}
+
+// Validator per resource jalur faskes. id_satusehat diwajibkan di semua:
+// ia satu-satunya kunci pencocokan, dan tanpa itu baris yang tersimpan tidak
+// akan pernah bisa diperbarui maupun dicegah berganda saat kiriman ulang.
+//
+// Jalur stream tidak memakai validator ini dan tidak terpengaruh: entry yang
+// tidak mendapat resourceID dari SatuSehat memang sudah dilewati sebelum
+// sampai ke pemetaan.
+
+func ValidateObservasiFaskes(o types.Observasi) error {
+	if !IsFilled(o.IdSatusehat) {
+		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+	if !IsStrFilled(o.Kode) {
+		return fmt.Errorf("kode wajib dikirim")
+	}
+	if !IsStrFilled(o.System) {
+		return fmt.Errorf("system wajib dikirim, supaya kodenya bisa dipetakan")
+	}
+
+	for i, c := range o.Component {
+		if err := ValidateObservasiFaskes(c); err != nil {
+			return fmt.Errorf("component[%d]: %s", i, err.Error())
+		}
+	}
+
+	return nil
+}
+
+func ValidateLayananFaskes(l types.Layanan) error {
+	if !IsFilled(l.IdSatusehat) {
+		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+	if !IsStrFilled(l.Jenis) {
+		return fmt.Errorf("jenis wajib dikirim")
+	}
+
+	switch l.Jenis {
+	case entity.LayananProcedure, entity.LayananMedicationDispense,
+		entity.LayananNutritionOrder, entity.LayananImmunization, entity.LayananServiceRequest:
+	default:
+		return fmt.Errorf("jenis %q tidak dikenali", l.Jenis)
+	}
+
+	return nil
+}
+
+// jenis boleh kosong: arahnya disimpulkan dari faskes asal dan tujuan
+func ValidateRujukanFaskes(r types.Rujukan) error {
+	if !IsFilled(r.IdSatusehat) {
+		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
+	}
+
+	switch r.Jenis {
+	case "", entity.RujukanKeluar, entity.RujukBalik, entity.RujukanInternal:
+	default:
+		return fmt.Errorf("jenis harus %q, %q, atau %q", entity.RujukanKeluar, entity.RujukBalik, entity.RujukanInternal)
+	}
+
+	return nil
+}
+
+func ValidateEpisodeFaskes(e types.Episode) error {
+	if !IsFilled(e.IdSatusehat) {
+		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
 	}
 
 	return nil
