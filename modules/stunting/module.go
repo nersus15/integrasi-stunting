@@ -293,6 +293,12 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.SimpanPemeriksaanFaskes,
 		Root:    root,
 	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "PUT",
+		Path:    "/faskes/:resourceName",
+		Handler: m.handler.FaskesUpdateBySatusehatId,
+		Root:    root,
+	})
 }
 
 func (m *Module) registerRootRoute(web *fiber.App) {
