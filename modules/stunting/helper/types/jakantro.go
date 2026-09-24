@@ -407,8 +407,11 @@ type KesehatanPayload struct {
 }
 type KunjunganPayload struct {
 	Id                 string     `json:"id"`
+	SatusehatId        *string    `json:"id_satusehat"`
 	IDAnak             string     `json:"id_anak"`
+	IdFaskes           *string    `json:"id_faskes"`
 	TanggalPengukuran  string     `json:"tanggal_pengukuran"`
+	TanggalSelesai     *string    `json:"tanggal_selesai"`
 	CaraUkur           *string    `json:"cara_ukur"`
 	BeratBadan         *float64   `json:"berat_badan"`
 	TinggiBadan        *float64   `json:"tinggi_badan"`
@@ -751,7 +754,9 @@ func (p *Kunjungan) ToPayload() *KunjunganPayload {
 	return &KunjunganPayload{
 		Id:                 p.Id,
 		IDAnak:             p.IdAnak,
+		SatusehatId:        p.IdSatusehat,
 		TanggalPengukuran:  p.TanggalPengukuran,
+		TanggalSelesai:     p.TanggalSelesai,
 		CaraUkur:           p.CaraUkur,
 		BeratBadan:         p.BeratBadan,
 		TinggiBadan:        p.TinggiBadan,
