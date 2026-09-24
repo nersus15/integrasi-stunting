@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/repository"
 	backgroundworker "github.com/nersus15/lib-background-worker"
 	"github.com/webcore-go/webcore/app/core"
+	"github.com/webcore-go/webcore/infra/logger"
 )
 
 type StuntingService struct {
@@ -280,6 +282,118 @@ func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, er
 	return res, nil
 }
 
+// Region Service Update Untuk FASKES (by satusehat id) Alternatif jalur ekstraksi payload satusehat
+func (s *StuntingService) UpdateKunjunganBySatusehatId(orgid string, data *entity.Kunjungan) (*types.Kunjungan, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "kunjungan", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+	gabungan, err := s.Repository.UpdateKunjunganBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Kunjungan
+	res = res.FromEntity(gabungan)
+
+	return res, nil
+}
+
+func (s *StuntingService) UpdateObservasiBySatusehatId(orgid string, data *entity.Observasi) (*types.Observasi, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "observasi", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+	gabungan, err := s.Repository.UpdateObservasiBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Observasi
+	return res.FromEntity(gabungan), nil
+}
+
+func (s *StuntingService) UpdateDiagnosaBySatusehatId(orgid string, data *entity.Diagnosa) (*types.Diagnosa, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "diagnosa", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+
+	gabungan, err := s.Repository.UpdateDiagnosaBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Diagnosa
+	return res.FromEntity(gabungan), nil
+}
+
+func (s *StuntingService) UpdateLayananBySatusehatId(orgid string, data *entity.Layanan) (*types.Layanan, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "layanan", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+	gabungan, err := s.Repository.UpdateLayananBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Layanan
+
+	return res.FromEntity(gabungan), nil
+}
+
+func (s *StuntingService) UpdateRujukanBySatusehatId(orgid string, data *entity.Rujukan) (*types.Rujukan, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "rujukan", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+
+	gabungan, err := s.Repository.UpdateRujukanBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Rujukan
+
+	return res.FromEntity(gabungan), nil
+}
+
+func (s *StuntingService) UpdateEpisodeBySatusehatId(orgid string, data *entity.Episode) (*types.Episode, error) {
+	if data == nil || data.SatusehatId == nil {
+		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
+	}
+	if err := s.VerifyAccessForUpdateFaskes(orgid, "episode", *data.SatusehatId); err != nil {
+		return nil, err
+	}
+	gabungan, err := s.Repository.UpdateEpisodeBySatusehatId(data, false)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var res *types.Episode
+
+	return res.FromEntity(gabungan), nil
+}
+
+// End Region
+
 func (s *StuntingService) KesehatanByAnak(id string) (*types.KesehatanAnakArray, error) {
 	k, err := s.Repository.ListKesehatanAnak(id)
 	if err != nil {
@@ -412,6 +526,79 @@ func (s *StuntingService) VerifyAccess(idposyandu *string, orgid *string) error 
 		if !valid {
 			return exceptions.Forbidden.WithMessage("Tidak bisa akses data", nil)
 		}
+	}
+
+	return nil
+}
+
+func (s *StuntingService) VerifyAccessForUpdateFaskes(orgid string, jenis string, satusehat_id string) error {
+	orgidRegistrar := ""
+	memkey := fmt.Sprintf("%s::%s", jenis, satusehat_id)
+
+	if og := s.Repository.GetStringByKey(memkey); og == "" {
+		switch jenis {
+		case "kunjungan":
+			if t, err := s.Repository.OrgIdByEncounterSId(satusehat_id); err != nil {
+				return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+			} else {
+				orgidRegistrar = utils.StrPtr(t)
+			}
+		case "observasi":
+			if ob, err := s.Repository.FindObservasiBySatusehatId(satusehat_id); err == nil {
+				if t, err := s.Repository.OrgIdByEncounterSId(utils.StrPtr(ob.RefEncounter)); err != nil {
+					return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+				} else {
+					orgidRegistrar = utils.StrPtr(t)
+				}
+			} else {
+				return exceptions.Classify(err)
+			}
+		case "diagnosa":
+			if ob, err := s.Repository.FindDiagnosaBySatusehatId(satusehat_id); err == nil {
+				if t, err := s.Repository.OrgIdByEncounterSId(utils.StrPtr(ob.RefEncounter)); err != nil {
+					return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+				} else {
+					orgidRegistrar = utils.StrPtr(t)
+				}
+			} else {
+				return exceptions.Classify(err)
+			}
+		case "layanan":
+			if ob, err := s.Repository.FindLayananBySatusehatId(satusehat_id); err == nil {
+				if t, err := s.Repository.OrgIdByEncounterSId(utils.StrPtr(ob.RefEncounter)); err != nil {
+					return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+				} else {
+					orgidRegistrar = utils.StrPtr(t)
+				}
+			} else {
+				return exceptions.Classify(err)
+			}
+		case "rujukan":
+			if ob, err := s.Repository.FindRujukanBySatusehatId(satusehat_id); err == nil {
+				if t, err := s.Repository.OrgIdByEncounterSId(utils.StrPtr(ob.RefEncounter)); err != nil {
+					return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+				} else {
+					orgidRegistrar = utils.StrPtr(t)
+				}
+			} else {
+				return exceptions.Classify(err)
+			}
+		case "episode":
+			if ob, err := s.Repository.FindEpisodeBySatusehatId(satusehat_id, true); err == nil {
+				orgidRegistrar = *ob.Faskes.SatusehatID
+			} else {
+				return exceptions.Classify(err)
+			}
+		}
+
+		s.Repository.SetStringByKey(memkey, orgidRegistrar, 30*24*time.Hour)
+	} else {
+		orgidRegistrar = og
+	}
+
+	if orgid != orgidRegistrar {
+		logger.Info("VerifyAccessForUpdateFaskes", "orgid", orgid, "registrar", orgidRegistrar)
+		return exceptions.Forbidden.WithMessage("Tidak bisa akses data", nil)
 	}
 
 	return nil
