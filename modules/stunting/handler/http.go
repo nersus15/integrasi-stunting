@@ -39,16 +39,13 @@ func NewHttpHandler(wctx *core.AppContext, cfg *config.ModuleConfig, service *se
 	}
 }
 
+// Region alternatif jalur ekstract payload satusehat untuk faskes
 // faskes diambil dari API key, id_faskes di body diabaikan
 func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
-	orgid, err := h.GetOrgid(c)
-	if err != nil {
-		return h.kirimError(c, err)
+	if err := h.khususFaskes(c); err != nil {
+		return err
 	}
-	if orgid == nil || *orgid == "jakantro" {
-		return h.kirimError(c, exceptions.Forbidden.WithMessage(
-			"endpoint ini hanya untuk faskes, bukan jakantro", nil))
-	}
+	orgid, _ := h.GetOrgid(c)
 
 	p := new(types.PemeriksaanFaskes)
 	if err := c.BodyParser(p); err != nil {
@@ -59,7 +56,7 @@ func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	res, err := h.stream.SimpanPemeriksaanFaskes(p, *orgid)
+	res, err := h.stream.SimpanPemeriksaanFaskes(p, utils.StrPtr(orgid))
 	if err != nil {
 		logger.Error("SimpanPemeriksaanFaskes: " + err.Error())
 		return h.kirimError(c, err)
@@ -67,6 +64,167 @@ func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(res)
 }
+
+func (h *HttpHandler) FaskesUpdateBySatusehatId(c *fiber.Ctx) error {
+	resource := c.Params("resourceName", "")
+
+	if err := h.khususFaskes(c); err != nil {
+		return h.kirimError(c, err)
+	}
+
+	orgid, e := h.GetOrgid(c)
+	if e != nil {
+		h.kirimError(c, e)
+	}
+
+	if resource == "" {
+		return h.kirimError(c, exceptions.TidakDitemukan.Messagef("Endpoint tidak ditemukan"))
+	}
+
+	resource = strings.ToLower(resource)
+	var res any
+	var err error
+
+	switch resource {
+	case "kunjungan":
+		res, err = h.updateKunjunganBySatusehatId(c, orgid)
+	case "observasi":
+		res, err = h.updateObservasiBySatusehatId(c, orgid)
+	case "diagnosa":
+		res, err = h.updateDiagnosaBySatusehatId(c, orgid)
+	case "layanan":
+		res, err = h.updateLayananBySatusehatId(c, orgid)
+	case "rujukan":
+		res, err = h.updateRujukanBySatusehatId(c, orgid)
+	case "episode":
+		res, err = h.updateEpisodeBySatusehatId(c, orgid)
+	default:
+		return h.kirimError(c, exceptions.TidakDitemukan.Messagef("Resource '%s' tidak ditemukan", resource))
+	}
+
+	if err == nil {
+		return c.Status(fiber.StatusOK).JSON(res)
+	} else {
+		return h.kirimError(c, err)
+	}
+}
+
+func (h *HttpHandler) updateKunjunganBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.KunjunganPayload)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+	if err := utils.ValidateKunjunganFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateKunjunganBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:updateKunjunganBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h *HttpHandler) updateObservasiBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.Observasi)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	if err := utils.ValidateObservasiFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateObservasiBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:updateObservasiBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h *HttpHandler) updateDiagnosaBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.Diagnosa)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	if err := utils.ValidateDiagnosaFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateDiagnosaBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:updateDiagnosaBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h *HttpHandler) updateLayananBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+
+	payload := new(types.Layanan)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	if err := utils.ValidateLayananFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateLayananBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:pdateLayananBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h *HttpHandler) updateRujukanBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.Rujukan)
+
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	if err := utils.ValidateRujukanFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateRujukanBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:updateRujukanBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+func (h *HttpHandler) updateEpisodeBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.Episode)
+
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	if err := utils.ValidateEpisodeFaskes(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateEpisodeBySatusehatId(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		logger.Error("http:updateEpisodeBySatusehatId: " + err.Error())
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// End Region
 
 func (h *HttpHandler) kirimError(c *fiber.Ctx, err error) error {
 	k := exceptions.Classify(err)
@@ -430,6 +588,22 @@ func (h *HttpHandler) GetOrgid(c *fiber.Ctx) (*string, error) {
 	}
 
 	return &orgid, nil
+}
+func (h *HttpHandler) khususFaskes(c *fiber.Ctx) error   { return h.khusus(c, "faskes") }
+func (h *HttpHandler) khususJakantro(c *fiber.Ctx) error { return h.khusus(c, "jakantro") }
+
+func (h *HttpHandler) khusus(c *fiber.Ctx, role string) error {
+	orgid, err := h.GetOrgid(c)
+
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	if orgid == nil || (role == "faskes" && utils.StrPtr(orgid) == "jakantro") || (role == "jakantro" && utils.StrPtr(orgid) != "jakantro") {
+		return exceptions.Forbidden.Messagef("endpoint ini hanya untuk %s", role)
+	}
+
+	return nil
 }
 
 // DaftarKafkaGagal menampilkan pesan kafka yang belum berhasil diproses.
