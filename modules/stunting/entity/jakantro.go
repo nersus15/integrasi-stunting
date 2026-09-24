@@ -296,6 +296,7 @@ const (
 	LayananMedicationDispense = "medication_dispense"
 	LayananNutritionOrder     = "nutrition_order"
 	LayananImmunization       = "immunization"
+	LayananServiceRequest     = "service_request"
 )
 
 type Encounter struct {
@@ -494,24 +495,50 @@ func (e Anak) GetPkName() string {
 	return "a.id"
 }
 
+func (e *Kunjungan) Override(new Kunjungan, force bool) {
+	skipFields := map[string]bool{
+		"BaseModel":   true,
+		"ID":          true,
+		"SatusehatId": true,
+		"IDAnak":      true,
+		"IDFaskes":    true,
+		"IDEpisode":   true,
+		"IDRujukan":   true,
+		"CreatedAt":   true,
+		"DeletedAt":   true,
+		"DeletedBy":   true,
+		"SourceData":  true,
+		"Anak":        true,
+		"Faskes":      true,
+		"Episode":     true,
+		"Rujukan":     true,
+		"AtasRujukan": true,
+		"Observasi":   true,
+		"Diagnosa":    true,
+		"Layanan":     true,
+	}
+
+	timpaField(e, new, skipFields, force)
+}
+
 func (e *Anak) Override(new Anak, force bool) {
 	valExisting := reflect.ValueOf(e).Elem()
 	valNew := reflect.ValueOf(new)
 
 	skipFields := map[string]bool{
-		"BaseModel": true, // Bun core
-		"ID":        true, // Primary key
-		"CreatedAt": true, // Database audit timestamp
-		"DeletedAt": true, // Soft delete tracking
-		"DeletedBy": true, // Soft delete tracking
-		"Orangtua":  true, // Relational struct
-		"Kunjungan": true, // Relational slice
-		"Kesehatan": true, // Relational slice
-		"Episode":   true, // Relational slice
-		"Observasi": true, // Relational slice
-		"Diagnosa":  true, // Relational slice
-		"Layanan":   true, // Relational slice
-		"Rujukan":   true, // Relational slice
+		"BaseModel": true,
+		"ID":        true,
+		"CreatedAt": true,
+		"DeletedAt": true,
+		"DeletedBy": true,
+		"Orangtua":  true,
+		"Kunjungan": true,
+		"Kesehatan": true,
+		"Episode":   true,
+		"Observasi": true,
+		"Diagnosa":  true,
+		"Layanan":   true,
+		"Rujukan":   true,
 	}
 
 	for i := 0; i < valNew.NumField(); i++ {
@@ -539,12 +566,12 @@ func (e *Orangtua) Override(new Orangtua, force bool) {
 	valNew := reflect.ValueOf(new)
 
 	skipFields := map[string]bool{
-		"BaseModel": true, // Bun core
-		"ID":        true, // Primary key
-		"CreatedAt": true, // Database audit timestamp
-		"DeletedAt": true, // Soft delete tracking
-		"DeletedBy": true, // Soft delete tracking
-		"Anak":      true, // Relational struct
+		"BaseModel": true,
+		"ID":        true,
+		"CreatedAt": true,
+		"DeletedAt": true,
+		"DeletedBy": true,
+		"Anak":      true,
 	}
 
 	for i := 0; i < valNew.NumField(); i++ {
@@ -563,6 +590,136 @@ func (e *Orangtua) Override(new Orangtua, force bool) {
 		}
 
 		if (!fieldNew.IsZero() && fieldNew != fieldExisting) || force {
+			fieldExisting.Set(fieldNew)
+		}
+	}
+}
+func (e *Diagnosa) Override(new Diagnosa, force bool) {
+	valExisting := reflect.ValueOf(e).Elem()
+	valNew := reflect.ValueOf(new)
+
+	skipFields := map[string]bool{
+		"BaseModel":    true,
+		"ID":           true,
+		"SatusehatId":  true,
+		"CreatedAt":    true,
+		"DeletedAt":    true,
+		"DeletedBy":    true,
+		"Anak":         true,
+		"Jenis":        true,
+		"Kunjungan":    true,
+		"TanggalCatat": true,
+	}
+
+	for i := 0; i < valNew.NumField(); i++ {
+		fieldType := valNew.Type().Field(i)
+		fieldName := fieldType.Name
+		if skipFields[fieldName] {
+			continue
+		}
+
+		fieldNew := valNew.Field(i)
+		fieldExisting := valExisting.FieldByName(fieldName)
+
+		if !fieldExisting.IsValid() || !fieldExisting.CanSet() {
+			continue
+		}
+
+		if (!fieldNew.IsZero() && fieldNew != fieldExisting) || force {
+			fieldExisting.Set(fieldNew)
+		}
+	}
+}
+
+func (e *Observasi) Override(new Observasi, force bool) {
+	skipFields := map[string]bool{
+		"BaseModel":   true,
+		"ID":          true,
+		"SatusehatId": true,
+		"IDAnak":      true,
+		"IDKunjungan": true,
+		"IDInduk":     true,
+		"CreatedAt":   true,
+		"DeletedAt":   true,
+		"Anak":        true,
+		"Kunjungan":   true,
+		"Induk":       true,
+		"Component":   true,
+	}
+
+	timpaField(e, new, skipFields, force)
+}
+
+func (e *Layanan) Override(new Layanan, force bool) {
+	skipFields := map[string]bool{
+		"BaseModel":   true,
+		"ID":          true,
+		"SatusehatId": true,
+		"IDAnak":      true,
+		"IDKunjungan": true,
+		"CreatedAt":   true,
+		"DeletedAt":   true,
+		"Anak":        true,
+		"Kunjungan":   true,
+	}
+
+	timpaField(e, new, skipFields, force)
+}
+
+func (e *Rujukan) Override(new Rujukan, force bool) {
+	skipFields := map[string]bool{
+		"BaseModel":      true,
+		"ID":             true,
+		"SatusehatId":    true,
+		"IDAnak":         true,
+		"IDKunjungan":    true,
+		"IDFaskesAsal":   true,
+		"IDFaskesTujuan": true,
+		"CreatedAt":      true,
+		"DeletedAt":      true,
+		"Anak":           true,
+		"Kunjungan":      true,
+		"FaskesAsal":     true,
+		"FaskesTujuan":   true,
+	}
+
+	timpaField(e, new, skipFields, force)
+}
+
+func (e *Episode) Override(new Episode, force bool) {
+	skipFields := map[string]bool{
+		"BaseModel":   true,
+		"ID":          true,
+		"SatusehatId": true,
+		"IDAnak":      true,
+		"IDFaskes":    true,
+		"CreatedAt":   true,
+		"DeletedAt":   true,
+		"Anak":        true,
+		"Faskes":      true,
+	}
+
+	timpaField(e, new, skipFields, force)
+}
+
+func timpaField(tujuan any, new any, skipFields map[string]bool, force bool) {
+	valExisting := reflect.ValueOf(tujuan).Elem()
+	valNew := reflect.ValueOf(new)
+
+	for i := 0; i < valNew.NumField(); i++ {
+		fieldName := valNew.Type().Field(i).Name
+		if skipFields[fieldName] {
+			continue
+		}
+
+		fieldNew := valNew.Field(i)
+		fieldExisting := valExisting.FieldByName(fieldName)
+
+		if !fieldExisting.IsValid() || !fieldExisting.CanSet() {
+			continue
+		}
+
+		if (!fieldNew.IsZero() && fieldNew.Interface() != fieldExisting.Interface()) || force {
 			fieldExisting.Set(fieldNew)
 		}
 	}
