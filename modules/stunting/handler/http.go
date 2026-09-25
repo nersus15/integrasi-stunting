@@ -43,7 +43,7 @@ func NewHttpHandler(wctx *core.AppContext, cfg *config.ModuleConfig, service *se
 // faskes diambil dari API key, id_faskes di body diabaikan
 func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 	if err := h.khususFaskes(c); err != nil {
-		return err
+		return h.kirimError(c, err)
 	}
 	orgid, _ := h.GetOrgid(c)
 
@@ -65,7 +65,7 @@ func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(res)
 }
 
-func (h *HttpHandler) FaskesUpdateBySatusehatId(c *fiber.Ctx) error {
+func (h *HttpHandler) UpdateResourceBySatusehatId(c *fiber.Ctx) error {
 	resource := c.Params("resourceName", "")
 
 	if err := h.khususFaskes(c); err != nil {
@@ -74,7 +74,7 @@ func (h *HttpHandler) FaskesUpdateBySatusehatId(c *fiber.Ctx) error {
 
 	orgid, e := h.GetOrgid(c)
 	if e != nil {
-		h.kirimError(c, e)
+		return h.kirimError(c, e)
 	}
 
 	if resource == "" {
@@ -433,6 +433,35 @@ func (h *HttpHandler) CreateKunjungan(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(res)
 }
 
+// UpdateKunjunganById ini adalah handler yang dikhususkan untuk jakantro, karena id kunjungan dari jakantro = id pengukurna internal jakantro
+func (h *HttpHandler) UpdateKunjunganById(c *fiber.Ctx) error {
+	if err := h.khususJakantro(c); err != nil {
+		return h.kirimError(c, err)
+	}
+
+	id := c.Params("id", "")
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.Messagef("Id harus dikirimkan sebagai parameter"))
+	}
+
+	payload := new(types.KunjunganPayload)
+
+	if err := c.BodyParser(payload); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+
+	if err := utils.ValidateKunjungan(*payload); err != nil {
+		return h.kirimError(c, exceptions.Validasi.New(err))
+	}
+
+	res, err := h.service.UpdateKunjunganById(payload, id)
+
+	if err != nil {
+		return h.kirimError(c, exceptions.Classify(err))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
 func (h *HttpHandler) CreateKesehatan(c *fiber.Ctx) error {
 	res, err := h.service.CreateKesehatan(c.Body())
 	if err != nil {
@@ -440,6 +469,34 @@ func (h *HttpHandler) CreateKesehatan(c *fiber.Ctx) error {
 	}
 
 	return c.Status(http.StatusCreated).JSON(res)
+}
+func (h *HttpHandler) UpdateKesehatanById(c *fiber.Ctx) error {
+	if err := h.khususJakantro(c); err != nil {
+		return h.kirimError(c, err)
+	}
+
+	id := c.Params("id", "")
+	if id == "" {
+		return h.kirimError(c, exceptions.ParameterRequired.Messagef("Id harus dikirimkan sebagai parameter"))
+	}
+
+	payload := new(types.KesehatanPayload)
+
+	if err := c.BodyParser(payload); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+
+	if err := utils.ValidateKesehatan(*payload); err != nil {
+		return h.kirimError(c, exceptions.Validasi.New(err))
+	}
+
+	res, err := h.service.UpdateKesehatanById(payload, id)
+
+	if err != nil {
+		return h.kirimError(c, exceptions.Classify(err))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 func (h *HttpHandler) FindKunjunganByIdAnak(c *fiber.Ctx) error {
@@ -596,7 +653,7 @@ func (h *HttpHandler) khusus(c *fiber.Ctx, role string) error {
 	orgid, err := h.GetOrgid(c)
 
 	if err != nil {
-		return h.kirimError(c, err)
+		return err
 	}
 
 	if orgid == nil || (role == "faskes" && utils.StrPtr(orgid) == "jakantro") || (role == "jakantro" && utils.StrPtr(orgid) != "jakantro") {
