@@ -49,7 +49,6 @@ func (s *StreamService) RetryKafkaTransaction(key string) error {
 
 	err = s.prosesUlang(tr)
 	if err != nil {
-		// simpan error terbaru dan naikkan attempt
 		if e := s.SaveKafkaTransaction(key, []byte(tr.Message), err); e != nil {
 			logger.Error("RetryKafkaTransaction: gagal memperbarui catatan "+key, "error", e)
 		}
@@ -109,8 +108,6 @@ func (s *StreamService) prosesUlang(tr *types.KafkaTransaction) (err error) {
 	return s.ProsesTransaksiFHIR(bundle, transaction.Patient)
 }
 
-// DaftarKafkaTransactionGagal dipakai endpoint/UI untuk menampilkan antrean.
-// patientId opsional untuk menyaring.
 func (s *StreamService) DaftarKafkaTransactionGagal(patientId *string) ([]*types.KafkaTransaction, error) {
 	return s.repository.FindKafkaTransactions(patientId)
 }
@@ -199,8 +196,7 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 				continue
 			}
 
-			// cari data anak di database
-			anak, _ = s.repository.FindAnak(nil, tmp.Nik, nil, nil)
+			anak, _ = s.repository.FindAnak(nil, tmp.Nik, nil, nil, false)
 
 			if anak != nil {
 				berubah := timpaAnakDariFHIR(anak, tmp)
@@ -247,7 +243,7 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 				idAnakSatusehat = ihs
 			}
 
-			orangtua, _ = s.repository.FindOrangTuaByNik(tmp.Nik)
+			orangtua, _ = s.repository.FindOrangTuaByNik(tmp.Nik, false)
 
 			if orangtua != nil {
 				orangtuaPerluUpdate = timpaDariFHIR(orangtua, tmp)
@@ -411,7 +407,7 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 
 	if anak_ke != nil && utils.IsFilled(idAnakSatusehat) {
 		// Update data anak
-		anak_db, err := s.repository.FindAnakBySatusehatId(*idAnakSatusehat)
+		anak_db, err := s.repository.FindAnakBySatusehatId(*idAnakSatusehat, false)
 		if err != nil {
 			logger.Error("ProsesTransaksiFHIR:UpdateDataAnak => " + err.Error())
 		}
@@ -756,7 +752,7 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 	}
 	// bundle tanpa Patient: anaknya dicari lewat IHS id dari envelope
 	if !utils.IsStrFilled(idAnak) && utils.IsFilled(ihsAnak) {
-		if a, err := s.repository.FindAnakBySatusehatId(*ihsAnak); err == nil && a != nil {
+		if a, err := s.repository.FindAnakBySatusehatId(*ihsAnak, false); err == nil && a != nil {
 			idAnak = a.Id
 		}
 	}
@@ -1118,12 +1114,12 @@ func (s *StreamService) CariAnak(a *types.Anak) *types.Anak {
 		return nil
 	}
 	if utils.IsFilled(a.IdSatusehat) {
-		if k, err := s.repository.FindAnakBySatusehatId(*a.IdSatusehat); err == nil && k != nil {
+		if k, err := s.repository.FindAnakBySatusehatId(*a.IdSatusehat, false); err == nil && k != nil {
 			return k
 		}
 	}
 	if utils.IsFilled(a.Nik) {
-		if k, err := s.repository.FindAnak(nil, a.Nik, nil, nil); err == nil && k != nil {
+		if k, err := s.repository.FindAnak(nil, a.Nik, nil, nil, false); err == nil && k != nil {
 			return k
 		}
 	}
