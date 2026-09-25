@@ -243,13 +243,13 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "GET",
-		Path:    "/anak/kunjungan/:id",
+		Path:    "/kunjungan/:id",
 		Handler: m.handler.FindKunjunganById,
 		Root:    root,
 	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "GET",
-		Path:    "/anak/kesehatan/:id",
+		Path:    "/kesehatan/:id",
 		Handler: m.handler.FindKesehatanById,
 		Root:    root,
 	})
@@ -279,11 +279,23 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.CreateKunjungan,
 		Root:    root,
 	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "PUT",
+		Path:    "/kunjungan/:id",
+		Handler: m.handler.UpdateKunjunganById,
+		Root:    root,
+	})
 
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "POST",
 		Path:    "/kesehatan",
 		Handler: m.handler.CreateKesehatan,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "PUT",
+		Path:    "/kesehatan/:id",
+		Handler: m.handler.UpdateKesehatanById,
 		Root:    root,
 	})
 
@@ -296,7 +308,7 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
 		Path:    "/faskes/:resourceName",
-		Handler: m.handler.FaskesUpdateBySatusehatId,
+		Handler: m.handler.UpdateResourceBySatusehatId,
 		Root:    root,
 	})
 }
