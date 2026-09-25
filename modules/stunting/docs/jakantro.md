@@ -210,6 +210,29 @@ itu foreign key, bukan validasi payload.
 Ketiganya disimpan `NULL` dan tidak bentrok dengan unique constraint. NIK
 orangtua tidak boleh kosong.
 
+### PUT /api/kunjungan/:id
+
+Memperbarui kunjungan yang sudah tersimpan. `id` pada path adalah id yang Anda
+tentukan sendiri saat membuatnya.
+
+```json
+{
+  "id": "c1e48a72-9d35-4b80-a6f3-52d7e9418b04",
+  "id_anak": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+  "tanggal_pengukuran": "2026-08-14",
+  "berat_badan": 9.8
+}
+```
+
+Field yang tidak dikirim **tidak dihapus** — nilainya yang sekarang
+dipertahankan. Jadi mengirim `berat_badan` saja tidak akan mengosongkan tinggi
+badan.
+
+> **Awas.** Kunjungan yang dibuat faskes tidak boleh diubah jakantro.
+> Percobaannya dijawab `403` `1008` dengan menyebut faskes pembuatnya.
+
+`id`, `id_anak`, dan `created_at` tidak ikut berubah meski dikirim.
+
 ---
 
 ## POST /api/kesehatan
@@ -270,6 +293,11 @@ Contoh bentuk flat:
 
 Field `tbc_*`, `layanan_*`, dan `penyuluhan_*` semuanya smallint nullable —
 dipakai sebagai flag `0`/`1`.
+
+### PUT /api/kesehatan/:id
+
+Bentuknya sama dengan `PUT /api/kunjungan/:id`: field yang tidak dikirim
+dipertahankan, `id` dan `id_anak` tidak berubah.
 
 ---
 

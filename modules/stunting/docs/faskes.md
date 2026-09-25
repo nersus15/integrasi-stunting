@@ -62,6 +62,38 @@ tanda stunting sementara anaknya juga belum pernah berstatus stunting. Bukan
 kesalahan payload — jangan retry. Penolakan tidak meninggalkan apa pun di
 database.
 
+## PUT /api/faskes/:resourceName
+
+Memperbarui satu resource yang sudah tersimpan. `:resourceName` salah satu dari
+`kunjungan`, `observasi`, `diagnosa`, `layanan`, `rujukan`, `episode`.
+
+```json
+PUT /api/faskes/diagnosa
+
+{
+  "id_satusehat": "cond-pkm-01",
+  "kode": "E45",
+  "display": "Nutritional stunting (revisi)"
+}
+```
+
+`id_satusehat` **wajib** — itu satu-satunya kunci pencarian barisnya.
+
+Field yang tidak dikirim dipertahankan. Untuk `kunjungan`, ini penting: PUT
+Encounter hanya membawa periode kunjungan, sehingga berat dan tinggi badan yang
+berasal dari Observation tidak ikut terhapus.
+
+| jawaban | arti |
+|---|---|
+| `200` | tersimpan; body berisi baris hasil penggabungan |
+| `403` `1008` | resource itu milik faskes lain |
+| `404` `2001` | `:resourceName` tidak dikenal, atau barisnya belum pernah tersimpan |
+| `422` `1002` | `id_satusehat` tidak dikirim, atau isinya tidak memenuhi aturan |
+
+Anda hanya bisa memperbarui resource yang faskes-nya sama dengan pemilik API key.
+
+---
+
 ### Kenapa `id_satusehat` wajib
 
 Kolom `satusehat_id` unik di tabel kunjungan, observasi, diagnosa, layanan, dan

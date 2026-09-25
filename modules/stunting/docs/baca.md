@@ -288,13 +288,13 @@ Data medis bisa tiba sebelum `Encounter`-nya. Baris seperti itu disimpan dengan
 Encounter-nya masuk. Kalau tidak ditampilkan, data itu tidak terlihat di mana
 pun.
 
-## GET /api/anak/kunjungan/:id dan GET /api/anak/kesehatan/:id
+## GET /api/kunjungan/:id dan GET /api/kesehatan/:id
 
 Satu record by id. Path param `id` wajib; kalau kosong kena `422` `1007`.
 
 ```
-GET /api/anak/kunjungan/c1e48a72-9d35-4b80-a6f3-52d7e9418b04
-GET /api/anak/kesehatan/d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5
+GET /api/kunjungan/c1e48a72-9d35-4b80-a6f3-52d7e9418b04
+GET /api/kesehatan/d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5
 ```
 
 Response berupa object kunjungan atau kesehatan, tanpa data anak.
@@ -306,3 +306,62 @@ Kode error yang bisa muncul di halaman ini — `404` `2001`, `422` `1002`,
 [Katalog Error](?doc=errors#tabel-acuan-lengkap).
 
 ---
+
+---
+
+## Antrean pesan kafka yang gagal
+
+Pesan dari SatuSehat yang gagal diproses disimpan supaya bisa diproses ulang
+setelah penyebabnya diperbaiki. Proses ulang membaca dari database, **bukan**
+mem-produce ulang ke kafka — consumer lain di topik yang sama bisa jadi sudah
+berhasil memproses pesan itu.
+
+### GET /api/kafka/gagal
+
+Daftar pesan yang belum beres. Bisa disaring dengan `?patient_id=`.
+
+```
+GET /api/kafka/gagal
+GET /api/kafka/gagal?patient_id=P99001100022
+```
+
+```json
+{
+  "jumlah": 1,
+  "data": [
+    {
+      "transaction_id": "f0a9c832-11d7-4b65-8e30-95c74ab2016d",
+      "patient_id": "P99001100022",
+      "attempt": 2,
+      "error": "ERROR: value too long for type character varying(50)",
+      "message": "{ ... pesan asli apa adanya ... }",
+      "created_at": "2026-09-22T10:04:10+07:00",
+      "resolved_at": null
+    }
+  ]
+}
+```
+
+| kolom | arti |
+|---|---|
+| `transaction_id` | id transaksi dari envelope. Kalau tidak terbaca, dipakai sidik jari isi pesan |
+| `patient_id` | IHS id pasien, diambil dari envelope. Dipakai menyaring |
+| `attempt` | sudah berapa kali dicoba |
+| `error` | penyebab kegagalan terakhir |
+| `message` | pesan kafka asli, byte per byte, siap diproses ulang |
+| `resolved_at` | terisi kalau sudah berhasil. Yang sudah beres tidak muncul di daftar |
+
+### POST /api/kafka/gagal/:id/retry
+
+Memproses ulang satu pesan. `:id` adalah `transaction_id`.
+
+`200` berarti berhasil dan barisnya ditandai selesai. Kalau masih gagal,
+jawabannya mengikuti penyebabnya dan `attempt` bertambah.
+
+### POST /api/kafka/gagal/retry
+
+Memproses ulang seluruh antrean, berurutan.
+
+```json
+{ "berhasil": 3, "gagal": 1 }
+```

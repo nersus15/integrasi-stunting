@@ -24,7 +24,7 @@ jangan tertukar.
 | | **Jakantro (posyandu)** | **Faskes (puskesmas & RS)** |
 |---|---|---|
 | halaman | [Jalur Jakantro](?doc=jakantro) | [Jalur Faskes](?doc=faskes) |
-| endpoint kirim | `POST /api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak` | `POST /api/faskes/pemeriksaan` |
+| endpoint kirim | `POST` dan `PUT` pada `/api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak` | `POST /api/faskes/pemeriksaan`, `PUT /api/faskes/:resource` |
 | siapa menentukan `id` | **Anda** | **sistem** |
 | kunci pencocokan | `id` kiriman Anda | `id_satusehat` (IHS id) |
 | identitas pengirim | group `jakantro` di API key | group `orgid:<satusehat id>` di API key |
@@ -35,7 +35,8 @@ sendiri ke sini lewat Kafka tanpa memanggil endpoint apa pun. Kedua jalur boleh
 dipakai bersamaan — `id_satusehat` yang membuat datanya menyatu, bukan berganda.
 
 Membacanya sama untuk keduanya: [endpoint GET](?doc=baca) tidak membedakan asal
-data.
+data. Di halaman itu juga ada [antrean pesan kafka yang gagal](?doc=baca#antrean-pesan-kafka-yang-gagal),
+untuk memproses ulang data SatuSehat yang sempat gagal masuk.
 
 ---
 
@@ -156,7 +157,7 @@ Tabel acuan lengkap beserta arti dan tindak lanjut tiap kode ada di
 ## Laporan pengujian
 
 Contoh di dokumentasi sengaja dibatasi supaya terbaca. Kalau butuh lebih banyak
-kasus — terutama kombinasi yang ditolak — ada laporan pengujian berisi **136
+kasus — terutama kombinasi yang ditolak — ada laporan pengujian berisi **155
 skenario** terhadap seluruh endpoint, lengkap dengan payload yang dikirim,
 status code, dan response utuh untuk masing-masing.
 
@@ -170,5 +171,8 @@ Untuk membangkitkan ulang:
 
 ```bash
 cd tests
-KUNCI_WRITE=<key> KUNCI_READ=<key> go test ./functional/api_stunting/
+GOWORK=off KUNCI_WRITE=<key> KUNCI_READ=<key> KUNCI_FASKES=<key> go test -p 1 ./functional/api_stunting/
 ```
+
+`KUNCI_FASKES` adalah kunci ber-group `orgid:<satusehat id>`, dipakai skenario
+jalur faskes.
