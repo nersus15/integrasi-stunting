@@ -31,8 +31,6 @@ type KafkaTransactionPayload struct {
 	Created       time.Time        `json:"created_at"`
 }
 
-// waktu disimpan sampai detik: urutan kejadian yang dibutuhkan saat menelusuri
-// pesan gagal, bukan tanggalnya saja
 const formatWaktu = time.RFC3339
 
 func (tr *KafkaTransaction) FromEntity(data *entity.FailedTransactions) *KafkaTransaction {

@@ -337,7 +337,6 @@ func kumpulkanKolomBun(rv reflect.Value, hasil map[string]any) bool {
 			adaTagBun = true
 		}
 
-		// bun.BaseModel dan sejenisnya: pembawa metadata tabel, bukan kolom
 		if field.Anonymous && !punyaTag {
 			if field.Type.Kind() == reflect.Struct && kumpulkanKolomBun(rv.Field(i), hasil) {
 				adaTagBun = true
@@ -375,7 +374,6 @@ func namaKolomBun(field reflect.StructField, tag string, punyaTag bool) (nama st
 	bagian := strings.Split(tag, ",")
 	nama = strings.TrimSpace(bagian[0])
 
-	// relasi, metadata tabel, dan embedded struct tidak punya kolom sendiri
 	if penandaStruktur(nama) {
 		return "", true
 	}
