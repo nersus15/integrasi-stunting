@@ -80,7 +80,56 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 	return nil
 }
 
+func ValidateAnakUpdate(p types.AnakPayload) error {
+	if !IsStrFilled(p.Id) {
+		return fmt.Errorf("id tidak boleh kosong")
+	}
+	if IsFilled(p.NIK) && strings.TrimSpace(*p.NIK) != "" && !IsDigitsLen(*p.NIK, 16) {
+		return fmt.Errorf("nik harus 16 digit angka")
+	}
+	if IsStrFilled(p.TanggalLahir) && !IsValidDate(p.TanggalLahir) {
+		return fmt.Errorf("tanggal_lahir harus berformat YYYY-MM-DD")
+	}
+	if jk := strings.ToUpper(strings.TrimSpace(p.JenisKelamin)); jk != "" && jk != "L" && jk != "P" {
+		return fmt.Errorf("jenis_kelamin harus 'L' atau 'P'")
+	}
+	if p.AnakKe < 0 {
+		return fmt.Errorf("anak_ke tidak boleh negatif")
+	}
+	if p.IMD != 0 && p.IMD != 1 {
+		return fmt.Errorf("imd harus bernilai 0 atau 1")
+	}
+	if p.BBLahir < 0 || p.TBLahir < 0 || p.LKLahir < 0 {
+		return fmt.Errorf("bb_lahir, tb_lahir, dan lk_lahir tidak boleh negatif")
+	}
+
+	return nil
+}
+
 // versi longgar untuk data dari Kafka
+func ValidateOrangtuaUpdate(p types.OrangtuaPayload) error {
+	if !IsStrFilled(p.Id) {
+		return fmt.Errorf("id tidak boleh kosong")
+	}
+	if IsStrFilled(p.NoKk) && !IsDigitsLen(p.NoKk, 16) {
+		return fmt.Errorf("no_kk harus 16 digit angka")
+	}
+	if IsStrFilled(p.Nik) && !IsDigitsLen(p.Nik, 16) {
+		return fmt.Errorf("nik harus 16 digit angka")
+	}
+	if p.Kia != 0 && p.Kia != 1 {
+		return fmt.Errorf("kia harus bernilai 0 atau 1")
+	}
+	if p.UsiaHamil != nil && *p.UsiaHamil < 0 {
+		return fmt.Errorf("usia_hamil tidak boleh bernilai negatif")
+	}
+	if p.KiaBayiKecil != nil && *p.KiaBayiKecil != 0 && *p.KiaBayiKecil != 1 {
+		return fmt.Errorf("kia_bayi_kecil harus bernilai 0 atau 1")
+	}
+
+	return nil
+}
+
 func ValidateOrangtuaStream(p types.OrangtuaPayload) error {
 	if !IsStrFilled(p.Id) {
 		return fmt.Errorf("id tidak boleh kosong")
@@ -341,7 +390,6 @@ func ValidateDiagnosaFaskes(diagnosa types.Diagnosa) error {
 
 	return nil
 }
-
 
 func ValidateObservasiFaskes(o types.Observasi) error {
 	if !IsFilled(o.IdSatusehat) {
