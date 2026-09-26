@@ -264,7 +264,7 @@ func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
 
-	if err := utils.ValidateOrangtua(orangtua); err != nil {
+	if err := utils.ValidateOrangtuaUpdate(orangtua); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
@@ -273,19 +273,16 @@ func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	err = h.service.VerifyAccess(&orangtua.IdPosyandu, orgid)
-
-	if err != nil {
-		logger.ErrorJson("VerifyAccess", err)
+	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
 		return h.kirimError(c, err)
 	}
 
-	res, err := h.service.CreateOrangTua(orangtua.ToEntity())
+	res, err := h.service.UpdateOrangTuaById(orangtua.ToEntity(), orgid)
 	if err != nil {
 		return h.kirimError(c, err)
 	}
 
-	return c.Status(http.StatusCreated).JSON(res)
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
@@ -312,10 +309,7 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	err = h.service.VerifyAccess(orangtua.IdPosyandu, orgid)
-
-	if err != nil {
-		logger.ErrorJson("VerifyAccess", err)
+	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -347,7 +341,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
 
-	if err := utils.ValidateAnak(anak); err != nil {
+	if err := utils.ValidateAnakUpdate(anak); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
@@ -356,10 +350,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	err = h.service.VerifyAccessByIdOrangtua(anak.IDOrangtua, orgid)
-
-	if err != nil {
-		logger.ErrorJson("VerifyAccess", err)
+	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -413,10 +404,7 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	err = h.service.VerifyAccessByIdOrangtua(anak.IdOrangtua, orgid)
-
-	if err != nil {
-		logger.ErrorJson("VerifyAccess", err)
+	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
 		return h.kirimError(c, err)
 	}
 

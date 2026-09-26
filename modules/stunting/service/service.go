@@ -48,7 +48,7 @@ func (s *StuntingService) CreateOrangTua(orangtua *entity.Orangtua) (*types.Oran
 	return s.Repository.CreateOrangTua(orangtua, nil)
 }
 
-func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, updatedBy *string) (*types.Orangtua, error) {
+func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, orgid *string) (*types.Orangtua, error) {
 	// Cari dulu
 	o, err := s.FindOrangTua(&orangtua.ID, &orangtua.NIK, &orangtua.NoKK, nil, nil)
 
@@ -60,11 +60,15 @@ func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, updatedB
 		}
 	}
 
+	if utils.StrPtr(orgid) != "jakantro" {
+		orangtua.IDPosyandu = nil
+	}
+
 	orangtua_db := o.ToPayload().ToEntity()
 	orangtua_db.Override(*orangtua, false)
 
 	orangtua_db.UpdatedAt = new(time.Now())
-	orangtua_db.UpdatedBy = updatedBy
+	orangtua_db.UpdatedBy = orgid
 
 	return s.Repository.UpdateOrangTuaById(orangtua_db, nil, false)
 }
@@ -84,17 +88,21 @@ func (s *StuntingService) CreateAnak(anak *entity.Anak) (*types.Anak, error) {
 	return s.Repository.CreateAnak(anak, nil)
 }
 
-func (s *StuntingService) UpdateAnakById(anak *entity.Anak, updatedBy *string) (*types.Anak, error) {
+func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*types.Anak, error) {
 	a, err := s.Repository.FindAnak(&anak.ID, anak.NIK, &anak.IDOrangtua, &anak.AnakKe, false)
 	if err != nil || a == nil {
 		return nil, exceptions.TidakDitemukan.Messagef("Data anak tidak ditemukan")
+	}
+
+	if utils.StrPtr(orgid) != "jakantro" {
+		anak.IDOrangtua = ""
 	}
 
 	anak_db := a.ToPayload().ToEntity()
 	anak_db.Override(*anak, false)
 
 	anak_db.UpdatedAt = new(time.Now())
-	anak_db.UpdatedBy = updatedBy
+	anak_db.UpdatedBy = orgid
 
 	return s.Repository.UpdateAnakById(anak_db, nil, false)
 }
@@ -593,6 +601,25 @@ func (s *StuntingService) orgidPemilik(refEncounter *string, idKunjungan *string
 	return "", exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: pemilik data tidak diketahui")
 }
 
+func (s *StuntingService) VerifyEncounterMilik(orgid, refEncounter string, bolehBelumAda bool) error {
+	pemilik, err := s.Repository.OrgIdByEncounterSId(refEncounter)
+	if err != nil {
+		if exceptions.Classify(err).ErrorCode != exceptions.TidakDitemukan.ErrorCode {
+			return err
+		}
+		if bolehBelumAda {
+			return nil
+		}
+		return exceptions.Forbidden.Messagef("encounter %s belum tersimpan, kepemilikannya tidak bisa diverifikasi", refEncounter)
+	}
+
+	if utils.StrPtr(pemilik) != orgid {
+		return exceptions.Forbidden.Messagef("encounter %s milik faskes lain", refEncounter)
+	}
+
+	return nil
+}
+
 func (s *StuntingService) VerifyAccessForUpdateFaskes(orgid string, jenis string, satusehat_id string) error {
 	orgidRegistrar := ""
 	memkey := fmt.Sprintf("%s::%s", jenis, satusehat_id)
@@ -666,20 +693,60 @@ func (s *StuntingService) VerifyAccessForUpdateFaskes(orgid string, jenis string
 	return nil
 }
 
-func (s *StuntingService) VerifyAccessByIdOrangtua(idorangtua string, orgid *string) error {
-	// Ini pembungkus kecil untuk anak, karena di dto anak tidak ada id posyandu
-	if !utils.IsStrFilled(idorangtua) {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Id orang tua kosong", nil)
-	}
-
-	// cari orangtua
-	orangtua, err := s.Repository.FindOrangTuaById(idorangtua)
-	if err != nil {
+func (s *StuntingService) VerifyAksesOrangtua(orgid *string, idOrangtua string) error {
+	if !utils.IsFilled(orgid) {
 		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
 	}
-	if orangtua == nil {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, orangtua tidak ditemukan", nil)
+	if *orgid == "jakantro" {
+		return nil
 	}
 
-	return s.VerifyAccess(orangtua.IdPosyandu, orgid)
+	orangtua, err := s.Repository.FindOrangTuaById(idOrangtua)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+
+	return s.aksesWilayahAtauKlinis(*orgid, orangtua.IdPosyandu, "", idOrangtua)
+}
+
+func (s *StuntingService) VerifyAksesAnak(orgid *string, idAnak string) error {
+	if !utils.IsFilled(orgid) {
+		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
+	}
+	if *orgid == "jakantro" {
+		return nil
+	}
+
+	anak, err := s.Repository.FindAnak(&idAnak, nil, nil, nil, false)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+
+	var idPosyandu *string
+	if utils.IsStrFilled(anak.IdOrangtua) {
+		orangtua, err := s.Repository.FindOrangTuaById(anak.IdOrangtua)
+		if err != nil {
+			return exceptions.Classify(err)
+		}
+		idPosyandu = orangtua.IdPosyandu
+	}
+
+	return s.aksesWilayahAtauKlinis(*orgid, idPosyandu, idAnak, "")
+}
+
+func (s *StuntingService) aksesWilayahAtauKlinis(orgid string, idPosyandu *string, idAnak, idOrangtua string) error {
+	errWilayah := s.VerifyAccess(idPosyandu, &orgid)
+	if errWilayah == nil {
+		return nil
+	}
+
+	ada, err := s.Repository.AksesKlinis(orgid, idAnak, idOrangtua)
+	if err != nil {
+		return err
+	}
+	if ada {
+		return nil
+	}
+
+	return errWilayah
 }
