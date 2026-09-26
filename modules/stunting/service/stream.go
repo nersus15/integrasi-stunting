@@ -346,6 +346,9 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 			rujukan = append(rujukan, *tmp)
 
 			if update {
+				if err := s.arahRujukanTersimpan(tmp); err != nil {
+					return exceptions.AbaikanJikaBelumTersimpan(err)
+				}
 				_, err := s.repository.UpdateRujukanBySatusehatId(tmp.ToEntity(), true)
 				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
@@ -1064,6 +1067,31 @@ func (s *StreamService) faskesDariRef(ref *string) (*string, string) {
 	return &f.Id, strings.ToLower(strings.TrimSpace(f.Jenis))
 }
 
+func (s *StreamService) arahRujukanTersimpan(r *types.Rujukan) error {
+	if r.Jenis != "" {
+		return nil
+	}
+
+	lama, err := s.repository.FindRujukanBySatusehatId(utils.StrPtr(r.IdSatusehat))
+	if err != nil {
+		return err
+	}
+
+	refAsal, refTujuan := r.RefFaskesAsal, r.RefFaskesTujuan
+	if !utils.IsFilled(refAsal) {
+		refAsal = lama.RefFaskesAsal
+	}
+	if !utils.IsFilled(refTujuan) {
+		refTujuan = lama.RefFaskesTujuan
+	}
+
+	_, jenisAsal := s.faskesDariRef(refAsal)
+	_, jenisTujuan := s.faskesDariRef(refTujuan)
+	r.Jenis = arahRujukan("", refAsal, refTujuan, jenisAsal, jenisTujuan)
+
+	return nil
+}
+
 func arahRujukan(dariKategori string, refAsal, refTujuan *string, jenisAsal, jenisTujuan string) string {
 	if dariKategori != "" {
 		return dariKategori
@@ -1129,6 +1157,38 @@ func (s *StreamService) CariAnak(a *types.Anak) *types.Anak {
 	return nil
 }
 
+func (s *StreamService) verifyEncounterPemeriksaan(orgid string, p *types.PemeriksaanFaskes) error {
+	encounter := utils.StrPtr(p.Kunjungan.IdSatusehat)
+	if err := s.stunting.VerifyEncounterMilik(orgid, encounter, true); err != nil {
+		return err
+	}
+
+	refs := make([]*string, 0, len(p.Observasi)+len(p.Diagnosa)+len(p.Layanan)+len(p.Rujukan))
+	for _, o := range p.Observasi {
+		refs = append(refs, o.RefEncounter)
+	}
+	for _, d := range p.Diagnosa {
+		refs = append(refs, d.RefEncounter)
+	}
+	for _, l := range p.Layanan {
+		refs = append(refs, l.RefEncounter)
+	}
+	for _, r := range p.Rujukan {
+		refs = append(refs, r.RefEncounter)
+	}
+
+	for _, ref := range refs {
+		if !utils.IsFilled(ref) || *ref == encounter {
+			continue
+		}
+		if err := s.stunting.VerifyEncounterMilik(orgid, *ref, false); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // orgid dari API key, bukan dari body
 func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgid string) (*types.HasilPemeriksaan, error) {
 	if p == nil {
@@ -1151,8 +1211,7 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 	anak := s.CariAnak(&p.Anak)
 	if anak == nil {
 		if !adaTandaStunting(p.Diagnosa, observasi) {
-			return nil, exceptions.TidakDisimpan.Messagef(
-				"tidak ada tanda stunting dan anak belum punya riwayat")
+			return nil, exceptions.TidakDisimpan.Messagef("tidak ada tanda stunting dan anak belum punya riwayat")
 		}
 
 		anak, err = s.PastikanAnak(&p.Anak, nil)
@@ -1160,9 +1219,14 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 			return nil, err
 		}
 		if anak == nil {
-			return nil, exceptions.TidakDisimpan.Messagef(
-				"anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun")
+			return nil, exceptions.TidakDisimpan.Messagef("anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun")
 		}
+	} else if err := s.stunting.VerifyAksesAnak(&orgid, anak.Id); err != nil {
+		return nil, err
+	}
+
+	if err := s.verifyEncounterPemeriksaan(orgid, p); err != nil {
+		return nil, err
 	}
 
 	kunjungan := p.Kunjungan
