@@ -373,14 +373,14 @@ func PatientToAnak(entry types2.BundleEntry) (*types.Anak, error) {
 
 	nik := FindNik(resource.Identifier)
 	name := FindName(resource.Name)
-	gender := strings.ToLower(resource.Gender.Display())
 	kelamin := ""
-
-	switch gender {
-	case "male":
-		kelamin = "L"
-	case "female":
-		kelamin = "P"
+	if resource.Gender != nil {
+		switch strings.ToLower(resource.Gender.Display()) {
+		case "male":
+			kelamin = "L"
+		case "female":
+			kelamin = "P"
+		}
 	}
 
 	logger.Info("ID Resource: " + helper.ToLogJSON(entry))
@@ -388,7 +388,7 @@ func PatientToAnak(entry types2.BundleEntry) (*types.Anak, error) {
 		IdSatusehat:  entry.Base.Id,
 		Nama:         name,
 		Nik:          &nik,
-		TanggalLahir: *resource.BirthDate,
+		TanggalLahir: str(resource.BirthDate),
 		JenisKelamin: kelamin,
 	}, nil
 
