@@ -268,6 +268,12 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
+		Path:    "/orangtua",
+		Handler: m.handler.UpdateOrantua,
+		Root:    root,
+	})
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "PUT",
 		Path:    "/anak",
 		Handler: m.handler.UpdateAnak,
 		Root:    root,
