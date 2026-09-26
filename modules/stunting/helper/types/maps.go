@@ -44,7 +44,7 @@ func (m Mapper) ToKey(key any, def *string) *string {
 	}
 
 	if def != nil {
-		strDefault := fmt.Sprint(def)
+		strDefault := *def
 		return &strDefault
 	}
 
