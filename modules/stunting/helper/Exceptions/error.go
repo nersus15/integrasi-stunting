@@ -5,6 +5,7 @@ import (
 	databasesql "database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -154,7 +155,7 @@ func Classify(err error) *Error {
 		return KolomWajib.WithMessage("kolom wajib tidak boleh kosong: "+pg.Field('c'), err)
 	}
 
-	if pg.IntegrityViolation() {
+	if pg.IntegrityViolation() || strings.HasPrefix(pg.Field('C'), "22") {
 		return Constraint.New(err)
 	}
 
