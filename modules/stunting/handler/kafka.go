@@ -68,7 +68,7 @@ func (k *KafkaHandler) proses(data []byte) (key string, err error) {
 		return sidikPesan(data), exceptions.BodyRusak.WithMessage("Gagal Unmarshall Data. Json Invalid", e)
 	}
 
-	key = utils.Nilai(transaction.TransactionID)
+	key = utils.StrPtr(transaction.TransactionID)
 	if key == "" {
 		key = sidikPesan(data)
 	}
