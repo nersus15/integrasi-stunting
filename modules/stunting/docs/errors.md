@@ -57,7 +57,7 @@ itulah yang perlu Anda tampilkan ke operator.
 | 422 | 1003 | `PAYLOAD_SHAPE_INVALID` | Bentuk payload tidak dikenali | Susunan key tidak sah atau id rujuk-silang tidak konsisten | Susun ulang mengikuti salah satu bentuk yang sah |
 | 422 | 1004 | `REQUIRED_FIELD_MISSING` | Kolom wajib tidak boleh kosong | Kolom `NOT NULL` menerima nilai kosong | Isi kolom yang disebut. Kalau di luar kontrak, laporkan |
 | 422 | 1005 | `REFERENCE_NOT_FOUND` | Referensi tidak ditemukan | Foreign key menunjuk baris yang tidak ada | Kirim data induknya lebih dulu |
-| 422 | 1006 | `CONSTRAINT_VIOLATION` | Data tidak memenuhi aturan database | Melanggar check constraint, umumnya nilai enum | Perbaiki nilainya sesuai daftar yang sah |
+| 422 | 1006 | `CONSTRAINT_VIOLATION` | Data tidak memenuhi aturan database | Melanggar check constraint (umumnya nilai enum), atau nilai di luar batas kolom | Perbaiki nilainya sesuai daftar atau batas yang sah |
 | 422 | 1007 | `PARAM_REQUIRED` | Parameter harus dikirim | Path parameter wajib terbaca kosong | Sertakan parameter pada URL |
 | 403 | 1008 | `FORBIDDEN` | User tidak memiliki akses | Key sah, tapi Anda tidak berwenang atas posyandu atau faskes itu | Jangan retry. Periksa keterkaitan posyandu–faskes |
 | 404 | 2001 | `NOT_FOUND` | Data tidak ditemukan | Tidak ada baris yang cocok | Lanjutkan sesuai alur, ini bukan kegagalan |
@@ -142,7 +142,9 @@ bentuk `REGISTRASI_LENGKAP` / `ANAK_BARU`.
 > Data tidak memenuhi aturan database
 
 Pelanggaran aturan database di luar kategori di atas — check constraint,
-pelanggaran tipe, dan sejenisnya.
+pelanggaran tipe, dan nilai di luar batas kolom: angka yang melampaui presisi
+kolom (mis. `nilai_angka` di atas 99999999.9999) atau teks yang melebihi
+panjang maksimum.
 
 Nilai enum berikut tidak diperiksa aplikasi, melainkan dijaga database:
 
