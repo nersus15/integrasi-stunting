@@ -369,7 +369,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	return c.Status(http.StatusCreated).JSON(res)
+	return c.Status(http.StatusOK).JSON(res)
 }
 
 func (h *HttpHandler) ListAnak(c *fiber.Ctx) error {
