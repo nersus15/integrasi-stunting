@@ -181,6 +181,12 @@ Dua sebab yang mungkin:
   `POST /api/faskes/pemeriksaan`, yang hanya untuk puskesmas dan RS
 - **data milik pihak lain** — posyandu atau faskes yang diminta tidak terhubung
   dengan wilayah kerja Anda
+- **anak atau orangtua di luar kewenangan** — di luar wilayah kerja Anda dan
+  tidak sedang dirujuk ke faskes Anda (lihat
+  [hak akses](?doc=faskes#hak-akses-anak-dan-orangtua))
+- **encounter milik faskes lain** — `kunjungan.id_satusehat` atau
+  `ref_encounter` menunjuk kunjungan faskes lain, atau encounter yang belum
+  tersimpan sehingga kepemilikannya tidak bisa diverifikasi
 
 Bedanya dengan `4002`: `4002` menolak karena role Anda tidak boleh memanggil
 endpoint itu sama sekali; `1008` sudah lolos lapisan role, lalu ditolak aturan

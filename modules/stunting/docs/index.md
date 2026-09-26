@@ -24,7 +24,7 @@ jangan tertukar.
 | | **Jakantro (posyandu)** | **Faskes (puskesmas & RS)** |
 |---|---|---|
 | halaman | [Jalur Jakantro](?doc=jakantro) | [Jalur Faskes](?doc=faskes) |
-| endpoint kirim | `POST` pada `/api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak`; `PUT` pada `/api/kunjungan/:id`, `/api/kesehatan/:id`, `/api/anak` | `POST /api/faskes/pemeriksaan`, `PUT /api/faskes/:resource` |
+| endpoint kirim | `POST` pada `/api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak`; `PUT` pada `/api/kunjungan/:id`, `/api/kesehatan/:id`, `/api/anak`, `/api/orangtua` | `POST /api/faskes/pemeriksaan`, `PUT /api/faskes/:resource`, `PUT /api/anak`, `PUT /api/orangtua` |
 | siapa menentukan `id` | **Anda** | **sistem** |
 | kunci pencocokan | `id` kiriman Anda | `id_satusehat` (IHS id) |
 | identitas pengirim | group `jakantro` di API key | group `orgid:<satusehat id>` di API key |

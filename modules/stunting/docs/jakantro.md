@@ -355,26 +355,34 @@ tidak sepakat anak ini milik siapa, jangan di-retry.
 
 ### PUT /api/anak
 
-Memperbarui anak yang sudah tersimpan. Anak dicari lewat `id` di body, dan
-aturan field-nya sama dengan `POST /api/anak`.
+Memperbarui anak yang sudah tersimpan. Anak dicari lewat `id` di body; hanya
+`id` yang wajib. Field yang tidak dikirim dipertahankan, field yang dikirim
+diperiksa formatnya sama seperti `POST /api/anak`.
 
 ```json
 {
   "id": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
-  "id_orangtua": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
-  "nik": "3175041503240003",
   "nama": "Rizky Ramadhan Putra",
-  "tanggal_lahir": "2024-03-15",
-  "jenis_kelamin": "L",
-  "anak_ke": 1,
-  "imd": 1,
-  "bb_lahir": 3.2,
-  "tb_lahir": 49.5,
-  "lk_lahir": 34.0,
-  "source_data": "jakantro"
+  "nik": "3175041503240003"
 }
 ```
 
-`200` mengembalikan anak hasil pembaruan. `satusehat_id` tidak perlu dikirim —
-nilai yang sudah terisi dari SatuSehat tetap dipertahankan. Anak yang tidak
-ditemukan dijawab `404` `2001`.
+`200` mengembalikan anak hasil pembaruan, `404` `2001` kalau anaknya tidak ada.
+`satusehat_id` tidak perlu dikirim — nilai yang sudah terisi dari SatuSehat tetap
+dipertahankan. Mengirim `id_orangtua` lain memindahkan anak ke orangtua itu.
+
+### PUT /api/orangtua
+
+Sama dengan `PUT /api/anak`: dicari lewat `id`, hanya `id` yang wajib, field yang
+tidak dikirim dipertahankan.
+
+```json
+{
+  "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+  "telepon": "081299990000",
+  "alamat": "Jl. Kenanga No. 14"
+}
+```
+
+Kedua endpoint ini juga dipakai faskes, dengan batasan yang dijelaskan di
+[Jalur faskes](?doc=faskes#put-apianak-dan-put-apiorangtua).

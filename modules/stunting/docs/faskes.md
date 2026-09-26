@@ -19,6 +19,18 @@ Satu kunjungan beserta seluruh data medisnya, dalam satu transaksi.
 > harus milik user ber-group `orgid:<satusehat id faskes>`. `kunjungan.id_faskes`
 > yang Anda kirim diabaikan, dan key jakantro ditolak `403` `1008`.
 
+Kalau anaknya sudah terdaftar, Anda harus punya
+[hak akses](#hak-akses-anak-dan-orangtua) atas anak itu; kalau tidak, dijawab
+`403` `1008`. Anak yang belum terdaftar dibuat baru tanpa pemeriksaan ini.
+
+Encounter yang dirujuk juga harus milik Anda, dan pelanggarannya dijawab `403`
+`1008`:
+
+- `kunjungan.id_satusehat` yang sudah tersimpan harus kunjungan faskes Anda.
+  Yang belum tersimpan dibuat baru.
+- `ref_encounter` di observasi, diagnosa, layanan, dan rujukan yang menunjuk
+  encounter lain harus menunjuk encounter faskes Anda yang sudah tersimpan.
+
 ### Bentuk payload
 
 | key | wajib | keterangan |
@@ -92,6 +104,25 @@ berasal dari Observation tidak ikut terhapus.
 
 Anda hanya bisa memperbarui resource yang faskes-nya sama dengan pemilik API key.
 
+### Field yang tidak bisa diubah
+
+Field berikut diabaikan kalau dikirim. Semuanya menentukan milik siapa data itu,
+di mana posisinya, atau dihitung sistem — bukan isi klinis.
+
+| resource | field |
+|---|---|
+| semua | `id`, `id_satusehat`, `id_anak`, `created_at`, `updated_at` |
+| `kunjungan` | `id_faskes`, `id_episode`, `ref_episode`, `id_rujukan`, `ref_rujukan`, `stunting` |
+| `observasi` | `id_kunjungan`, `id_induk`, `ref_encounter` |
+| `diagnosa` | `id_kunjungan`, `ref_encounter`, `jenis`, `tanggal_catat` |
+| `layanan` | `id_kunjungan`, `ref_encounter`, `jenis` |
+| `rujukan` | `id_kunjungan`, `ref_encounter`, `jenis`, `tanggal`, `id_faskes_asal`, `ref_faskes_asal`, `id_faskes_tujuan`, `ref_faskes_tujuan` |
+| `episode` | `id_faskes` |
+
+`jenis` dan `tanggal` rujukan dikunci karena [hak akses](#hak-akses-anak-dan-orangtua)
+bergantung pada urutan rujukan dan rujuk balik. Kalau salah satunya keliru,
+perbaiki di SatuSehat — perubahan yang datang lewat Kafka tetap diterima.
+
 ---
 
 ### Kenapa `id_satusehat` wajib
@@ -112,3 +143,39 @@ Konsekuensinya:
 Penentuan stunting, pengangkatan observasi ke kolom kunjungan, dan penyambungan
 rujukan memakai jalan yang sama persis — tidak ada logika terpisah untuk jalur
 ini. Hasil bacanya pun identik; lihat [endpoint GET](?doc=baca).
+
+---
+
+## PUT /api/anak dan PUT /api/orangtua
+
+Faskes memakai endpoint yang sama dengan jakantro — lihat
+[PUT /api/anak](?doc=jakantro#put-apianak) dan
+[PUT /api/orangtua](?doc=jakantro#put-apiorangtua). Hanya `id` yang wajib,
+field yang tidak dikirim dipertahankan.
+
+Data identitas dari faskes dianggap lebih terpercaya, jadi `nik` dan `no_kk`
+boleh Anda perbaiki. Dua field diabaikan kalau dikirim faskes, karena keduanya
+menentukan siapa yang berhak atas data itu:
+
+| field | endpoint | alasan |
+|---|---|---|
+| `id_posyandu` | `PUT /api/orangtua` | memindah keluarga ke wilayah lain |
+| `id_orangtua` | `PUT /api/anak` | memindah anak ke keluarga lain |
+
+## Hak akses anak dan orangtua
+
+Berlaku untuk `GET /api/anak/:id`, `GET /api/orangtua`, `PUT /api/anak`,
+`PUT /api/orangtua`, dan `POST /api/faskes/pemeriksaan` untuk anak yang sudah
+terdaftar. Akses diberikan kalau salah satu terpenuhi:
+
+| pemanggil | syarat |
+|---|---|
+| jakantro | selalu |
+| puskesmas dan pustu | posyandu keluarga itu ada di wilayah kerja Anda |
+| faskes tujuan rujukan (umumnya RS) | ada rujukan untuk anak itu dengan tujuan faskes Anda, dan belum ada rujuk balik dari faskes Anda sesudahnya |
+| faskes yang mencatat kunjungan | hanya untuk anak yang belum terhubung ke orangtua |
+
+Untuk orangtua, rujukan salah satu anaknya sudah cukup. Rujuk balik mencabut
+akses; rujukan baru sesudahnya memberikannya lagi. Rujukan `internal` tidak
+memberi akses.
+
