@@ -54,7 +54,7 @@ func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, updatedB
 
 	if err != nil || o == nil {
 		if o == nil || errors.Is(err, sql.ErrNoRows) {
-			return nil, exceptions.TidakDitemukan.Messagef("Data anak tidak ditemukan")
+			return nil, exceptions.TidakDitemukan.Messagef("Data orangtua tidak ditemukan")
 		} else {
 			return nil, err
 		}
@@ -549,7 +549,7 @@ func (s *StuntingService) VerifyAccess(idposyandu, orgid *string) error {
 
 				switch levelWilayah {
 				case 3: // kecamatan
-					if utils.Substr(*faskesSaya.Wilayah, 0, 9)+"00000" == *posyandu.Puskesmas.Wilayah {
+					if utils.Substr(*faskesSaya.Wilayah, 0, 9)+"0000" == *posyandu.Puskesmas.Wilayah {
 						valid = true
 					}
 				case 4:
@@ -601,7 +601,7 @@ func (s *StuntingService) VerifyAccessForUpdateFaskes(orgid string, jenis string
 		switch jenis {
 		case "kunjungan":
 			if t, err := s.Repository.OrgIdByEncounterSId(satusehat_id); err != nil {
-				return exceptions.Forbidden.Messagef("Tidak Bisa Verifikasi Akses: %v", err.Error())
+				return exceptions.Classify(err)
 			} else {
 				orgidRegistrar = utils.StrPtr(t)
 			}
