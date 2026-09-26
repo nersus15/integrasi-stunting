@@ -342,13 +342,6 @@ func ValidateDiagnosaFaskes(diagnosa types.Diagnosa) error {
 	return nil
 }
 
-// Validator per resource jalur faskes. id_satusehat diwajibkan di semua:
-// ia satu-satunya kunci pencocokan, dan tanpa itu baris yang tersimpan tidak
-// akan pernah bisa diperbarui maupun dicegah berganda saat kiriman ulang.
-//
-// Jalur stream tidak memakai validator ini dan tidak terpengaruh: entry yang
-// tidak mendapat resourceID dari SatuSehat memang sudah dilewati sebelum
-// sampai ke pemetaan.
 
 func ValidateObservasiFaskes(o types.Observasi) error {
 	if !IsFilled(o.IdSatusehat) {
