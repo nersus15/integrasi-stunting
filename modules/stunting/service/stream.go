@@ -603,7 +603,7 @@ func (s *StreamService) SusunUlangBundle(tx types2.PackMediator) (*types2.Bundle
 	idBaru := []types2.NewPost{} // Mapping ID Response ke request Resource yang baru dipost
 	for i := range requestBundle.Entry {
 		if response[i].Id == nil || *response[i].Id == "" {
-			continue
+			return nil, nil, fmt.Errorf("entry ke-%d tidak punya resourceID di response", i)
 		}
 
 		responseId := response[i].Id
@@ -619,6 +619,9 @@ func (s *StreamService) SusunUlangBundle(tx types2.PackMediator) (*types2.Bundle
 	}
 	if len(idBaru) > 0 {
 		for i := range newBundle.Entry {
+			if newBundle.Entry[i].Base == nil {
+				continue
+			}
 			processor.UpdateTemporaryReference(&newBundle.Entry[i], &register, idBaru)
 		}
 	}
