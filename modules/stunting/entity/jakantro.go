@@ -480,6 +480,10 @@ func (e *Kunjungan) Override(new Kunjungan, force bool) {
 		"Observasi":   true,
 		"Diagnosa":    true,
 		"Layanan":     true,
+		"RefEpisode":  true,
+		"RefRujukan":  true,
+		"Stunting":    true,
+		"UpdatedAt":   true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -534,6 +538,7 @@ func (e *Episode) Override(new Episode, force bool) {
 		"DeletedAt":   true,
 		"Anak":        true,
 		"Faskes":      true,
+		"UpdatedAt":   true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -557,18 +562,20 @@ func (m *Observasi) BeforeAppendModel(ctx context.Context, query bun.Query) erro
 
 func (e *Observasi) Override(new Observasi, force bool) {
 	skipFields := map[string]bool{
-		"BaseModel":   true,
-		"ID":          true,
-		"SatusehatId": true,
-		"IDAnak":      true,
-		"IDKunjungan": true,
-		"IDInduk":     true,
-		"CreatedAt":   true,
-		"DeletedAt":   true,
-		"Anak":        true,
-		"Kunjungan":   true,
-		"Induk":       true,
-		"Component":   true,
+		"BaseModel":    true,
+		"ID":           true,
+		"SatusehatId":  true,
+		"IDAnak":       true,
+		"IDKunjungan":  true,
+		"IDInduk":      true,
+		"CreatedAt":    true,
+		"DeletedAt":    true,
+		"Anak":         true,
+		"Kunjungan":    true,
+		"Induk":        true,
+		"Component":    true,
+		"RefEncounter": true,
+		"UpdatedAt":    true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -602,6 +609,10 @@ func (e *Diagnosa) Override(new Diagnosa, force bool) {
 		"Jenis":        true,
 		"Kunjungan":    true,
 		"TanggalCatat": true,
+		"IDAnak":       true,
+		"IDKunjungan":  true,
+		"RefEncounter": true,
+		"UpdatedAt":    true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -625,15 +636,18 @@ func (m *Layanan) BeforeAppendModel(ctx context.Context, query bun.Query) error 
 
 func (e *Layanan) Override(new Layanan, force bool) {
 	skipFields := map[string]bool{
-		"BaseModel":   true,
-		"ID":          true,
-		"SatusehatId": true,
-		"IDAnak":      true,
-		"IDKunjungan": true,
-		"CreatedAt":   true,
-		"DeletedAt":   true,
-		"Anak":        true,
-		"Kunjungan":   true,
+		"BaseModel":    true,
+		"ID":           true,
+		"SatusehatId":  true,
+		"IDAnak":       true,
+		"IDKunjungan":  true,
+		"CreatedAt":    true,
+		"DeletedAt":    true,
+		"Anak":         true,
+		"Kunjungan":    true,
+		"RefEncounter": true,
+		"Jenis":        true,
+		"UpdatedAt":    true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -649,19 +663,25 @@ func (e Rujukan) GetPkName() string {
 
 func (e *Rujukan) Override(new Rujukan, force bool) {
 	skipFields := map[string]bool{
-		"BaseModel":      true,
-		"ID":             true,
-		"SatusehatId":    true,
-		"IDAnak":         true,
-		"IDKunjungan":    true,
-		"IDFaskesAsal":   true,
-		"IDFaskesTujuan": true,
-		"CreatedAt":      true,
-		"DeletedAt":      true,
-		"Anak":           true,
-		"Kunjungan":      true,
-		"FaskesAsal":     true,
-		"FaskesTujuan":   true,
+		"BaseModel":       true,
+		"ID":              true,
+		"SatusehatId":     true,
+		"IDAnak":          true,
+		"IDKunjungan":     true,
+		"IDFaskesAsal":    true,
+		"IDFaskesTujuan":  true,
+		"CreatedAt":       true,
+		"DeletedAt":       true,
+		"Anak":            true,
+		"Kunjungan":       true,
+		"FaskesAsal":      true,
+		"FaskesTujuan":    true,
+		"RefEncounter":    true,
+		"RefFaskesAsal":   true,
+		"RefFaskesTujuan": true,
+		"Jenis":           true,
+		"Tanggal":         true,
+		"UpdatedAt":       true,
 	}
 
 	timpaField(e, new, skipFields, force)
