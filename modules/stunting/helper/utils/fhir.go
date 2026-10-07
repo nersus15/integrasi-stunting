@@ -551,18 +551,13 @@ func EncounterToKunjungan(entry types2.BundleEntry) (*types.Kunjungan, *string, 
 		TanggalPengukuran: tanggalEncounter(resource.Period),
 	}
 
-	// rawat inap bisa melintasi beberapa hari; tanpa ini rujukan yang terbit
-	// saat pulang terlihat di luar rentang kunjungannya
 	if resource.Period != nil {
 		k.TanggalSelesai = isiStr(TanggalSaja(str(resource.Period.End)))
 	}
-
-	// episode-nya bisa tiba di bundle lain, jadi ref-nya disimpan dulu
 	if len(resource.EpisodeOfCare) > 0 {
 		k.RefEpisode = ReferenceID(&resource.EpisodeOfCare[0])
 	}
 
-	// basedOn diisi faskes tujuan: kunjungan ini memenuhi rujukan tersebut
 	k.RefRujukan = refServiceRequest(resource.BasedOn)
 
 	return k, ReferenceID(resource.Subject), ReferenceID(resource.ServiceProvider), nil

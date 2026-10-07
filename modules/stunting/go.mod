@@ -4,6 +4,7 @@ go 1.26.5
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.15
+	github.com/google/uuid v1.6.0
 	github.com/nersus15/lib-background-worker v0.0.0-20260819073430-1d51ec2d840f
 	github.com/nersus15/lib-go-cron v0.1.0
 	github.com/pressly/goose/v3 v3.27.3
@@ -21,7 +22,6 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

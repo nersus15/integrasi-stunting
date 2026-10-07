@@ -5,6 +5,7 @@ use (
 	./libraries/authstoredb
 	./libraries/fhir
 	./libraries/jwt
+	./libraries/lib-kafka
 	./libraries/lib-sql
 	./libraries/memory
 	./libraries/redis

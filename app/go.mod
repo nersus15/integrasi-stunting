@@ -7,8 +7,10 @@ require (
 	github.com/nersus15/lib-background-worker v0.0.0-20260819073430-1d51ec2d840f
 	github.com/nersus15/lib-go-cron v0.1.0
 	github.com/nersus15/lib-sqlchiper v0.1.1
+	github.com/webcore-go/lib-kafka v0.1.8
 	github.com/webcore-go/lib-memory v0.1.3
 	github.com/webcore-go/lib-postgres v0.1.14
+	github.com/webcore-go/lib-redis v0.1.7
 	github.com/webcore-go/lib-sql v0.1.22
 	github.com/webcore-go/webcore v0.0.39
 )
@@ -35,8 +37,10 @@ require (
 	github.com/maypok86/otter/v2 v2.3.0 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/mutecomm/go-sqlcipher/v4 v4.4.2 // indirect
+	github.com/onsi/gomega v1.29.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pressly/goose/v3 v3.27.3 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
@@ -57,15 +61,18 @@ require (
 	github.com/valyala/fasthttp v1.73.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/webcore-go/lib-kafka v0.1.8 // indirect
-	github.com/webcore-go/lib-redis v0.1.7 // indirect
 	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
 	mellium.im/sasl v0.3.2 // indirect
 )

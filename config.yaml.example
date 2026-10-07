@@ -52,8 +52,10 @@ app:
   # API rate limiting settings per minute
   rate_limit:
     enabled: true
-    limit: 1000
-    # burst: 100
+    max: 1000
+    window: 1m
+    backend: memory   # memory: lib cache:memory, per pod | redis: lib cache:redis, berlaku lintas pod
+    fail_open: true   # redis tidak terjangkau: true = request diloloskan, false = 503
 
   module:
     base_path: "./ext"
@@ -66,6 +68,7 @@ server:
   path: "/api"
   read_timeout: 30s
   write_timeout: 30s
+  # proxy_header: "X-Client-IP"  # header IP klien dari HAProxy; kosongkan kalau tidak di belakang proxy
 
 auth:
   type: apikey

@@ -152,27 +152,3 @@ tambahan `details` dan `stack`; keduanya hilang di environment lain.
 Tabel acuan lengkap beserta arti dan tindak lanjut tiap kode ada di
 [Katalog Error](?doc=errors).
 
----
-
-## Laporan pengujian
-
-Contoh di dokumentasi sengaja dibatasi supaya terbaca. Kalau butuh lebih banyak
-kasus — terutama kombinasi yang ditolak — ada laporan pengujian berisi **155
-skenario** terhadap seluruh endpoint, lengkap dengan payload yang dikirim,
-status code, dan response utuh untuk masing-masing.
-
-[Lihat laporan pengujian](?doc=laporan)
-
-Laporan itu dihasilkan dari test yang ditembakkan ke service sungguhan, jadi
-isinya bukan contoh yang diketik tangan — dan versi yang Anda lihat di sini ikut
-tertanam di biner service, jadi selalu sesuai dengan versi yang sedang berjalan.
-
-Untuk membangkitkan ulang:
-
-```bash
-cd tests
-GOWORK=off KUNCI_WRITE=<key> KUNCI_READ=<key> KUNCI_FASKES=<key> go test -p 1 ./functional/api_stunting/
-```
-
-`KUNCI_FASKES` adalah kunci ber-group `orgid:<satusehat id>`, dipakai skenario
-jalur faskes.

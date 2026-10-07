@@ -1320,7 +1320,6 @@ func (d *StuntingRepository) StartMigration(DB interface{}, dialect string, serv
 		return exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
 	}
 
-	// Set dialek wajib di sini sebelum eksekusi run
 	switch dialect {
 	case "sqlite":
 		goose.SetDialect("sqlite3")
