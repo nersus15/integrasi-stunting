@@ -53,52 +53,46 @@ type Anak struct {
 }
 
 type Kunjungan struct {
-	Id                 string     `json:"id"`
-	IdAnak             string     `json:"id_anak"`
-	TanggalPengukuran  string     `json:"tanggal_pengukuran"`
-	TanggalSelesai     *string    `json:"tanggal_selesai"`
-	CaraUkur           *string    `json:"cara_ukur"`
-	BeratBadan         *float64   `json:"berat_badan"`
-	TinggiBadan        *float64   `json:"tinggi_badan"`
-	LingkarLengan      *float64   `json:"lingkar_lengan"`
-	LingkarKepala      *float64   `json:"lingkar_kepala"`
-	LingkarDada        *float64   `json:"lingkar_dada"`
-	AsiBulan0          *int16     `json:"asi_bulan_0"`
-	AsiBulan1          *int16     `json:"asi_bulan_1"`
-	AsiBulan2          *int16     `json:"asi_bulan_2"`
-	AsiBulan3          *int16     `json:"asi_bulan_3"`
-	AsiBulan4          *int16     `json:"asi_bulan_4"`
-	AsiBulan5          *int16     `json:"asi_bulan_5"`
-	AsiBulan6          *int16     `json:"asi_bulan_6"`
-	VitBiru            *int16     `json:"vit_biru"`
-	VitMerah           *int16     `json:"vit_merah"`
-	PittingEdema       *int16     `json:"pitting_edema"`
-	KelasIbuBalita     *int16     `json:"kelas_ibu_balita"`
-	StatusBbuSigizi    *string    `json:"status_bbu_sigizi"`
-	StatusTbuSigizi    *string    `json:"status_tbu_sigizi"`
-	StatusBbtbSigizi   *string    `json:"status_bbtb_sigizi"`
-	ZscoreBbuSigizi    *float64   `json:"zscore_bbu_sigizi"`
-	ZscoreTbuSigizi    *float64   `json:"zscore_tbu_sigizi"`
-	ZscoreBbtbSigizi   *float64   `json:"zscore_bbtb_sigizi"`
-	StatusBbuWhoantro  *string    `json:"status_bbu_whoantro"`
-	StatusTbuWhoantro  *string    `json:"status_tbu_whoantro"`
-	StatusBbtbWhoantro *string    `json:"status_bbtb_whoantro"`
-	ZscoreBbuWhoantro  *float64   `json:"zscore_bbu_whoantro"`
-	ZscoreTbuWhoantro  *float64   `json:"zscore_tbu_whoantro"`
-	ZscoreBbtbWhoantro *float64   `json:"zscore_bbtb_whoantro"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          *time.Time `json:"updated_at"`
-	DeletedAt          *time.Time `json:"deleted_at"`
-	SourceData         *string    `json:"source_data"`
-	UpdatedBy          *string    `json:"updated_by"`
-	DeletedBy          *string    `json:"deleted_by"`
-	IdFaskes           *string    `json:"id_faskes"`
-	IdSatusehat        *string    `json:"id_satusehat"`
-	IdEpisode          *string    `json:"id_episode"`
-	RefEpisode         *string    `json:"ref_episode"`
-	IdRujukan          *string    `json:"id_rujukan"`
-	RefRujukan         *string    `json:"ref_rujukan"`
-	Stunting           *int       `json:"stunting"`
+	Id                string     `json:"id"`
+	IdAnak            string     `json:"id_anak"`
+	TanggalPengukuran string     `json:"tanggal_pengukuran"`
+	TanggalSelesai    *string    `json:"tanggal_selesai"`
+	CaraUkur          *string    `json:"cara_ukur"`
+	BeratBadan        *float64   `json:"berat_badan"`
+	TinggiBadan       *float64   `json:"tinggi_badan"`
+	LingkarLengan     *float64   `json:"lingkar_lengan"`
+	LingkarKepala     *float64   `json:"lingkar_kepala"`
+	LingkarDada       *float64   `json:"lingkar_dada"`
+	ASIBulan0         *int16     `json:"asi_bulan_0"`
+	ASIBulan1         *int16     `json:"asi_bulan_1"`
+	ASIBulan2         *int16     `json:"asi_bulan_2"`
+	ASIBulan3         *int16     `json:"asi_bulan_3"`
+	ASIBulan4         *int16     `json:"asi_bulan_4"`
+	ASIBulan5         *int16     `json:"asi_bulan_5"`
+	ASIBulan6         *int16     `json:"asi_bulan_6"`
+	VitBiru           *int16     `json:"vit_biru"`
+	VitMerah          *int16     `json:"vit_merah"`
+	PittingEdema      *int16     `json:"pitting_edema"`
+	KelasIbuBalita    *int16     `json:"kelas_ibu_balita"`
+	StatusBbu         *string    `json:"status_bbu"`
+	StatusTbu         *string    `json:"status_tbu"`
+	StatusBbtb        *string    `json:"status_bbtb"`
+	ZscoreBbu         *float64   `json:"zscore_bbu"`
+	ZscoreTbu         *float64   `json:"zscore_tbu"`
+	ZscoreBbtb        *float64   `json:"zscore_bbtb"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         *time.Time `json:"updated_at"`
+	DeletedAt         *time.Time `json:"deleted_at"`
+	SourceData        *string    `json:"source_data"`
+	UpdatedBy         *string    `json:"updated_by"`
+	DeletedBy         *string    `json:"deleted_by"`
+	IdFaskes          *string    `json:"id_faskes"`
+	IdSatusehat       *string    `json:"id_satusehat"`
+	IdEpisode         *string    `json:"id_episode"`
+	RefEpisode        *string    `json:"ref_episode"`
+	IdRujukan         *string    `json:"id_rujukan"`
+	RefRujukan        *string    `json:"ref_rujukan"`
+	Stunting          *int       `json:"stunting"`
 }
 
 type Kesehatan struct {
@@ -429,52 +423,81 @@ type AnakPayload struct {
 }
 
 type KunjunganPayload struct {
-	Id                 string     `json:"id"`
-	SatusehatId        *string    `json:"id_satusehat"`
-	IDAnak             string     `json:"id_anak"`
-	IdFaskes           *string    `json:"id_faskes"`
-	TanggalPengukuran  string     `json:"tanggal_pengukuran"`
-	TanggalSelesai     *string    `json:"tanggal_selesai"`
-	IdEpisode          *string    `json:"id_episode"`
-	RefEpisode         *string    `json:"ref_episode"`
-	IdRujukan          *string    `json:"id_rujukan"`
-	RefRujukan         *string    `json:"ref_rujukan"`
-	CaraUkur           *string    `json:"cara_ukur"`
-	BeratBadan         *float64   `json:"berat_badan"`
-	TinggiBadan        *float64   `json:"tinggi_badan"`
-	LingkarLengan      *float64   `json:"lingkar_lengan"`
-	LingkarKepala      *float64   `json:"lingkar_kepala"`
-	LingkarDada        *float64   `json:"lingkar_dada"`
-	ASIBulan0          *int16     `json:"asi_bulan_0"`
-	ASIBulan1          *int16     `json:"asi_bulan_1"`
-	ASIBulan2          *int16     `json:"asi_bulan_2"`
-	ASIBulan3          *int16     `json:"asi_bulan_3"`
-	ASIBulan4          *int16     `json:"asi_bulan_4"`
-	ASIBulan5          *int16     `json:"asi_bulan_5"`
-	ASIBulan6          *int16     `json:"asi_bulan_6"`
-	VitBiru            *int16     `json:"vit_biru"`
-	VitMerah           *int16     `json:"vit_merah"`
-	PittingEdema       *int16     `json:"pitting_edema"`
-	KelasIbuBalita     *int16     `json:"kelas_ibu_balita"`
-	StatusBBUSigizi    *string    `json:"status_bbu_sigizi"`
-	StatusTBUSigizi    *string    `json:"status_tbu_sigizi"`
-	StatusBBTBSigizi   *string    `json:"status_bbtb_sigizi"`
-	ZScoreBBUSigizi    *float64   `json:"zscore_bbu_sigizi"`
-	ZScoreTBUSigizi    *float64   `json:"zscore_tbu_sigizi"`
-	ZScoreBBTBSigizi   *float64   `json:"zscore_bbtb_sigizi"`
-	StatusBBUWhoAntro  *string    `json:"status_bbu_whoantro"`
-	StatusTBUWhoAntro  *string    `json:"status_tbu_whoantro"`
-	StatusBBTBWhoAntro *string    `json:"status_bbtb_whoantro"`
-	ZScoreBBUWhoAntro  *float64   `json:"zscore_bbu_whoantro"`
-	ZScoreTBUWhoAntro  *float64   `json:"zscore_tbu_whoantro"`
-	ZScoreBBTBWhoAntro *float64   `json:"zscore_bbtb_whoantro"`
-	SourceData         *string    `json:"source_data"`
-	UpdatedBy          *string    `json:"updated_by"`
-	DeletedBy          *string    `json:"deleted_by"`
-	CreatedAt          *time.Time `json:"created_at"`
-	UpdatedAt          *time.Time `json:"updated_at"`
-	DeletedAt          *time.Time `json:"deleted_at"`
-	Stunting           *int       `json:"stunting"`
+	Id                string     `json:"id"`
+	SatusehatId       *string    `json:"id_satusehat"`
+	IDAnak            string     `json:"id_anak"`
+	IdFaskes          *string    `json:"id_faskes"`
+	TanggalPengukuran string     `json:"tanggal_pengukuran"`
+	TanggalSelesai    *string    `json:"tanggal_selesai"`
+	IdEpisode         *string    `json:"id_episode"`
+	RefEpisode        *string    `json:"ref_episode"`
+	IdRujukan         *string    `json:"id_rujukan"`
+	RefRujukan        *string    `json:"ref_rujukan"`
+	CaraUkur          *string    `json:"cara_ukur"`
+	BeratBadan        *float64   `json:"berat_badan"`
+	TinggiBadan       *float64   `json:"tinggi_badan"`
+	LingkarLengan     *float64   `json:"lingkar_lengan"`
+	LingkarKepala     *float64   `json:"lingkar_kepala"`
+	LingkarDada       *float64   `json:"lingkar_dada"`
+	ASIBulan0         *int16     `json:"asi_bulan_0"`
+	ASIBulan1         *int16     `json:"asi_bulan_1"`
+	ASIBulan2         *int16     `json:"asi_bulan_2"`
+	ASIBulan3         *int16     `json:"asi_bulan_3"`
+	ASIBulan4         *int16     `json:"asi_bulan_4"`
+	ASIBulan5         *int16     `json:"asi_bulan_5"`
+	ASIBulan6         *int16     `json:"asi_bulan_6"`
+	VitBiru           *int16     `json:"vit_biru"`
+	VitMerah          *int16     `json:"vit_merah"`
+	PittingEdema      *int16     `json:"pitting_edema"`
+	KelasIbuBalita    *int16     `json:"kelas_ibu_balita"`
+	StatusBBU         *string    `json:"status_bbu"`
+	StatusTBU         *string    `json:"status_tbu"`
+	StatusBBTB        *string    `json:"status_bbtb"`
+	ZScoreBBU         *float64   `json:"zscore_bbu"`
+	ZScoreTBU         *float64   `json:"zscore_tbu"`
+	ZScoreBBTB        *float64   `json:"zscore_bbtb"`
+	SourceData        *string    `json:"source_data"`
+	UpdatedBy         *string    `json:"updated_by"`
+	DeletedBy         *string    `json:"deleted_by"`
+	CreatedAt         *time.Time `json:"created_at"`
+	UpdatedAt         *time.Time `json:"updated_at"`
+	DeletedAt         *time.Time `json:"deleted_at"`
+	Stunting          *int       `json:"stunting"`
+}
+type KunjunganFaskesPayload struct {
+	Id                string     `json:"id"`
+	SatusehatId       *string    `json:"id_satusehat"`
+	IDAnak            string     `json:"id_anak"`
+	IdFaskes          *string    `json:"id_faskes"`
+	TanggalPengukuran string     `json:"tanggal_pengukuran"`
+	TanggalSelesai    *string    `json:"tanggal_selesai"`
+	IdEpisode         *string    `json:"id_episode"`
+	RefEpisode        *string    `json:"ref_episode"`
+	IdRujukan         *string    `json:"id_rujukan"`
+	RefRujukan        *string    `json:"ref_rujukan"`
+	CaraUkur          *string    `json:"cara_ukur"`
+	BeratBadan        *float64   `json:"berat_badan"`
+	TinggiBadan       *float64   `json:"tinggi_badan"`
+	LingkarLengan     *float64   `json:"lingkar_lengan"`
+	LingkarKepala     *float64   `json:"lingkar_kepala"`
+	LingkarDada       *float64   `json:"lingkar_dada"`
+	Asi               *int16     `json:"asi"`
+	VitBiru           *int16     `json:"vit_biru"`
+	VitMerah          *int16     `json:"vit_merah"`
+	PittingEdema      *int16     `json:"pitting_edema"`
+	KelasIbuBalita    *int16     `json:"kelas_ibu_balita"`
+	StatusBBU         *string    `json:"status_bbu"`
+	StatusTBU         *string    `json:"status_tbu"`
+	StatusBBTB        *string    `json:"status_bbtb"`
+	ZScoreBBU         *float64   `json:"zscore_bbu"`
+	ZScoreTBU         *float64   `json:"zscore_tbu"`
+	ZScoreBBTB        *float64   `json:"zscore_bbtb"`
+	UpdatedBy         *string    `json:"updated_by"`
+	DeletedBy         *string    `json:"deleted_by"`
+	CreatedAt         *time.Time `json:"created_at"`
+	UpdatedAt         *time.Time `json:"updated_at"`
+	DeletedAt         *time.Time `json:"deleted_at"`
+	Stunting          *int       `json:"stunting"`
 }
 
 type KunjunganNestedPayload struct {
@@ -789,52 +812,46 @@ func (kj *Kunjungan) FromEntity(e *entity.Kunjungan) *Kunjungan {
 		return nil
 	}
 	return &Kunjungan{
-		Id:                 e.ID,
-		IdAnak:             e.IDAnak,
-		TanggalPengukuran:  e.TanggalPengukuran.Format("2006-01-02"),
-		TanggalSelesai:     teksTanggal(e.TanggalSelesai),
-		CaraUkur:           e.CaraUkur,
-		BeratBadan:         e.BeratBadan,
-		TinggiBadan:        e.TinggiBadan,
-		LingkarLengan:      e.LingkarLengan,
-		LingkarKepala:      e.LingkarKepala,
-		LingkarDada:        e.LingkarDada,
-		AsiBulan0:          e.ASIBulan0,
-		AsiBulan1:          e.ASIBulan1,
-		AsiBulan2:          e.ASIBulan2,
-		AsiBulan3:          e.ASIBulan3,
-		AsiBulan4:          e.ASIBulan4,
-		AsiBulan5:          e.ASIBulan5,
-		AsiBulan6:          e.ASIBulan6,
-		VitBiru:            e.VitBiru,
-		VitMerah:           e.VitMerah,
-		PittingEdema:       e.PittingEdema,
-		KelasIbuBalita:     e.KelasIbuBalita,
-		StatusBbuSigizi:    e.StatusBBUSigizi,
-		StatusTbuSigizi:    e.StatusTBUSigizi,
-		StatusBbtbSigizi:   e.StatusBBTBSigizi,
-		ZscoreBbuSigizi:    e.ZScoreBBUSigizi,
-		ZscoreTbuSigizi:    e.ZScoreTBUSigizi,
-		ZscoreBbtbSigizi:   e.ZScoreBBTBSigizi,
-		StatusBbuWhoantro:  e.StatusBBUWhoAntro,
-		StatusTbuWhoantro:  e.StatusTBUWhoAntro,
-		StatusBbtbWhoantro: e.StatusBBTBWhoAntro,
-		ZscoreBbuWhoantro:  e.ZScoreBBUWhoAntro,
-		ZscoreTbuWhoantro:  e.ZScoreTBUWhoAntro,
-		ZscoreBbtbWhoantro: e.ZScoreBBTBWhoAntro,
-		CreatedAt:          e.CreatedAt,
-		UpdatedAt:          e.UpdatedAt,
-		DeletedAt:          e.DeletedAt,
-		SourceData:         e.SourceData,
-		UpdatedBy:          e.UpdatedBy,
-		DeletedBy:          e.DeletedBy,
-		IdFaskes:           e.IDFaskes,
-		IdSatusehat:        e.SatusehatId,
-		IdEpisode:          e.IDEpisode,
-		RefEpisode:         e.RefEpisode,
-		IdRujukan:          e.IDRujukan,
-		RefRujukan:         e.RefRujukan,
-		Stunting:           e.Stunting,
+		Id:                e.ID,
+		IdAnak:            e.IDAnak,
+		TanggalPengukuran: e.TanggalPengukuran.Format("2006-01-02"),
+		TanggalSelesai:    teksTanggal(e.TanggalSelesai),
+		CaraUkur:          e.CaraUkur,
+		BeratBadan:        e.BeratBadan,
+		TinggiBadan:       e.TinggiBadan,
+		LingkarLengan:     e.LingkarLengan,
+		LingkarKepala:     e.LingkarKepala,
+		LingkarDada:       e.LingkarDada,
+		ASIBulan0:         e.ASIBulan0,
+		ASIBulan1:         e.ASIBulan1,
+		ASIBulan2:         e.ASIBulan2,
+		ASIBulan3:         e.ASIBulan3,
+		ASIBulan4:         e.ASIBulan4,
+		ASIBulan5:         e.ASIBulan5,
+		ASIBulan6:         e.ASIBulan6,
+		VitBiru:           e.VitBiru,
+		VitMerah:          e.VitMerah,
+		PittingEdema:      e.PittingEdema,
+		KelasIbuBalita:    e.KelasIbuBalita,
+		StatusBbu:         e.StatusBBU,
+		StatusTbu:         e.StatusTBU,
+		StatusBbtb:        e.StatusBBTB,
+		ZscoreBbu:         e.ZScoreBBU,
+		ZscoreTbu:         e.ZScoreTBU,
+		ZscoreBbtb:        e.ZScoreBBTB,
+		CreatedAt:         e.CreatedAt,
+		UpdatedAt:         e.UpdatedAt,
+		DeletedAt:         e.DeletedAt,
+		SourceData:        e.SourceData,
+		UpdatedBy:         e.UpdatedBy,
+		DeletedBy:         e.DeletedBy,
+		IdFaskes:          e.IDFaskes,
+		IdSatusehat:       e.SatusehatId,
+		IdEpisode:         e.IDEpisode,
+		RefEpisode:        e.RefEpisode,
+		IdRujukan:         e.IDRujukan,
+		RefRujukan:        e.RefRujukan,
+		Stunting:          e.Stunting,
 	}
 }
 
@@ -844,52 +861,46 @@ func (p *Kunjungan) ToPayload() *KunjunganPayload {
 	}
 
 	return &KunjunganPayload{
-		Id:                 p.Id,
-		IDAnak:             p.IdAnak,
-		SatusehatId:        p.IdSatusehat,
-		IdFaskes:           p.IdFaskes,
-		CreatedAt:          &p.CreatedAt,
-		DeletedAt:          p.DeletedAt,
-		TanggalPengukuran:  p.TanggalPengukuran,
-		TanggalSelesai:     p.TanggalSelesai,
-		IdEpisode:          p.IdEpisode,
-		RefEpisode:         p.RefEpisode,
-		IdRujukan:          p.IdRujukan,
-		RefRujukan:         p.RefRujukan,
-		CaraUkur:           p.CaraUkur,
-		BeratBadan:         p.BeratBadan,
-		TinggiBadan:        p.TinggiBadan,
-		LingkarLengan:      p.LingkarLengan,
-		LingkarKepala:      p.LingkarKepala,
-		LingkarDada:        p.LingkarDada,
-		ASIBulan0:          p.AsiBulan0,
-		ASIBulan1:          p.AsiBulan1,
-		ASIBulan2:          p.AsiBulan2,
-		ASIBulan3:          p.AsiBulan3,
-		ASIBulan4:          p.AsiBulan4,
-		ASIBulan5:          p.AsiBulan5,
-		ASIBulan6:          p.AsiBulan6,
-		VitBiru:            p.VitBiru,
-		VitMerah:           p.VitMerah,
-		PittingEdema:       p.PittingEdema,
-		KelasIbuBalita:     p.KelasIbuBalita,
-		StatusBBUSigizi:    p.StatusBbuSigizi,
-		StatusTBUSigizi:    p.StatusTbuSigizi,
-		StatusBBTBSigizi:   p.StatusBbtbSigizi,
-		ZScoreBBUSigizi:    p.ZscoreBbuSigizi,
-		ZScoreTBUSigizi:    p.ZscoreTbuSigizi,
-		ZScoreBBTBSigizi:   p.ZscoreBbtbSigizi,
-		StatusBBUWhoAntro:  p.StatusBbuWhoantro,
-		StatusTBUWhoAntro:  p.StatusTbuWhoantro,
-		StatusBBTBWhoAntro: p.StatusBbtbWhoantro,
-		ZScoreBBUWhoAntro:  p.ZscoreBbuWhoantro,
-		ZScoreTBUWhoAntro:  p.ZscoreTbuWhoantro,
-		ZScoreBBTBWhoAntro: p.ZscoreBbtbWhoantro,
-		SourceData:         p.SourceData,
-		UpdatedBy:          p.UpdatedBy,
-		DeletedBy:          p.DeletedBy,
-		UpdatedAt:          p.UpdatedAt,
-		Stunting:           p.Stunting,
+		Id:                p.Id,
+		IDAnak:            p.IdAnak,
+		SatusehatId:       p.IdSatusehat,
+		IdFaskes:          p.IdFaskes,
+		CreatedAt:         &p.CreatedAt,
+		DeletedAt:         p.DeletedAt,
+		TanggalPengukuran: p.TanggalPengukuran,
+		TanggalSelesai:    p.TanggalSelesai,
+		IdEpisode:         p.IdEpisode,
+		RefEpisode:        p.RefEpisode,
+		IdRujukan:         p.IdRujukan,
+		RefRujukan:        p.RefRujukan,
+		CaraUkur:          p.CaraUkur,
+		BeratBadan:        p.BeratBadan,
+		TinggiBadan:       p.TinggiBadan,
+		LingkarLengan:     p.LingkarLengan,
+		LingkarKepala:     p.LingkarKepala,
+		LingkarDada:       p.LingkarDada,
+		ASIBulan0:         p.ASIBulan0,
+		ASIBulan1:         p.ASIBulan1,
+		ASIBulan2:         p.ASIBulan2,
+		ASIBulan3:         p.ASIBulan3,
+		ASIBulan4:         p.ASIBulan4,
+		ASIBulan5:         p.ASIBulan5,
+		ASIBulan6:         p.ASIBulan6,
+		VitBiru:           p.VitBiru,
+		VitMerah:          p.VitMerah,
+		PittingEdema:      p.PittingEdema,
+		KelasIbuBalita:    p.KelasIbuBalita,
+		StatusBBU:         p.StatusBbu,
+		StatusTBU:         p.StatusTbu,
+		StatusBBTB:        p.StatusBbtb,
+		ZScoreBBU:         p.ZscoreBbu,
+		ZScoreTBU:         p.ZscoreTbu,
+		ZScoreBBTB:        p.ZscoreBbtb,
+		SourceData:        p.SourceData,
+		UpdatedBy:         p.UpdatedBy,
+		DeletedBy:         p.DeletedBy,
+		UpdatedAt:         p.UpdatedAt,
+		Stunting:          p.Stunting,
 	}
 }
 
@@ -900,49 +911,43 @@ func (p *KunjunganPayload) ToEntity() *entity.Kunjungan {
 
 	tPengukuran, _ := time.Parse("2006-01-02", p.TanggalPengukuran)
 	e := &entity.Kunjungan{
-		ID:                 p.Id,
-		IDAnak:             p.IDAnak,
-		TanggalPengukuran:  tPengukuran,
-		CaraUkur:           p.CaraUkur,
-		BeratBadan:         p.BeratBadan,
-		TinggiBadan:        p.TinggiBadan,
-		LingkarLengan:      p.LingkarLengan,
-		LingkarKepala:      p.LingkarKepala,
-		LingkarDada:        p.LingkarDada,
-		ASIBulan0:          p.ASIBulan0,
-		ASIBulan1:          p.ASIBulan1,
-		ASIBulan2:          p.ASIBulan2,
-		ASIBulan3:          p.ASIBulan3,
-		ASIBulan4:          p.ASIBulan4,
-		ASIBulan5:          p.ASIBulan5,
-		ASIBulan6:          p.ASIBulan6,
-		VitBiru:            p.VitBiru,
-		VitMerah:           p.VitMerah,
-		PittingEdema:       p.PittingEdema,
-		KelasIbuBalita:     p.KelasIbuBalita,
-		StatusBBUSigizi:    p.StatusBBUSigizi,
-		StatusTBUSigizi:    p.StatusTBUSigizi,
-		StatusBBTBSigizi:   p.StatusBBTBSigizi,
-		ZScoreBBUSigizi:    p.ZScoreBBUSigizi,
-		ZScoreTBUSigizi:    p.ZScoreTBUSigizi,
-		ZScoreBBTBSigizi:   p.ZScoreBBTBSigizi,
-		StatusBBUWhoAntro:  p.StatusBBUWhoAntro,
-		StatusTBUWhoAntro:  p.StatusTBUWhoAntro,
-		StatusBBTBWhoAntro: p.StatusBBTBWhoAntro,
-		ZScoreBBUWhoAntro:  p.ZScoreBBUWhoAntro,
-		ZScoreTBUWhoAntro:  p.ZScoreTBUWhoAntro,
-		ZScoreBBTBWhoAntro: p.ZScoreBBTBWhoAntro,
-		SourceData:         p.SourceData,
-		UpdatedBy:          p.UpdatedBy,
-		DeletedBy:          p.DeletedBy,
-		Stunting:           p.Stunting,
-		SatusehatId:        p.SatusehatId,
-		IDFaskes:           p.IdFaskes,
-		TanggalSelesai:     waktuDariString(p.TanggalSelesai),
-		IDEpisode:          p.IdEpisode,
-		RefEpisode:         p.RefEpisode,
-		IDRujukan:          p.IdRujukan,
-		RefRujukan:         p.RefRujukan,
+		ID:                p.Id,
+		IDAnak:            p.IDAnak,
+		TanggalPengukuran: tPengukuran,
+		CaraUkur:          p.CaraUkur,
+		BeratBadan:        p.BeratBadan,
+		TinggiBadan:       p.TinggiBadan,
+		LingkarLengan:     p.LingkarLengan,
+		LingkarKepala:     p.LingkarKepala,
+		LingkarDada:       p.LingkarDada,
+		ASIBulan0:         p.ASIBulan0,
+		ASIBulan1:         p.ASIBulan1,
+		ASIBulan2:         p.ASIBulan2,
+		ASIBulan3:         p.ASIBulan3,
+		ASIBulan4:         p.ASIBulan4,
+		ASIBulan5:         p.ASIBulan5,
+		ASIBulan6:         p.ASIBulan6,
+		VitBiru:           p.VitBiru,
+		VitMerah:          p.VitMerah,
+		PittingEdema:      p.PittingEdema,
+		KelasIbuBalita:    p.KelasIbuBalita,
+		StatusBBU:         p.StatusBBU,
+		StatusTBU:         p.StatusTBU,
+		StatusBBTB:        p.StatusBBTB,
+		ZScoreBBU:         p.ZScoreBBU,
+		ZScoreTBU:         p.ZScoreTBU,
+		ZScoreBBTB:        p.ZScoreBBTB,
+		SourceData:        p.SourceData,
+		UpdatedBy:         p.UpdatedBy,
+		DeletedBy:         p.DeletedBy,
+		Stunting:          p.Stunting,
+		SatusehatId:       p.SatusehatId,
+		IDFaskes:          p.IdFaskes,
+		TanggalSelesai:    waktuDariString(p.TanggalSelesai),
+		IDEpisode:         p.IdEpisode,
+		RefEpisode:        p.RefEpisode,
+		IDRujukan:         p.IdRujukan,
+		RefRujukan:        p.RefRujukan,
 	}
 
 	// timestamp dari jakantro; kalau tidak dikirim, database yang mengisi
