@@ -198,12 +198,12 @@ kedua jenis diagnosa ada, keempat jenis layanan ada.
   "lingkar_kepala": 45.3,
   "lingkar_dada": 46.0,
   "ref_episode": "ep-lengkap-01",
-  "status_tbu_whoantro": "Sangat Pendek",
-  "zscore_tbu_whoantro": -3.21,
-  "status_bbu_whoantro": "Berat Badan Sangat Kurang",
-  "zscore_bbu_whoantro": -3.05,
-  "status_bbtb_whoantro": "Gizi Kurang",
-  "zscore_bbtb_whoantro": -1.94
+  "status_tbu": "Sangat Pendek",
+  "zscore_tbu": -3.21,
+  "status_bbu": "Berat Badan Sangat Kurang",
+  "zscore_bbu": -3.05,
+  "status_bbtb": "Gizi Kurang",
+  "zscore_bbtb": -1.94
  },
  "episode": [
   {
