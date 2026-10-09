@@ -389,7 +389,7 @@ type OrangtuaPayload struct {
 	Rt           string     `json:"rt"`
 	Rw           string     `json:"rw"`
 	Alamat       string     `json:"alamat"`
-	Kia          int16      `json:"kia"`
+	Kia          *int16     `json:"kia"`
 	SourceData   *string    `json:"source_data"`
 	UsiaHamil    *int16     `json:"usia_hamil"`
 	KiaBayiKecil *int16     `json:"kia_bayi_kecil"`
@@ -409,7 +409,7 @@ type AnakPayload struct {
 	TanggalLahir string     `json:"tanggal_lahir"` // format YYYY-MM-DD
 	JenisKelamin string     `json:"jenis_kelamin"`
 	AnakKe       int16      `json:"anak_ke"`
-	IMD          int16      `json:"imd"`
+	IMD          *int16     `json:"imd"`
 	BBLahir      float32    `json:"bb_lahir"`
 	TBLahir      float32    `json:"tb_lahir"`
 	LKLahir      float32    `json:"lk_lahir"`
@@ -593,7 +593,7 @@ func (o *Orangtua) FromEntity(e *entity.Orangtua) *Orangtua {
 		Rt:           e.RT,
 		Rw:           e.RW,
 		Alamat:       e.Alamat,
-		Kia:          e.KIA,
+		Kia:          nilaiInt16(e.KIA),
 		CreatedAt:    e.CreatedAt,
 		UpdatedAt:    e.UpdatedAt,
 		DeletedAt:    e.DeletedAt,
@@ -627,7 +627,7 @@ func (p *Orangtua) ToPayload() *OrangtuaPayload {
 		Rt:           p.Rt,
 		Rw:           p.Rw,
 		Alamat:       p.Alamat,
-		Kia:          p.Kia,
+		Kia:          &p.Kia,
 		SourceData:   p.SourceData,
 		UsiaHamil:    p.UsiaHamil,
 		KiaBayiKecil: p.KiaBayiKecil,
@@ -708,7 +708,7 @@ func (a *Anak) FromEntity(e *entity.Anak) *Anak {
 		TanggalLahir: e.TanggalLahir.Format("2006-01-02"),
 		JenisKelamin: e.JenisKelamin,
 		AnakKe:       e.AnakKe,
-		Imd:          e.IMD,
+		Imd:          nilaiInt16(e.IMD),
 		BbLahir:      e.BBLahir,
 		TbLahir:      e.TBLahir,
 		LkLahir:      e.LKLahir,
@@ -743,7 +743,7 @@ func (p *Anak) ToPayload() *AnakPayload {
 		TanggalLahir: p.TanggalLahir,
 		JenisKelamin: p.JenisKelamin,
 		AnakKe:       p.AnakKe,
-		IMD:          p.Imd,
+		IMD:          &p.Imd,
 		BBLahir:      p.BbLahir,
 		TBLahir:      p.TbLahir,
 		LKLahir:      p.LkLahir,
@@ -1786,4 +1786,11 @@ func waktuDariString(s *string) *time.Time {
 		}
 	}
 	return nil
+}
+
+func nilaiInt16(v *int16) int16 {
+	if v == nil {
+		return 0
+	}
+	return *v
 }

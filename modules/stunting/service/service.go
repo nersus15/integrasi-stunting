@@ -62,6 +62,8 @@ func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, orgid *s
 
 	if utils.StrPtr(orgid) != "jakantro" {
 		orangtua.IDPosyandu = nil
+	} else {
+		orangtua.SatusehatId = ""
 	}
 
 	orangtua_db := o.ToPayload().ToEntity()
@@ -96,6 +98,8 @@ func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*typ
 
 	if utils.StrPtr(orgid) != "jakantro" {
 		anak.IDOrangtua = ""
+	} else {
+		anak.SatusehatId = ""
 	}
 
 	anak_db := a.ToPayload().ToEntity()
@@ -145,6 +149,12 @@ func (s *StuntingService) CreateKunjungan(body []byte) (*types.KunjunganAnak, er
 	// unmarshall body
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
+	}
+	if payload != nil {
+		utils.AbaikanFieldSistem(payload)
+		bersihkanPayloadJakantro(payload.Orangtua, payload.Anak)
+		bersihkanKunjunganJakantro(payload.Kunjungan)
+		bersihkanKunjunganJakantro(&payload.KunjunganPayload)
 	}
 
 	// Deteksi jenis payload
@@ -269,6 +279,10 @@ func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, er
 	if err := json.Unmarshal(body, &payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	if payload != nil {
+		utils.AbaikanFieldSistem(payload)
+		bersihkanPayloadJakantro(payload.Orangtua, payload.Anak)
+	}
 
 	jenis, payloadKesehatan, err := utils.DeteksiJenisPayloadKesehatan(payload)
 	if err != nil {
@@ -364,9 +378,25 @@ func (s *StuntingService) UpdateObservasiBySatusehatId(orgid string, data *entit
 	if err != nil {
 		return nil, err
 	}
+	if err := s.perbaruiUkurKunjungan(*data.SatusehatId); err != nil {
+		return nil, err
+	}
 
 	var res *types.Observasi
 	return res.FromEntity(gabungan), nil
+}
+
+// kolom kunjungan yang berasal dari observasi ini ikut diperbarui, dipakai PUT Kafka dan faskes
+func (s *StuntingService) perbaruiUkurKunjungan(satusehatId string) error {
+	o, err := s.Repository.FindObservasiBySatusehatId(satusehatId)
+	if err != nil || o == nil || !utils.IsFilled(o.IdKunjungan) {
+		return err
+	}
+
+	ukur := &types.Kunjungan{}
+	angkatKeKunjungan(ukur, []utils.HasilObservasi{utils.HasilDariObservasi(*o, nil)})
+
+	return s.Repository.UpdateUkurKunjungan(*o.IdKunjungan, utils.KolomUkurTerisi(ukur))
 }
 
 func (s *StuntingService) UpdateDiagnosaBySatusehatId(orgid string, data *entity.Diagnosa) (*types.Diagnosa, error) {
@@ -375,6 +405,14 @@ func (s *StuntingService) UpdateDiagnosaBySatusehatId(orgid string, data *entity
 	}
 	if err := s.VerifyAccessForUpdateFaskes(orgid, "diagnosa", *data.SatusehatId); err != nil {
 		return nil, err
+	}
+	// jenis tidak bisa diubah, jadi enum dicek terhadap jenis yang tersimpan
+	lama, err := s.Repository.FindDiagnosaBySatusehatId(*data.SatusehatId)
+	if err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateEnumDiagnosa(lama.Jenis, data.Kategori, data.Kritikalitas, data.ClinicalStatus, data.VerificationStatus); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 	}
 
 	gabungan, err := s.Repository.UpdateDiagnosaBySatusehatId(data, false)
@@ -393,6 +431,13 @@ func (s *StuntingService) UpdateLayananBySatusehatId(orgid string, data *entity.
 	}
 	if err := s.VerifyAccessForUpdateFaskes(orgid, "layanan", *data.SatusehatId); err != nil {
 		return nil, err
+	}
+	lama, err := s.Repository.FindLayananBySatusehatId(*data.SatusehatId)
+	if err != nil {
+		return nil, err
+	}
+	if err := utils.ValidateStatusLayanan(lama.Jenis, data.Status); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 	}
 	gabungan, err := s.Repository.UpdateLayananBySatusehatId(data, false)
 
@@ -749,4 +794,23 @@ func (s *StuntingService) aksesWilayahAtauKlinis(orgid string, idPosyandu *strin
 	}
 
 	return errWilayah
+}
+
+// satusehat_id hanya diisi jalur SatuSehat dan faskes
+func bersihkanPayloadJakantro(orangtua *types.OrangtuaPayload, anak *types.AnakPayload) {
+	if orangtua != nil {
+		orangtua.SatusehatId = nil
+	}
+	if anak != nil {
+		anak.SatusehatId = nil
+	}
+}
+
+// kepemilikan faskes, episode, rujukan, dan status stunting milik jalur faskes
+func bersihkanKunjunganJakantro(k *types.KunjunganPayload) {
+	if k == nil {
+		return
+	}
+	k.SatusehatId, k.IdFaskes, k.Stunting = nil, nil, nil
+	k.IdEpisode, k.RefEpisode, k.IdRujukan, k.RefRujukan = nil, nil, nil, nil
 }

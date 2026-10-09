@@ -1527,6 +1527,7 @@ func (d *StuntingRepository) CreateEpisode(episode *entity.Episode, ctx context.
 }
 
 type DataMedis struct {
+	AnakBaru     *entity.Anak
 	Kunjungan    *entity.Kunjungan
 	RefEncounter *string
 	Episode      []*entity.Episode
@@ -1539,12 +1540,14 @@ type DataMedis struct {
 	// kunjungan yang sudah ada dan statusnya perlu diperbarui
 	IdKunjunganStatus *string
 	Stunting          *int
+
+	// kunjungan yang sudah ada dan pengukurannya perlu diperbarui
+	IdKunjunganUkur *string
+	Ukur            *types.Kunjungan
 }
 
 var tabelTurunan = []string{"stunting.observasi", "stunting.diagnosa", "stunting.layanan", "stunting.rujukan"}
 
-// satu transaksi, satu statement per tabel. ON CONFLICT DO NOTHING supaya
-// pesan yang terkirim ulang tidak menggagalkan seluruh transaksi.
 func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Context) error {
 	if data == nil {
 		return exceptions.BodyRusak.New(nil)
@@ -1563,7 +1566,12 @@ func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Contex
 	}
 
 	err := bunDB.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
-		// episode lebih dulu, kunjungan.id_episode menunjuk ke sana
+		if data.AnakBaru != nil {
+			if _, err := tx.NewInsert().Model(data.AnakBaru).Returning("NULL").Exec(ctx); err != nil {
+				return err
+			}
+		}
+
 		if len(data.Episode) > 0 {
 			if _, err := tx.NewInsert().Model(&data.Episode).On("CONFLICT DO NOTHING").Returning("NULL").Exec(ctx); err != nil {
 				return err
@@ -1610,6 +1618,18 @@ func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Contex
 				Where(`id = ? AND "deletedAt" IS NULL`, *data.IdKunjunganStatus).
 				Exec(ctx); err != nil {
 				return err
+			}
+		}
+
+		if data.IdKunjunganUkur != nil && data.Ukur != nil {
+			if kolom := utils.KolomUkurTerisi(data.Ukur); len(kolom) > 0 {
+				q := tx.NewUpdate().Table("stunting.kunjungan").Set(`"updatedAt" = ?`, time.Now())
+				for k, v := range kolom {
+					q = q.Set("? = ?", bun.Ident(k), v)
+				}
+				if _, err := q.Where(`id = ? AND "deletedAt" IS NULL`, *data.IdKunjunganUkur).Exec(ctx); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -1886,6 +1906,32 @@ func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan
 	d.lupakan(keyKunjunganId(lama.Id))
 
 	return gabungan, nil
+}
+
+// hanya kolom yang dikirim yang di-SET; nilai nil ditulis NULL
+func (d *StuntingRepository) UpdateUkurKunjungan(id string, kolom map[string]any) error {
+	if len(kolom) == 0 {
+		return nil
+	}
+
+	lama, err := d.FindKunjunganById(id)
+	if err != nil {
+		return err
+	}
+
+	kolom["updatedAt"] = time.Now()
+	filter := []port.DbExpression{
+		{Expr: `id = ? AND "deletedAt" IS NULL`, Args: []any{id}},
+	}
+	if _, err := d.Connection.Update(d.Context.Context, entity.Kunjungan{}.TableName(), filter, kolom); err != nil {
+		logger.Error(fmt.Sprintf("UpdateUkurKunjungan (%s): ", id) + err.Error())
+		return err
+	}
+
+	d.lupakan(keyKunjunganId(id))
+	d.lupakanRiwayatAnak(lama.IdAnak)
+
+	return nil
 }
 
 func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi, stream bool) (*entity.Observasi, error) {

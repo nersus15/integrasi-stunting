@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"runtime/debug"
 	"strings"
@@ -296,6 +297,9 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 
 			if update {
 				_, err := s.repository.UpdateObservasiBySatusehatId(tmp.Induk.ToEntity(), true)
+				if err == nil {
+					err = s.stunting.perbaruiUkurKunjungan(utils.Nilai(tmp.Induk.IdSatusehat))
+				}
 				return exceptions.AbaikanJikaBelumTersimpan(err)
 			}
 
@@ -424,7 +428,7 @@ func (s *StreamService) ProsesTransaksiFHIR(bundle *types2.Bundle, ihsAnak *stri
 	}
 
 	if kunjungan != nil || len(observasi) > 0 || len(diagnosa) > 0 || len(layanan) > 0 || len(rujukan) > 0 || len(episode) > 0 {
-		_, _, alasan, err := s.simpanDataMedis(anak, idAnakSatusehat, kunjungan, refFaskes, observasi, diagnosa, layanan, rujukan, episode)
+		_, _, alasan, err := s.simpanDataMedis(anak, idAnakSatusehat, kunjungan, refFaskes, observasi, diagnosa, layanan, rujukan, episode, nil)
 
 		if err != nil {
 			return err
@@ -751,7 +755,7 @@ func petakanLayanan(entry types2.BundleEntry) (*types.Layanan, *string, *string,
 // alasan hanya terisi kalau sengaja tidak disimpan; kegagalan sebenarnya lewat error
 func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunjungan *types.Kunjungan,
 	refFaskes *string, observasi []utils.HasilObservasi, diagnosa []types.Diagnosa,
-	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode) (*string, bool, string, error) {
+	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode, anakBaru *entity.Anak) (*string, bool, string, error) {
 	idAnak := ""
 	if anak != nil {
 		idAnak = anak.Id
@@ -783,7 +787,7 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 
 	logger.Info(fmt.Sprintf("ProsesTransaksiFHIR:simpanDataMedis => data medis memenuhi syarat (%v, %v)", stunting, terakhirStunting))
 
-	data := &repository.DataMedis{}
+	data := &repository.DataMedis{AnakBaru: anakBaru}
 
 	// episode lebih dulu: kunjungan menunjuk ke sana lewat FK
 	for i := range episode {
@@ -836,6 +840,14 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 	if sudahAda && adaDataKlinis && (statusLama == nil || (stunting && *statusLama != 1)) {
 		data.IdKunjunganStatus = idKunjungan
 		data.Stunting = utils.BoolToSmallintPtr(stunting)
+	}
+
+	if sudahAda && len(observasi) > 0 {
+		ukur := &types.Kunjungan{}
+
+		angkatKeKunjungan(ukur, observasi)
+		data.IdKunjunganUkur = idKunjungan
+		data.Ukur = ukur
 	}
 
 	for _, h := range observasi {
@@ -920,22 +932,40 @@ func (s *StreamService) entityKunjungan(idAnak string, k *types.Kunjungan, refFa
 	}
 
 	e := &entity.Kunjungan{
-		ID:            k.Id,
-		IDAnak:        k.IdAnak,
-		CaraUkur:      k.CaraUkur,
-		BeratBadan:    k.BeratBadan,
-		TinggiBadan:   k.TinggiBadan,
-		LingkarLengan: k.LingkarLengan,
-		LingkarKepala: k.LingkarKepala,
-		LingkarDada:   k.LingkarDada,
-		IDFaskes:      k.IdFaskes,
-		SatusehatId:   k.IdSatusehat,
-		IDEpisode:     k.IdEpisode,
-		RefEpisode:    k.RefEpisode,
-		IDRujukan:     k.IdRujukan,
-		RefRujukan:    k.RefRujukan,
-		Stunting:      k.Stunting,
+		ID:             k.Id,
+		IDAnak:         k.IdAnak,
+		CaraUkur:       k.CaraUkur,
+		BeratBadan:     k.BeratBadan,
+		TinggiBadan:    k.TinggiBadan,
+		LingkarLengan:  k.LingkarLengan,
+		LingkarKepala:  k.LingkarKepala,
+		LingkarDada:    k.LingkarDada,
+		ASIBulan0:      k.ASIBulan0,
+		ASIBulan1:      k.ASIBulan1,
+		ASIBulan2:      k.ASIBulan2,
+		ASIBulan3:      k.ASIBulan3,
+		ASIBulan4:      k.ASIBulan4,
+		ASIBulan5:      k.ASIBulan5,
+		ASIBulan6:      k.ASIBulan6,
+		VitBiru:        k.VitBiru,
+		VitMerah:       k.VitMerah,
+		PittingEdema:   k.PittingEdema,
+		KelasIbuBalita: k.KelasIbuBalita,
+		StatusBBU:      k.StatusBbu,
+		StatusTBU:      k.StatusTbu,
+		StatusBBTB:     k.StatusBbtb,
+		ZScoreBBU:      k.ZscoreBbu,
+		ZScoreTBU:      k.ZscoreTbu,
+		ZScoreBBTB:     k.ZscoreBbtb,
+		IDFaskes:       k.IdFaskes,
+		SatusehatId:    k.IdSatusehat,
+		IDEpisode:      k.IdEpisode,
+		RefEpisode:     k.RefEpisode,
+		IDRujukan:      k.IdRujukan,
+		RefRujukan:     k.RefRujukan,
+		Stunting:       k.Stunting,
 	}
+
 	if t := utils.WaktuDariTanggal(k.TanggalPengukuran); t != nil {
 		e.TanggalPengukuran = *t
 	}
@@ -982,7 +1012,6 @@ func angkatKeKunjungan(k *types.Kunjungan, observasi []utils.HasilObservasi) {
 	if k == nil {
 		return
 	}
-
 	for _, h := range observasi {
 		if h.Kolom == "" || h.Angka == nil {
 			continue
@@ -1000,8 +1029,23 @@ func angkatKeKunjungan(k *types.Kunjungan, observasi []utils.HasilObservasi) {
 			k.LingkarKepala = h.Angka
 		case "lingkar_lengan":
 			k.LingkarLengan = h.Angka
+
+		// status ikut z-score pasangannya, kosong berarti NULL
+		case "zscore_bbu":
+			k.ZscoreBbu, k.StatusBbu = h.Angka, isiStatus(h.Status)
+		case "zscore_tbu":
+			k.ZscoreTbu, k.StatusTbu = h.Angka, isiStatus(h.Status)
+		case "zscore_bbtb":
+			k.ZscoreBbtb, k.StatusBbtb = h.Angka, isiStatus(h.Status)
 		}
 	}
+}
+
+func isiStatus(s string) *string {
+	if !utils.IsStrFilled(s) {
+		return nil
+	}
+	return &s
 }
 
 func adaTandaStunting(diagnosa []types.Diagnosa, observasi []utils.HasilObservasi) bool {
@@ -1117,6 +1161,15 @@ func (s *StreamService) PastikanAnak(anak *types.Anak, anakKe *int) (*types.Anak
 		return anak, nil
 	}
 
+	e, err := siapkanAnakBaru(anak, anakKe)
+	if err != nil || e == nil {
+		return nil, err
+	}
+	return s.repository.CreateAnak(e, nil)
+}
+
+// nil tanpa error berarti anak sudah lewat 5 tahun
+func siapkanAnakBaru(anak *types.Anak, anakKe *int) (*entity.Anak, error) {
 	bd, err := time.Parse("2006-01-02", anak.TanggalLahir)
 	if err != nil {
 		return nil, exceptions.Validasi.Messagef("anak.tanggal_lahir tidak valid: %q", anak.TanggalLahir)
@@ -1135,9 +1188,9 @@ func (s *StreamService) PastikanAnak(anak *types.Anak, anakKe *int) (*types.Anak
 		p.AnakKe = int16(*anakKe)
 	}
 	if err := utils.ValidateAnakStream(*p); err != nil {
-		return nil, err
+		return nil, exceptions.Validasi.WithMessage("anak."+err.Error(), err)
 	}
-	return s.repository.CreateAnak(p.ToEntity(), nil)
+	return p.ToEntity(), nil
 }
 
 func (s *StreamService) CariAnak(a *types.Anak) *types.Anak {
@@ -1203,24 +1256,49 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 		return nil, exceptions.Forbidden.WithMessage("faskes dengan orgid "+orgid+" belum terdaftar", err)
 	}
 
+	for i, r := range p.Rujukan {
+		if !utils.IsFilled(r.RefFaskesTujuan) {
+			continue
+		}
+		if _, err := s.repository.FindFaskesByOrgid(*r.RefFaskesTujuan); err != nil {
+			var e *exceptions.Error
+			if errors.As(err, &e) && e.ErrorCode == exceptions.TidakDitemukan.ErrorCode {
+				return nil, exceptions.ReferensiHilang.Messagef("rujukan[%d]: faskes tujuan %s belum terdaftar", i, *r.RefFaskesTujuan)
+			}
+			return nil, err
+		}
+	}
+
 	observasi := make([]utils.HasilObservasi, 0, len(p.Observasi))
 	for _, o := range p.Observasi {
 		observasi = append(observasi, utils.HasilDariObservasi(o, o.Component))
 	}
 
+	// id dan kepemilikan ditentukan sistem
+	p.Anak.Id, p.Anak.IdOrangtua = "", ""
+	p.Kunjungan.IdEpisode, p.Kunjungan.IdRujukan, p.Kunjungan.Stunting = nil, nil, nil
+	for i := range observasi {
+		observasi[i].Induk.IdInduk = nil
+	}
+	for i := range p.Episode {
+		p.Episode[i].IdFaskes = nil
+	}
+
+	var anakBaru *entity.Anak
 	anak := s.CariAnak(&p.Anak)
 	if anak == nil {
 		if !adaTandaStunting(p.Diagnosa, observasi) {
 			return nil, exceptions.TidakDisimpan.Messagef("tidak ada tanda stunting dan anak belum punya riwayat")
 		}
 
-		anak, err = s.PastikanAnak(&p.Anak, nil)
+		anakBaru, err = siapkanAnakBaru(&p.Anak, nil)
 		if err != nil {
 			return nil, err
 		}
-		if anak == nil {
+		if anakBaru == nil {
 			return nil, exceptions.TidakDisimpan.Messagef("anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun")
 		}
+		anak = &p.Anak
 	} else if err := s.stunting.VerifyAksesAnak(&orgid, anak.Id); err != nil {
 		return nil, err
 	}
@@ -1233,7 +1311,7 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 	kunjungan.IdFaskes = &faskes.Id
 
 	idKunjungan, disimpan, alasan, err := s.simpanDataMedis(anak, anak.IdSatusehat, &kunjungan, &orgid,
-		observasi, p.Diagnosa, p.Layanan, p.Rujukan, p.Episode)
+		observasi, p.Diagnosa, p.Layanan, p.Rujukan, p.Episode, anakBaru)
 
 	if err != nil {
 		return nil, err

@@ -90,7 +90,7 @@ type Orangtua struct {
 	RT           string     `bun:"rt,type:char(3),notnull" json:"rt"`
 	RW           string     `bun:"rw,type:char(3),notnull" json:"rw"`
 	Alamat       string     `bun:"alamat,type:text,notnull" json:"alamat"`
-	KIA          int16      `bun:"kia,type:smallint,notnull" json:"kia"`
+	KIA          *int16     `bun:"kia,type:smallint,notnull" json:"kia"`
 	CreatedAt    time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    *time.Time `bun:"updatedAt" json:"updated_at"`
 	DeletedAt    *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
@@ -114,7 +114,7 @@ type Anak struct {
 	TanggalLahir time.Time  `bun:"tanggal_lahir,type:date,notnull" json:"tanggal_lahir"`
 	JenisKelamin string     `bun:"jenis_kelamin,type:char(1),notnull" json:"jenis_kelamin"`
 	AnakKe       int16      `bun:"anak_ke,type:smallint,notnull" json:"anak_ke"`
-	IMD          int16      `bun:"imd,type:smallint,notnull" json:"imd"`
+	IMD          *int16     `bun:"imd,type:smallint,notnull" json:"imd"`
 	BBLahir      float32    `bun:"bb_lahir,type:real,notnull" json:"bb_lahir"`
 	TBLahir      float32    `bun:"tb_lahir,type:real,notnull" json:"tb_lahir"`
 	LKLahir      float32    `bun:"lk_lahir,type:real,notnull" json:"lk_lahir"`
@@ -385,17 +385,21 @@ func (m *Orangtua) BeforeAppendModel(ctx context.Context, query bun.Query) error
 		now := time.Now()
 		m.UpdatedAt = &now
 	}
+	if _, ok := query.(*bun.InsertQuery); ok && m.KIA == nil {
+		m.KIA = new(int16)
+	}
 	return nil
 }
 
 func (e *Orangtua) Override(new Orangtua, force bool) {
 	skipFields := map[string]bool{
-		"BaseModel": true,
-		"ID":        true,
-		"CreatedAt": true,
-		"DeletedAt": true,
-		"DeletedBy": true,
-		"Anak":      true,
+		"BaseModel":  true,
+		"ID":         true,
+		"CreatedAt":  true,
+		"DeletedAt":  true,
+		"DeletedBy":  true,
+		"SourceData": true,
+		"Anak":       true,
 	}
 
 	timpaField(e, new, skipFields, force)
@@ -414,24 +418,28 @@ func (m *Anak) BeforeAppendModel(ctx context.Context, query bun.Query) error {
 		now := time.Now()
 		m.UpdatedAt = &now
 	}
+	if _, ok := query.(*bun.InsertQuery); ok && m.IMD == nil {
+		m.IMD = new(int16)
+	}
 	return nil
 }
 
 func (e *Anak) Override(new Anak, force bool) {
 	skipFields := map[string]bool{
-		"BaseModel": true,
-		"ID":        true,
-		"CreatedAt": true,
-		"DeletedAt": true,
-		"DeletedBy": true,
-		"Orangtua":  true,
-		"Kunjungan": true,
-		"Kesehatan": true,
-		"Episode":   true,
-		"Observasi": true,
-		"Diagnosa":  true,
-		"Layanan":   true,
-		"Rujukan":   true,
+		"BaseModel":  true,
+		"ID":         true,
+		"CreatedAt":  true,
+		"DeletedAt":  true,
+		"DeletedBy":  true,
+		"SourceData": true,
+		"Orangtua":   true,
+		"Kunjungan":  true,
+		"Kesehatan":  true,
+		"Episode":    true,
+		"Observasi":  true,
+		"Diagnosa":   true,
+		"Layanan":    true,
+		"Rujukan":    true,
 	}
 
 	timpaField(e, new, skipFields, force)

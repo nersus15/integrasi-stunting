@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
@@ -66,7 +67,7 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 		return fmt.Errorf("alamat tidak boleh kosong")
 	}
 
-	if p.Kia != 0 && p.Kia != 1 {
+	if p.Kia != nil && *p.Kia != 0 && *p.Kia != 1 {
 		return fmt.Errorf("kia harus bernilai 0 atau 1")
 	}
 
@@ -96,7 +97,7 @@ func ValidateAnakUpdate(p types.AnakPayload) error {
 	if p.AnakKe < 0 {
 		return fmt.Errorf("anak_ke tidak boleh negatif")
 	}
-	if p.IMD != 0 && p.IMD != 1 {
+	if p.IMD != nil && *p.IMD != 0 && *p.IMD != 1 {
 		return fmt.Errorf("imd harus bernilai 0 atau 1")
 	}
 	if p.BBLahir < 0 || p.TBLahir < 0 || p.LKLahir < 0 {
@@ -117,7 +118,7 @@ func ValidateOrangtuaUpdate(p types.OrangtuaPayload) error {
 	if IsStrFilled(p.Nik) && !IsDigitsLen(p.Nik, 16) {
 		return fmt.Errorf("nik harus 16 digit angka")
 	}
-	if p.Kia != 0 && p.Kia != 1 {
+	if p.Kia != nil && *p.Kia != 0 && *p.Kia != 1 {
 		return fmt.Errorf("kia harus bernilai 0 atau 1")
 	}
 	if p.UsiaHamil != nil && *p.UsiaHamil < 0 {
@@ -188,7 +189,7 @@ func ValidateAnak(p types.AnakPayload) error {
 	if p.AnakKe <= 0 {
 		return fmt.Errorf("anak_ke harus lebih dari 0")
 	}
-	if p.IMD != 0 && p.IMD != 1 {
+	if p.IMD != nil && *p.IMD != 0 && *p.IMD != 1 {
 		return fmt.Errorf("imd harus bernilai 0 atau 1")
 	}
 
@@ -340,9 +341,15 @@ func ValidatePemeriksaanFaskes(p *types.PemeriksaanFaskes) error {
 		if err := ValidateDiagnosaFaskes(d); err != nil {
 			return fmt.Errorf("diagnosa[%d]: %s", i, err.Error())
 		}
+		if err := ValidateEnumDiagnosa(d.Jenis, d.Kategori, d.Kritikalitas, d.ClinicalStatus, d.VerificationStatus); err != nil {
+			return fmt.Errorf("diagnosa[%d]: %s", i, err.Error())
+		}
 	}
 	for i, l := range p.Layanan {
 		if err := ValidateLayananFaskes(l); err != nil {
+			return fmt.Errorf("layanan[%d]: %s", i, err.Error())
+		}
+		if err := ValidateStatusLayanan(l.Jenis, l.Status); err != nil {
 			return fmt.Errorf("layanan[%d]: %s", i, err.Error())
 		}
 	}
@@ -440,8 +447,11 @@ func ValidateRujukanFaskes(r types.Rujukan) error {
 	default:
 		return fmt.Errorf("jenis harus %q, %q, atau %q", entity.RujukanKeluar, entity.RujukBalik, entity.RujukanInternal)
 	}
+	if err := cekEnum("status", r.Status, statusPermintaan); err != nil {
+		return err
+	}
 
-	return nil
+	return cekEnum("prioritas", r.Prioritas, prioritasRujukan)
 }
 
 func ValidateEpisodeFaskes(e types.Episode) error {
@@ -449,5 +459,92 @@ func ValidateEpisodeFaskes(e types.Episode) error {
 		return fmt.Errorf("id_satusehat wajib dikirim, kirim setelah data diterima SatuSehat")
 	}
 
+	return cekEnum("status", e.Status, statusEpisode)
+}
+
+// value set FHIR R4 resource asalnya
+var (
+	kategoriDiagnosa = map[string][]string{
+		DiagnosaDiagnosis: {"problem-list-item", "encounter-diagnosis"},
+		DiagnosaAlergi:    {"food", "medication", "environment", "biologic"},
+	}
+	clinicalStatus = map[string][]string{
+		DiagnosaDiagnosis: {"active", "recurrence", "relapse", "inactive", "remission", "resolved"},
+		DiagnosaAlergi:    {"active", "inactive", "resolved"},
+	}
+	verificationStatus = map[string][]string{
+		DiagnosaDiagnosis: {"unconfirmed", "provisional", "differential", "confirmed", "refuted", "entered-in-error"},
+		DiagnosaAlergi:    {"unconfirmed", "confirmed", "refuted", "entered-in-error"},
+	}
+	kritikalitas     = []string{"low", "high", "unable-to-assess"}
+	statusPermintaan = []string{"draft", "active", "on-hold", "revoked", "completed", "entered-in-error", "unknown"}
+	statusLayanan    = map[string][]string{
+		entity.LayananProcedure:          {"preparation", "in-progress", "not-done", "on-hold", "stopped", "completed", "entered-in-error", "unknown"},
+		entity.LayananMedicationDispense: {"preparation", "in-progress", "cancelled", "on-hold", "completed", "entered-in-error", "stopped", "declined", "unknown"},
+		entity.LayananNutritionOrder:     statusPermintaan,
+		entity.LayananServiceRequest:     statusPermintaan,
+		entity.LayananImmunization:       {"completed", "entered-in-error", "not-done"},
+	}
+	prioritasRujukan = []string{"routine", "urgent", "asap", "stat"}
+	statusEpisode    = []string{"planned", "waitlist", "active", "onhold", "finished", "cancelled", "entered-in-error"}
+)
+
+func cekEnum(field string, nilai *string, sah []string) error {
+	if !IsFilled(nilai) || slices.Contains(sah, *nilai) {
+		return nil
+	}
+	return fmt.Errorf("%s %q tidak dikenali, pilih salah satu: %s", field, *nilai, strings.Join(sah, ", "))
+}
+
+// jenis kosong berarti diagnosis
+func ValidateEnumDiagnosa(jenis string, kategori, kritis, clinical, verification *string) error {
+	if jenis == "" {
+		jenis = DiagnosaDiagnosis
+	}
+	for _, c := range []struct {
+		field string
+		nilai *string
+		sah   []string
+	}{
+		{"kategori", kategori, kategoriDiagnosa[jenis]},
+		{"kritikalitas", kritis, kritikalitas},
+		{"clinical_status", clinical, clinicalStatus[jenis]},
+		{"verification_status", verification, verificationStatus[jenis]},
+	} {
+		if err := cekEnum(c.field, c.nilai, c.sah); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func ValidateStatusLayanan(jenis string, status *string) error {
+	return cekEnum("status", status, statusLayanan[jenis])
+}
+
+// z-score dan status satu indeks hanya boleh datang dari kunjungan atau observasi, tidak keduanya
+func ValidateZscoreSatuSumber(p *types.PemeriksaanFaskes) error {
+	if p == nil {
+		return nil
+	}
+	for i, o := range p.Observasi {
+		if kolom := KolomUkuran(o.System, o.Kode); zscoreDiKunjungan(p.Kunjungan, kolom) {
+			indeks := strings.TrimPrefix(kolom, "zscore_")
+			return fmt.Errorf("observasi[%d] (%s) sudah membawa %s; kunjungan.zscore_%s dan kunjungan.status_%s jangan dikirim bersamaan",
+				i, o.Kode, kolom, indeks, indeks)
+		}
+	}
+	return nil
+}
+
+func zscoreDiKunjungan(k types.Kunjungan, kolom string) bool {
+	switch kolom {
+	case "zscore_bbu":
+		return k.ZscoreBbu != nil || IsFilled(k.StatusBbu)
+	case "zscore_tbu":
+		return k.ZscoreTbu != nil || IsFilled(k.StatusTbu)
+	case "zscore_bbtb":
+		return k.ZscoreBbtb != nil || IsFilled(k.StatusBbtb)
+	}
+	return false
 }

@@ -51,9 +51,13 @@ func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 	if err := c.BodyParser(p); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(p)
 
 	if err := utils.ValidatePemeriksaanFaskes(p); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
+	}
+	if err := utils.ValidateZscoreSatuSumber(p); err != nil {
+		return h.kirimError(c, exceptions.BentukPayload.WithMessage(err.Error(), err))
 	}
 
 	res, err := h.stream.SimpanPemeriksaanFaskes(p, utils.StrPtr(orgid))
@@ -114,6 +118,7 @@ func (h *HttpHandler) updateKunjunganBySatusehatId(c *fiber.Ctx, orgid *string) 
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 	if err := utils.ValidateKunjunganFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 	}
@@ -132,6 +137,7 @@ func (h *HttpHandler) updateObservasiBySatusehatId(c *fiber.Ctx, orgid *string) 
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateObservasiFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -151,6 +157,7 @@ func (h *HttpHandler) updateDiagnosaBySatusehatId(c *fiber.Ctx, orgid *string) (
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateDiagnosaFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -171,6 +178,7 @@ func (h *HttpHandler) updateLayananBySatusehatId(c *fiber.Ctx, orgid *string) (a
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateLayananFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -191,6 +199,7 @@ func (h *HttpHandler) updateRujukanBySatusehatId(c *fiber.Ctx, orgid *string) (a
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateRujukanFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -210,6 +219,7 @@ func (h *HttpHandler) updateEpisodeBySatusehatId(c *fiber.Ctx, orgid *string) (a
 	if err := c.BodyParser(payload); err != nil {
 		return nil, exceptions.BodyRusak.New(err)
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateEpisodeFaskes(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -244,6 +254,8 @@ func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
 	if err := c.BodyParser(&orangtua); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(&orangtua)
+	orangtua.SatusehatId = nil
 
 	if err := utils.ValidateOrangtua(orangtua); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
@@ -263,6 +275,7 @@ func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
 	if err := c.BodyParser(&orangtua); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(&orangtua)
 
 	if err := utils.ValidateOrangtuaUpdate(orangtua); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
@@ -322,6 +335,8 @@ func (h *HttpHandler) CreateAnak(c *fiber.Ctx) error {
 	if err := c.BodyParser(&anak); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(&anak)
+	anak.SatusehatId = nil
 
 	if err := utils.ValidateAnak(anak); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
@@ -340,6 +355,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 	if err := c.BodyParser(&anak); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(&anak)
 
 	if err := utils.ValidateAnakUpdate(anak); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
@@ -437,6 +453,7 @@ func (h *HttpHandler) UpdateKunjunganById(c *fiber.Ctx) error {
 	if err := c.BodyParser(payload); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateKunjungan(*payload); err != nil {
 		return h.kirimError(c, exceptions.Validasi.New(err))
@@ -473,6 +490,7 @@ func (h *HttpHandler) UpdateKesehatanById(c *fiber.Ctx) error {
 	if err := c.BodyParser(payload); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+	utils.AbaikanFieldSistem(payload)
 
 	if err := utils.ValidateKesehatan(*payload); err != nil {
 		return h.kirimError(c, exceptions.Validasi.New(err))

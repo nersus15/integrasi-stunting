@@ -165,11 +165,18 @@ type Ukuran struct {
 
 // kode -> kolom kunjungan, system bebas. Yang tidak terdaftar tetap tersimpan di observasi.
 var kolomUkuran = map[Ukuran]string{
-	{SystemLOINC, "29463-7"}: "berat_badan",
-	{SystemLOINC, "8302-2"}:  "tinggi_badan",
-	{SystemLOINC, "8306-3"}:  "tinggi_badan",
-	{SystemLOINC, "8308-9"}:  "tinggi_badan",
-	{SystemLOINC, "9843-4"}:  "lingkar_kepala",
+	{SystemLOINC, "29463-7"}:    "berat_badan",
+	{SystemLOINC, "8302-2"}:     "tinggi_badan",
+	{SystemLOINC, "8306-3"}:     "tinggi_badan",
+	{SystemLOINC, "8308-9"}:     "tinggi_badan",
+	{SystemLOINC, "9843-4"}:     "lingkar_kepala",
+	{SystemSNOMED, "284473002"}: "lingkar_lengan",
+
+	{SystemSNOMED, "1153593003"}: "zscore_bbu",
+	{SystemSNOMED, "1153590000"}: "zscore_tbu",
+	{SystemSNOMED, "1153604005"}: "zscore_tbu",
+	{SystemSNOMED, "1153598007"}: "zscore_bbtb",
+	{SystemSNOMED, "1153600001"}: "zscore_bbtb",
 }
 
 var caraUkur = map[Ukuran]string{
@@ -179,6 +186,36 @@ var caraUkur = map[Ukuran]string{
 
 func KolomUkuran(system, kode string) string { return kolomUkuran[Ukuran{system, kode}] }
 func CaraUkur(system, kode string) string    { return caraUkur[Ukuran{system, kode}] }
+
+func KolomUkurTerisi(k *types.Kunjungan) map[string]any {
+	m := map[string]any{}
+	for kolom, v := range map[string]*float64{
+		"berat_badan": k.BeratBadan, "tinggi_badan": k.TinggiBadan,
+		"lingkar_kepala": k.LingkarKepala, "lingkar_lengan": k.LingkarLengan,
+	} {
+		if v != nil {
+			m[kolom] = *v
+		}
+	}
+	if k.CaraUkur != nil {
+		m["cara_ukur"] = *k.CaraUkur
+	}
+	// status ikut z-score pasangannya, nil ditulis NULL
+	for _, p := range []struct {
+		kolomZ, kolomS string
+		z              *float64
+		s              *string
+	}{
+		{"zscore_bbu", "status_bbu", k.ZscoreBbu, k.StatusBbu},
+		{"zscore_tbu", "status_tbu", k.ZscoreTbu, k.StatusTbu},
+		{"zscore_bbtb", "status_bbtb", k.ZscoreBbtb, k.StatusBbtb},
+	} {
+		if p.z != nil {
+			m[p.kolomZ], m[p.kolomS] = *p.z, p.s
+		}
+	}
+	return m
+}
 
 // yang dikenal kolomUkuran didahulukan, supaya tidak bergantung urutan coding
 func KodeUtama(cc fhir.CodeableConcept) (system, kode, display string) {
@@ -339,28 +376,42 @@ func Interpretasi(list []fhir.CodeableConcept) string {
 	return ""
 }
 
-type StatusIndeks struct {
-	Kolom string
-	Label string
+// Lampiran 3 terminologi Gizi SatuSehat. Dicari per kolom karena kode
+// seperti 248325000 dipakai BB/PB, BB/TB, dan IMT/U sekaligus.
+var statusGizi = map[string]map[string]string{
+	"zscore_bbu": {
+		"OI000007":  "Berat Badan Sangat Kurang",
+		"248342006": "Berat Badan Kurang",
+		"43664005":  "Berat Badan Normal",
+		"OI000010":  "Risiko Berat Badan Lebih",
+	},
+	"zscore_tbu": {
+		"OI000011":  "Sangat Pendek",
+		"444000005": "Pendek",
+		"17489000":  "Normal",
+		"83077003":  "Tinggi",
+	},
+	"zscore_bbtb": {
+		"OI000001":  "Gizi Buruk",
+		"248325000": "Gizi Kurang",
+		"248324001": "Gizi Baik",
+		"OI000004":  "Risiko Gizi Lebih",
+		"238131007": "Gizi Lebih",
+		"414915002": "Obesitas",
+	},
 }
 
-// hanya kode yang menunjuk satu indeks. Yang ambigu (mis. 248342006 Underweight,
-// dipakai BB/U dan IMT dewasa) ditentukan dari Observation.code induknya.
-var statusIndeks = map[Ukuran]StatusIndeks{
-	{SystemKemkes, "OI000007"}: {"status_bbu_whoantro", "Berat Badan Sangat Kurang"},
-	{SystemKemkes, "OI000010"}: {"status_bbu_whoantro", "Risiko Berat Badan Lebih"},
-
-	{SystemKemkes, "OI000011"}:  {"status_tbu_whoantro", "Sangat Pendek"},
-	{SystemSNOMED, "444000005"}: {"status_tbu_whoantro", "Pendek"},
-	{SystemSNOMED, "17489000"}:  {"status_tbu_whoantro", "Normal"},
-	{SystemSNOMED, "83077003"}:  {"status_tbu_whoantro", "Tinggi"},
-
-	{SystemKemkes, "OI000004"}: {"status_bbtb_whoantro", "Risiko Gizi Lebih"},
-}
-
-func StatusGizi(system, kode string) (StatusIndeks, bool) {
-	s, ok := statusIndeks[Ukuran{system, kode}]
+func StatusGizi(kolom, kode string) (string, bool) {
+	s, ok := statusGizi[kolom][kode]
 	return s, ok
+}
+
+func statusGiziDari(kolom string, kode *string) string {
+	if kode == nil {
+		return ""
+	}
+	s, _ := StatusGizi(kolom, *kode)
+	return s
 }
 
 func PatientToAnak(entry types2.BundleEntry) (*types.Anak, error) {
@@ -583,13 +634,20 @@ func TanggalSaja(s string) string {
 
 // untuk jalur masuk yang tidak lewat FHIR
 func HasilDariObservasi(induk types.Observasi, komponen []types.Observasi) HasilObservasi {
+	kolom := KolomUkuran(induk.System, induk.Kode)
 	h := HasilObservasi{
 		Induk:    induk,
-		Kolom:    KolomUkuran(induk.System, induk.Kode),
+		Kolom:    kolom,
 		Angka:    induk.NilaiAngka,
 		CaraUkur: CaraUkur(induk.System, induk.Kode),
+		Status:   statusGiziDari(kolom, induk.Interpretasi),
 	}
-	h.Component = append(h.Component, komponen...)
+	for _, c := range komponen {
+		if c.Tanggal == nil {
+			c.Tanggal = induk.Tanggal
+		}
+		h.Component = append(h.Component, c)
+	}
 	return h
 }
 
@@ -600,6 +658,8 @@ type HasilObservasi struct {
 	Kolom    string
 	Angka    *float64
 	CaraUkur string
+	// label interpretasi, hanya untuk Kolom zscore_*
+	Status string
 }
 
 func ObservationToObservasi(entry types2.BundleEntry) (*HasilObservasi, *fhir.Observation, *string, *string, error) {
@@ -610,6 +670,8 @@ func ObservationToObservasi(entry types2.BundleEntry) (*HasilObservasi, *fhir.Ob
 
 	sys, kode, disp := KodeUtama(resource.Code)
 	nilai := NilaiDariObservation(resource)
+	kolom := KolomUkuran(sys, kode)
+	interpretasi := isiStr(Interpretasi(resource.Interpretation))
 
 	h := &HasilObservasi{
 		Induk: types.Observasi{
@@ -624,12 +686,13 @@ func ObservationToObservasi(entry types2.BundleEntry) (*HasilObservasi, *fhir.Ob
 			NilaiKode:    nilai.Kode,
 			NilaiSystem:  nilai.KodeSystem,
 			NilaiDisplay: nilai.KodeDisplay,
-			Interpretasi: isiStr(Interpretasi(resource.Interpretation)),
+			Interpretasi: interpretasi,
 			Tanggal:      waktuObservasi(resource),
 		},
-		Kolom:    KolomUkuran(sys, kode),
+		Kolom:    kolom,
 		Angka:    nilai.Angka,
 		CaraUkur: CaraUkur(sys, kode),
+		Status:   statusGiziDari(kolom, interpretasi),
 	}
 
 	for _, c := range resource.Component {
