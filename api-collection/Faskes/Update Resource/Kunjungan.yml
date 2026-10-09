@@ -13,7 +13,16 @@ http:
         "id_satusehat": "enc-lengkap-01",
         "tanggal_pengukuran": "2026-05-12",
         "tanggal_selesai": "2026-05-15",
-        "berat_badan": 9.0
+        "cara_ukur": "telentang",
+        "berat_badan": 9.0,
+        "tinggi_badan": 76.4,
+        "lingkar_lengan": 12.3,
+        "lingkar_kepala": 45.3,
+        "lingkar_dada": 46.2,
+        "status_bbu": "Berat Badan Kurang",
+        "zscore_bbu": -2.98,
+        "status_bbtb": "Gizi Baik",
+        "zscore_bbtb": -1.88
       }
   auth: inherit
 

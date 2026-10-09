@@ -1,0 +1,26 @@
+info:
+  name: Observasi Z-score
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/faskes/observasi"
+  body:
+    type: json
+    data: |-
+      {
+        "id_satusehat": "obs-lkp-z-pbu",
+        "system": "http://snomed.info/sct",
+        "kode": "1153590000",
+        "nilai_angka": -2.41,
+        "satuan": "{Zscore}",
+        "interpretasi": "444000005"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

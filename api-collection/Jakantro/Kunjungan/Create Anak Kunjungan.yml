@@ -28,7 +28,29 @@ http:
           "id": "f4a92b57-8e31-4d06-9c85-7b1e2f6a3d90",
           "id_anak": "e2c74a18-5d93-4f60-b287-3ca9f1e05d47",
           "tanggal_pengukuran": "2026-08-14",
-          "berat_badan": 7.1
+          "cara_ukur": "telentang",
+          "berat_badan": 7.1,
+          "tinggi_badan": 74.0,
+          "lingkar_lengan": 12.0,
+          "lingkar_kepala": 43.8,
+          "lingkar_dada": 44.0,
+          "asi_bulan_0": 1,
+          "asi_bulan_1": 1,
+          "asi_bulan_2": 1,
+          "asi_bulan_3": 1,
+          "asi_bulan_4": 1,
+          "asi_bulan_5": 1,
+          "asi_bulan_6": 1,
+          "vit_biru": 1,
+          "vit_merah": 1,
+          "pitting_edema": 0,
+          "kelas_ibu_balita": 1,
+          "status_bbu": "Berat Badan Sangat Kurang",
+          "zscore_bbu": -3.12,
+          "status_tbu": "Pendek",
+          "zscore_tbu": -2.35,
+          "status_bbtb": "Gizi Kurang",
+          "zscore_bbtb": -2.85
         }
       }
   auth: inherit

@@ -1,7 +1,7 @@
 info:
-  name: Pemeriksaan
+  name: Pemeriksaan Z-score Bentrok
   type: http
-  seq: 1
+  seq: 4
 
 http:
   method: POST
@@ -19,7 +19,7 @@ http:
           "anak_ke": 1
         },
         "kunjungan": {
-          "id_satusehat": "enc-lengkap-01",
+          "id_satusehat": "enc-bentrok-01",
           "tanggal_pengukuran": "2026-05-12",
           "tanggal_selesai": "2026-05-15",
           "cara_ukur": "telentang",
@@ -28,27 +28,17 @@ http:
           "lingkar_lengan": 12.1,
           "lingkar_kepala": 45.3,
           "lingkar_dada": 46.0,
-          "ref_episode": "ep-lengkap-01",
           "status_bbu": "Berat Badan Sangat Kurang",
           "zscore_bbu": -3.05,
           "status_bbtb": "Gizi Kurang",
-          "zscore_bbtb": -1.94
+          "zscore_bbtb": -1.94,
+          "status_tbu": "Sangat Pendek",
+          "zscore_tbu": -3.21
         },
-        "episode": [
-          {
-            "id_satusehat": "ep-lengkap-01",
-            "ref_faskes": "100011",
-            "system": "http://terminology.kemkes.go.id/CodeSystem/episodeofcare-type",
-            "kode": "TB-SO",
-            "display": "Tuberkulosis Sensitif Obat",
-            "status": "active",
-            "mulai": "2026-05-12",
-            "selesai": "2026-11-12"
-          }
-        ],
+        "episode": [],
         "observasi": [
           {
-            "id_satusehat": "obs-lkp-bb",
+            "id_satusehat": "obs-btk-bb",
             "system": "http://loinc.org",
             "kode": "29463-7",
             "display": "Body weight",
@@ -59,7 +49,7 @@ http:
             "tanggal": "2026-05-12T02:10:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-tb",
+            "id_satusehat": "obs-btk-tb",
             "system": "http://loinc.org",
             "kode": "8306-3",
             "display": "Body height (lying)",
@@ -70,7 +60,7 @@ http:
             "tanggal": "2026-05-12T02:10:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-lk",
+            "id_satusehat": "obs-btk-lk",
             "system": "http://loinc.org",
             "kode": "9843-4",
             "display": "Head circumference",
@@ -80,7 +70,7 @@ http:
             "tanggal": "2026-05-12T02:10:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-lila",
+            "id_satusehat": "obs-btk-lila",
             "system": "http://snomed.info/sct",
             "kode": "284473002",
             "display": "Mid upper arm circumference",
@@ -90,7 +80,7 @@ http:
             "tanggal": "2026-05-12T02:10:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-z-pbu",
+            "id_satusehat": "obs-btk-z-pbu",
             "system": "http://snomed.info/sct",
             "kode": "1153590000",
             "display": "Length for age z score",
@@ -101,7 +91,7 @@ http:
             "tanggal": "2026-05-12T02:10:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-kode",
+            "id_satusehat": "obs-btk-kode",
             "system": "http://snomed.info/sct",
             "kode": "363870007",
             "display": "Mental state, behavior / psychosocial function observable",
@@ -112,7 +102,7 @@ http:
             "tanggal": "2026-05-12T02:20:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-teks",
+            "id_satusehat": "obs-btk-teks",
             "system": "http://loinc.org",
             "kode": "75275-8",
             "display": "Nutrition assessment note",
@@ -121,7 +111,7 @@ http:
             "tanggal": "2026-05-12T02:25:00Z"
           },
           {
-            "id_satusehat": "obs-lkp-panel",
+            "id_satusehat": "obs-btk-panel",
             "system": "http://snomed.info/sct",
             "kode": "1156892006",
             "display": "Nutrition assessment",
@@ -129,14 +119,14 @@ http:
             "tanggal": "2026-05-12T02:30:00Z",
             "component": [
               {
-                "id_satusehat": "obs-lkp-c1",
+                "id_satusehat": "obs-btk-c1",
                 "system": "http://snomed.info/sct",
                 "kode": "709261005",
                 "display": "Assessment of breastfeeding",
                 "nilai_angka": 1
               },
               {
-                "id_satusehat": "obs-lkp-c2",
+                "id_satusehat": "obs-btk-c2",
                 "system": "http://snomed.info/sct",
                 "kode": "710999009",
                 "display": "Monitoring food intake",
@@ -145,92 +135,9 @@ http:
             ]
           }
         ],
-        "diagnosa": [
-          {
-            "id_satusehat": "cond-lkp-01",
-            "jenis": "diagnosis",
-            "system": "http://hl7.org/fhir/sid/icd-10",
-            "kode": "E45",
-            "display": "Nutritional stunting",
-            "kategori": "encounter-diagnosis",
-            "clinical_status": "active",
-            "verification_status": "confirmed",
-            "onset": "2026-03-01",
-            "tanggal_catat": "2026-05-12"
-          },
-          {
-            "id_satusehat": "alg-lkp-01",
-            "jenis": "alergi",
-            "system": "http://snomed.info/sct",
-            "kode": "227493005",
-            "display": "Cow milk",
-            "kategori": "food",
-            "kritikalitas": "high",
-            "clinical_status": "active",
-            "verification_status": "confirmed",
-            "onset": "2026-02-01",
-            "tanggal_catat": "2026-02-02"
-          }
-        ],
-        "layanan": [
-          {
-            "id_satusehat": "proc-lkp-01",
-            "jenis": "procedure",
-            "system": "http://snomed.info/sct",
-            "kode": "441041000124100",
-            "display": "Counseling about nutrition",
-            "kategori": "409063005",
-            "status": "completed",
-            "tanggal": "2026-05-12T03:00:00Z",
-            "catatan": "Konseling gizi bersama ibu"
-          },
-          {
-            "id_satusehat": "md-lkp-01",
-            "jenis": "medication_dispense",
-            "system": "http://sys-ids.kemkes.go.id/kfa",
-            "kode": "93000271",
-            "display": "F-100 Therapeutic Milk",
-            "status": "completed",
-            "jumlah": 30,
-            "satuan": "SAC",
-            "tanggal": "2026-05-12T03:30:00Z"
-          },
-          {
-            "id_satusehat": "no-lkp-01",
-            "jenis": "nutrition_order",
-            "system": "http://snomed.info/sct",
-            "kode": "435801000124108",
-            "display": "High protein diet",
-            "status": "active",
-            "tanggal": "2026-05-12T03:40:00Z"
-          },
-          {
-            "id_satusehat": "imm-lkp-01",
-            "jenis": "immunization",
-            "system": "http://sys-ids.kemkes.go.id/kfa",
-            "kode": "93000148",
-            "display": "Vitamin A 200.000 IU",
-            "status": "completed",
-            "jumlah": 1,
-            "satuan": "KAP",
-            "tanggal": "2026-05-12T03:50:00Z"
-          }
-        ],
-        "rujukan": [
-          {
-            "id_satusehat": "sr-lkp-keluar",
-            "jenis": "rujukan",
-            "ref_faskes_asal": "100011",
-            "ref_faskes_tujuan": "200022",
-            "system": "http://snomed.info/sct",
-            "kode": "737481003",
-            "display": "Inpatient care management",
-            "status": "active",
-            "prioritas": "urgent",
-            "alasan": "Nutritional stunting",
-            "tanggal": "2026-05-15T01:00:00Z"
-          }
-        ]
+        "diagnosa": [],
+        "layanan": [],
+        "rujukan": []
       }
   auth: inherit
 

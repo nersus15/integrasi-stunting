@@ -16,8 +16,26 @@ http:
         "cara_ukur": "telentang",
         "berat_badan": 9.8,
         "tinggi_badan": 76.2,
-        "lingkar_lengan": 13.5,
-        "lingkar_kepala": 45.1
+        "lingkar_lengan": 13.6,
+        "lingkar_kepala": 45.1,
+        "lingkar_dada": 47.3,
+        "asi_bulan_0": 1,
+        "asi_bulan_1": 1,
+        "asi_bulan_2": 1,
+        "asi_bulan_3": 1,
+        "asi_bulan_4": 1,
+        "asi_bulan_5": 1,
+        "asi_bulan_6": 1,
+        "vit_biru": 1,
+        "vit_merah": 1,
+        "pitting_edema": 0,
+        "kelas_ibu_balita": 1,
+        "status_bbu": "Berat Badan Kurang",
+        "zscore_bbu": -2.56,
+        "status_tbu": "Sangat Pendek",
+        "zscore_tbu": -4.48,
+        "status_bbtb": "Gizi Baik",
+        "zscore_bbtb": 0.12
       }
   auth: inherit
 
