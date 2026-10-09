@@ -1,0 +1,15 @@
+info:
+  name: Kunjungan By ID
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{BASE_URL}}/kunjungan/c1e48a72-9d35-4b80-a6f3-52d7e9418b04"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,57 @@
+info:
+  name: Create Orangtua + Anak + Kunjungan
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/kunjungan"
+  body:
+    type: json
+    data: |-
+      {
+        "orangtua": {
+          "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+          "id_posyandu": "POS-JAKARTA-01",
+          "no_kk": "3175042509870001",
+          "nik": "3175040101900002",
+          "nama_ayah": "Ahmad Suryana",
+          "nama_ibu": "Dewi Lestari",
+          "telepon": "081234567890",
+          "rt": "004",
+          "rw": "007",
+          "alamat": "Jl. Kenanga No. 12",
+          "kia": 1
+        },
+        "anak": {
+          "id": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+          "id_orangtua": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+          "nik": "3175041503240003",
+          "nama": "Rizky Ramadhan",
+          "tanggal_lahir": "2024-03-15",
+          "jenis_kelamin": "L",
+          "anak_ke": 1,
+          "imd": 1,
+          "bb_lahir": 3.2,
+          "tb_lahir": 49.5,
+          "lk_lahir": 34.0,
+          "source_data": "jakantro"
+        },
+        "kunjungan": {
+          "id": "c1e48a72-9d35-4b80-a6f3-52d7e9418b04",
+          "id_anak": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+          "tanggal_pengukuran": "2026-08-14",
+          "cara_ukur": "telentang",
+          "berat_badan": 9.4,
+          "tinggi_badan": 76.2,
+          "lingkar_lengan": 13.5,
+          "lingkar_kepala": 45.1
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

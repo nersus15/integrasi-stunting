@@ -1,0 +1,25 @@
+info:
+  name: Observasi
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/faskes/observasi"
+  body:
+    type: json
+    data: |-
+      {
+        "id_satusehat": "obs-lkp-bb",
+        "system": "http://loinc.org",
+        "kode": "29463-7",
+        "nilai_angka": 9.0,
+        "satuan": "kg"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,10 @@
+name: dev-faskes-100011
+variables:
+  - name: BASE_URL
+    value: http://localhost:2025/api
+  - name: API_KEY
+    value: b6a9e1d84f2c53a7e0f91823b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3
+  - name: TRANSACTION_ID
+    value: f0a9c832-11d7-4b65-8e30-95c74ab2016d
+  - name: MODULE_BASEURL
+    value: http://localhost:2025/stunting

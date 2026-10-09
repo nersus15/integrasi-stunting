@@ -1,0 +1,40 @@
+info:
+  name: Create Anak + Kunjungan
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/kunjungan"
+  body:
+    type: json
+    data: |-
+      {
+        "anak": {
+          "id": "e2c74a18-5d93-4f60-b287-3ca9f1e05d47",
+          "id_orangtua": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+          "nik": "3175041503240004",
+          "nama": "Aisyah Nur",
+          "tanggal_lahir": "2025-01-20",
+          "jenis_kelamin": "P",
+          "anak_ke": 2,
+          "imd": 1,
+          "bb_lahir": 2.9,
+          "tb_lahir": 47.0,
+          "lk_lahir": 33.0,
+          "source_data": "jakantro"
+        },
+        "kunjungan": {
+          "id": "f4a92b57-8e31-4d06-9c85-7b1e2f6a3d90",
+          "id_anak": "e2c74a18-5d93-4f60-b287-3ca9f1e05d47",
+          "tanggal_pengukuran": "2026-08-14",
+          "berat_badan": 7.1
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

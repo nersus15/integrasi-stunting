@@ -1,0 +1,15 @@
+info:
+  name: Anak Milik Orangtua
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{BASE_URL}}/orangtua/8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21/anak"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

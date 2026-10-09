@@ -1,0 +1,23 @@
+info:
+  name: Update
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/anak"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+        "nama": "Rizky Ramadhan Putra",
+        "nik": "3175041503240003"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

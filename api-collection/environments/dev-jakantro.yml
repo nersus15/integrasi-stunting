@@ -1,0 +1,13 @@
+name: dev-jakantro
+variables:
+  - name: BASE_URL
+    value: http://localhost:2025/api
+  - name: API_KEY
+    value: 4a088f54847956e3f828a2938deee1c1e568b47c088e67bd1d6a1c090131c383
+    disabled: true
+  - name: API_KEY
+    value: 4a088f54847956e3f828a2938deee1c1e568b47c088e67bd1d6a1c090131c383
+  - name: TRANSACTION_ID
+    value: f0a9c832-11d7-4b65-8e30-95c74ab2016d
+  - name: MODULE_BASEURL
+    value: http://localhost:2025/stunting

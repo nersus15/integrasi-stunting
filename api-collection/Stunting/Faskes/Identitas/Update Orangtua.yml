@@ -1,0 +1,25 @@
+info:
+  name: Update Orangtua
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/orangtua"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+        "nik": "3175040101900002",
+        "no_kk": "3175042509870001",
+        "nama_ibu": "Dewi Lestari",
+        "telepon": "081234567890"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

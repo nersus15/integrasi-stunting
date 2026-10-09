@@ -1,0 +1,15 @@
+info:
+  name: Kesehatan By ID
+  type: http
+  seq: 9
+
+http:
+  method: GET
+  url: "{{BASE_URL}}/kesehatan/d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

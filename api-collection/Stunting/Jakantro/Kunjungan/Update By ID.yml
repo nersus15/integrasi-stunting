@@ -1,0 +1,28 @@
+info:
+  name: Update By ID
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/kunjungan/c1e48a72-9d35-4b80-a6f3-52d7e9418b04"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "c1e48a72-9d35-4b80-a6f3-52d7e9418b04",
+        "id_anak": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+        "tanggal_pengukuran": "2026-08-14",
+        "cara_ukur": "telentang",
+        "berat_badan": 9.8,
+        "tinggi_badan": 76.2,
+        "lingkar_lengan": 13.5,
+        "lingkar_kepala": 45.1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

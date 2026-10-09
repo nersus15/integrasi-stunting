@@ -1,0 +1,31 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/orangtua"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "3d6b8f21-7a45-4c92-b0e8-1f5a9c73d264",
+        "id_posyandu": "POS-JAKARTA-01",
+        "no_kk": "3175042509870009",
+        "nik": "3175040101900011",
+        "nama_ayah": "Bambang Wijaya",
+        "nama_ibu": "Sri Handayani",
+        "telepon": "081298765432",
+        "rt": "002",
+        "rw": "005",
+        "alamat": "Jl. Melati No. 8",
+        "kia": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

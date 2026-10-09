@@ -1,0 +1,7 @@
+info:
+  name: Jakantro
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit

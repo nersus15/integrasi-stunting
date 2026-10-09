@@ -1,0 +1,26 @@
+info:
+  name: Create Kunjungan Saja
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/kunjungan"
+  body:
+    type: json
+    data: |-
+      {
+        "kunjungan": {
+          "id": "a6f18c93-2b47-4e50-8d31-9c07a5e2f8b6",
+          "id_anak": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+          "tanggal_pengukuran": "2026-09-11",
+          "berat_badan": 9.8
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

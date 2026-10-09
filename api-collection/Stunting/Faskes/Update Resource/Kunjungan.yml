@@ -1,0 +1,24 @@
+info:
+  name: Kunjungan
+  type: http
+  seq: 1
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/faskes/kunjungan"
+  body:
+    type: json
+    data: |-
+      {
+        "id_satusehat": "enc-lengkap-01",
+        "tanggal_pengukuran": "2026-05-12",
+        "tanggal_selesai": "2026-05-15",
+        "berat_badan": 9.0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

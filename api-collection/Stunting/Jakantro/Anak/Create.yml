@@ -1,0 +1,32 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/anak"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "9b4e7c02-1f83-4a56-8d97-6e2b0f5a3c81",
+        "id_orangtua": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+        "nik": "3175041503240007",
+        "nama": "Fajar Pratama",
+        "tanggal_lahir": "2025-06-02",
+        "jenis_kelamin": "L",
+        "anak_ke": 3,
+        "imd": 1,
+        "bb_lahir": 3.0,
+        "tb_lahir": 48.0,
+        "lk_lahir": 33.5,
+        "source_data": "jakantro"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

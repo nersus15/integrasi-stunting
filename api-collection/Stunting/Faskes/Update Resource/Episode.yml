@@ -1,0 +1,23 @@
+info:
+  name: Episode
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{BASE_URL}}/faskes/episode"
+  body:
+    type: json
+    data: |-
+      {
+        "id_satusehat": "ep-lengkap-01",
+        "status": "finished",
+        "selesai": "2026-11-12"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

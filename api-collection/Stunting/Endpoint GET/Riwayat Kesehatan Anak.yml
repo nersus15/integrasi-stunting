@@ -1,0 +1,15 @@
+info:
+  name: Riwayat Kesehatan Anak
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{BASE_URL}}/anak/b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68/kesehatan"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

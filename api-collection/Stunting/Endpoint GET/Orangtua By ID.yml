@@ -1,0 +1,15 @@
+info:
+  name: Orangtua By ID
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{BASE_URL}}/orangtua/8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

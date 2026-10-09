@@ -1,0 +1,31 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/kesehatan"
+  body:
+    type: json
+    data: |-
+      {
+        "id": "d5b3f169-8c47-42ae-b91d-6f0a3e28c7d5",
+        "id_anak": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
+        "tanggal_pemantauan": "2026-08-14",
+        "tbc_batuk": 0,
+        "tbc_demam": 0,
+        "tbc_bb": 0,
+        "tbc_kontak": 0,
+        "layanan_asi_eks": 1,
+        "layanan_imunisasi": 1,
+        "layanan_vit_a": 1,
+        "penyuluhan_edukasi": 1
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
