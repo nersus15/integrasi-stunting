@@ -104,7 +104,13 @@ Selengkapnya, termasuk `403` `1008` yang berbeda sebab, ada di
 (`created_at`, `updated_at`, `deleted_at`) dikirim balik sebagai RFC 3339 UTC.
 
 **Field yang tidak dikirim jadi `null`,** kecuali `source_data` yang punya
-default di database.
+default di database, serta `kia` dan `imd` yang menjadi `0`.
+
+**Kolom yang diisi sistem diabaikan kalau dikirim:** `created_at`,
+`updated_at`, `deleted_at`, `updated_by`, dan `deleted_by`, di semua endpoint.
+Daftar lengkap field yang diterima tiap endpoint ada di
+[Jalur jakantro](?doc=jakantro#field-per-entitas) dan
+[Jalur faskes](?doc=faskes#field-per-bagian).
 
 **Kolom id bertipe `varchar`,** jadi nilainya kembali apa adanya — sepanjang
 yang Anda kirim, tanpa tambahan apa pun. Bandingkan langsung, tidak perlu

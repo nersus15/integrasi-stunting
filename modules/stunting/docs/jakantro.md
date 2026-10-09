@@ -7,12 +7,101 @@ Semua endpoint di halaman ini mewajibkan Anda mengirim `id` sendiri — lihat
 [aturan `id`](?doc=index#aturan-id). Contoh payload siap salin ada di
 [Contoh Payload](?doc=contoh).
 
-## Field wajib per entitas
+## Field per entitas
 
-Yang tidak disebut di sini boleh dikosongkan atau dihilangkan.
+Daftar ini lengkap: field yang tidak tercantum tidak dikenali dan diabaikan.
+Kolom **wajib** berlaku untuk POST. Aturan PUT ada di bagian endpoint
+masing-masing.
 
-| entitas | wajib | aturan tambahan |
-|---|---|---|
+Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
+`updated_by`, `deleted_by` — diabaikan kalau dikirim, di semua endpoint.
+
+### `orangtua`
+
+| key | tipe | wajib | keterangan |
+|---|---|---|---|
+| `id` | teks, maks 36 | ya | id buatan jakantro. Kunci pencarian di `PUT /api/orangtua` |
+| `id_posyandu` | teks, maks 36 | ya | posyandu tempat keluarga terdaftar. Menentukan puskesmas yang berhak mengakses keluarga ini |
+| `no_kk` | 16 digit angka | ya | nomor kartu keluarga, unik. Bentrok dijawab `409` `3003` |
+| `nik` | 16 digit angka | ya | NIK orangtua. POST dengan NIK yang sudah terdaftar mengembalikan data yang ada, bukan error |
+| `nama_ayah`, `nama_ibu` | teks, maks 255 | ya | |
+| `telepon` | teks, maks 255 | ya | |
+| `rt`, `rw` | teks, 3 karakter | ya | dikembalikan dengan padding spasi sampai 3 karakter |
+| `alamat` | teks | ya | |
+| `kia` | `0`/`1` | — | keluarga memiliki buku KIA. Kosong berarti `0` |
+| `usia_hamil` | bilangan bulat ≥ 0 | — | usia kehamilan ibu, kalau sedang hamil |
+| `kia_bayi_kecil` | `0`/`1` | — | memiliki buku KIA bayi kecil |
+| `source_data` | teks, maks 36 | — | penanda sumber data. Kosong memakai default database. Tidak bisa diubah setelah dibuat |
+| `satusehat_id` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
+
+### `anak`
+
+| key | tipe | wajib | keterangan |
+|---|---|---|---|
+| `id` | teks, maks 36 | ya | id buatan jakantro. Kunci pencarian di `PUT /api/anak` |
+| `id_orangtua` | teks, maks 36 | ya | `id` orangtua yang sudah ada atau dikirim di payload yang sama |
+| `nama` | teks, maks 255 | ya | |
+| `nik` | 16 digit angka | — | boleh kosong, lihat [NIK anak boleh kosong](#nik-anak-boleh-kosong) |
+| `tanggal_lahir` | `YYYY-MM-DD` | ya | |
+| `jenis_kelamin` | `L`/`P` | ya | |
+| `anak_ke` | bilangan bulat > 0 | ya | urutan kelahiran dalam keluarga |
+| `imd` | `0`/`1` | — | mendapat inisiasi menyusu dini. Kosong berarti `0` |
+| `bb_lahir` | angka > 0 | ya | berat lahir, kg |
+| `tb_lahir` | angka > 0 | ya | panjang lahir, cm |
+| `lk_lahir` | angka > 0 | ya | lingkar kepala saat lahir, cm |
+| `source_data` | teks, maks 36 | ya | penanda sumber data, mis. `jakantro`. Tidak bisa diubah setelah dibuat |
+| `status_aktif` | teks, maks 20 | — | bawaan `aktif`. Disimpan apa adanya, tidak dipakai logika service |
+| `satusehat_id` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
+
+### `kunjungan`
+
+| key | tipe | wajib | keterangan |
+|---|---|---|---|
+| `id` | teks, maks 36 | ya | id buatan jakantro, mis. id pengukuran di sistem Anda |
+| `id_anak` | teks, maks 36 | ya | `id` anak yang sudah ada atau dikirim di payload yang sama |
+| `tanggal_pengukuran` | `YYYY-MM-DD` | ya | tanggal penimbangan atau pengukuran |
+| `tanggal_selesai` | `YYYY-MM-DD` | — | akhir kunjungan. Untuk posyandu biasanya dikosongkan |
+| `cara_ukur` | teks | — | `telentang` atau `berdiri` |
+| `berat_badan` | angka > 0 | — | kg |
+| `tinggi_badan` | angka > 0 | — | panjang atau tinggi badan, cm |
+| `lingkar_lengan` | angka > 0 | — | lingkar lengan atas (LILA), cm |
+| `lingkar_kepala` | angka > 0 | — | cm |
+| `lingkar_dada` | angka > 0 | — | cm |
+| `asi_bulan_0` … `asi_bulan_6` | `0`/`1` | — | anak mendapat ASI eksklusif pada bulan ke-0 sampai ke-6 |
+| `vit_biru` | `0`/`1` | — | mendapat kapsul vitamin A biru (usia 6–11 bulan) |
+| `vit_merah` | `0`/`1` | — | mendapat kapsul vitamin A merah (usia 12–59 bulan) |
+| `pitting_edema` | `0`/`1` | — | ditemukan edema pitting |
+| `kelas_ibu_balita` | `0`/`1` | — | ibu mengikuti kelas ibu balita |
+| `status_bbu`, `status_tbu`, `status_bbtb` | teks | — | status gizi BB/U, TB/U, BB/TB hasil hitungan Anda, mis. `Sangat Pendek`. Labelnya mengikuti [tabel status gizi](?doc=faskes#z-score-dan-status-gizi) |
+| `zscore_bbu`, `zscore_tbu`, `zscore_bbtb` | angka | — | z-score pasangan status di atas, disimpan 2 desimal |
+| `source_data` | teks, maks 36 | — | penanda sumber data. Tidak bisa diubah setelah dibuat |
+
+`id_satusehat`, `id_faskes`, `stunting`, `ref_episode`, `ref_rujukan`,
+`id_episode`, dan `id_rujukan` milik jalur faskes dan **diabaikan** kalau
+dikirim jakantro. Kunjungan dari jakantro selalu tetap milik jakantro.
+
+### `kesehatan`
+
+| key | tipe | wajib | keterangan |
+|---|---|---|---|
+| `id` | teks, maks 36 | ya | id buatan jakantro |
+| `id_anak` | teks, maks 36 | ya | `id` anak yang sudah ada atau dikirim di payload yang sama |
+| `tanggal_pemantauan` | `YYYY-MM-DD` | ya | |
+| `tbc_batuk` | `0`/`1` | — | skrining TBC: ada gejala batuk |
+| `tbc_demam` | `0`/`1` | — | skrining TBC: ada gejala demam |
+| `tbc_bb` | `0`/`1` | — | skrining TBC: berat badan turun atau tidak naik |
+| `tbc_kontak` | `0`/`1` | — | skrining TBC: kontak dengan pasien TBC |
+| `layanan_asi_eks` | `0`/`1` | — | mendapat layanan ASI eksklusif |
+| `layanan_mpasi` | `0`/`1` | — | mendapat layanan MP-ASI |
+| `layanan_imunisasi` | `0`/`1` | — | mendapat imunisasi |
+| `layanan_vit_a` | `0`/`1` | — | mendapat vitamin A |
+| `layanan_obat_cacing` | `0`/`1` | — | mendapat obat cacing |
+| `layanan_mt_pangan` | `0`/`1` | — | mendapat makanan tambahan pangan lokal |
+| `penyuluhan_edukasi` | `0`/`1` | — | orangtua mendapat penyuluhan atau edukasi |
+| `penyuluhan_rujukan` | `0`/`1` | — | anak dirujuk |
+| `source_data` | teks, maks 36 | — | penanda sumber data. Tidak bisa diubah setelah dibuat |
+
+---|---|---|
 | `orangtua` | `id`, `id_posyandu`, `no_kk`, `nik`, `nama_ayah`, `nama_ibu`, `telepon`, `rt`, `rw`, `alamat`, `kia` | `no_kk` dan `nik` 16 digit angka. `kia` hanya `0`/`1`. `usia_hamil` tidak boleh negatif, `kia_bayi_kecil` hanya `0`/`1` |
 | `anak` | `id`, `id_orangtua`, `nama`, `tanggal_lahir`, `jenis_kelamin`, `anak_ke`, `imd`, `bb_lahir`, `tb_lahir`, `lk_lahir`, `source_data` | `jenis_kelamin` hanya `L`/`P`. `anak_ke`, `bb_lahir`, `tb_lahir`, `lk_lahir` harus > 0. `imd` hanya `0`/`1`. `nik` opsional, tapi kalau dikirim harus 16 digit |
 | `kunjungan` | `id`, `id_anak`, `tanggal_pengukuran` | field ukuran opsional, tapi kalau dikirim harus > 0. `asi_*`, `vit_*`, `pitting_edema`, `kelas_ibu_balita` hanya `0`/`1` |
@@ -24,6 +113,8 @@ Yang tidak disebut di sini boleh dikosongkan atau dihilangkan.
 
 Endpoint utama. Menerima tiga bentuk payload — service menyimpulkan sendiri
 entitas mana yang perlu dibuat dari key yang Anda kirim.
+Isi key `orangtua`, `anak`, dan `kunjungan` mengikuti
+[Field per entitas](#field-per-entitas).
 
 ### Bentuk 1 — orangtua + anak + kunjungan sekaligus
 
@@ -224,14 +315,15 @@ tentukan sendiri saat membuatnya.
 }
 ```
 
-Field yang tidak dikirim **tidak dihapus** — nilainya yang sekarang
-dipertahankan. Jadi mengirim `berat_badan` saja tidak akan mengosongkan tinggi
-badan.
+`id`, `id_anak`, dan `tanggal_pengukuran` wajib, sama seperti POST. Field
+lain mengikuti [tabel `kunjungan`](#kunjungan). Field yang tidak dikirim
+**tidak dihapus** — nilainya yang sekarang dipertahankan. Jadi mengirim
+`berat_badan` saja tidak akan mengosongkan tinggi badan.
 
 > **Awas.** Kunjungan yang dibuat faskes tidak boleh diubah jakantro.
 > Percobaannya dijawab `403` `1008` dengan menyebut faskes pembuatnya.
 
-`id`, `id_anak`, dan `created_at` tidak ikut berubah meski dikirim.
+`id`, `id_anak`, dan `source_data` tidak ikut berubah meski dikirim.
 
 ---
 
@@ -296,15 +388,15 @@ dipakai sebagai flag `0`/`1`.
 
 ### PUT /api/kesehatan/:id
 
-Bentuknya sama dengan `PUT /api/kunjungan/:id`: field yang tidak dikirim
-dipertahankan, `id` dan `id_anak` tidak berubah.
+Bentuknya sama dengan `PUT /api/kunjungan/:id`: `id`, `id_anak`, dan
+`tanggal_pemantauan` wajib, field yang tidak dikirim dipertahankan, dan `id`,
+`id_anak`, serta `source_data` tidak berubah.
 
 ---
 
 ## POST /api/orangtua
 
-Satu orangtua, tanpa nested. Semua field kecuali `source_data`, `usia_hamil`,
-dan `kia_bayi_kecil` wajib diisi.
+Satu orangtua, tanpa nested. Field-nya ada di [tabel `orangtua`](#orangtua).
 
 ```json
 {
@@ -331,6 +423,8 @@ terhadap NIK.
 ---
 
 ## POST /api/anak
+
+Satu anak pada orangtua yang sudah ada. Field-nya ada di [tabel `anak`](#anak).
 
 ```json
 {
@@ -368,13 +462,15 @@ diperiksa formatnya sama seperti `POST /api/anak`.
 ```
 
 `200` mengembalikan anak hasil pembaruan, `404` `2001` kalau anaknya tidak ada.
-`satusehat_id` tidak perlu dikirim — nilai yang sudah terisi dari SatuSehat tetap
-dipertahankan. Mengirim `id_orangtua` lain memindahkan anak ke orangtua itu.
+Field lain mengikuti [tabel `anak`](#anak). `satusehat_id` dan `source_data`
+diabaikan — nilai dari SatuSehat tetap dipertahankan. Mengirim `id_orangtua`
+lain memindahkan anak ke orangtua itu. `imd` boleh diubah ke `0`.
 
 ### PUT /api/orangtua
 
 Sama dengan `PUT /api/anak`: dicari lewat `id`, hanya `id` yang wajib, field yang
-tidak dikirim dipertahankan.
+tidak dikirim dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
+`satusehat_id` dan `source_data` diabaikan, `kia` boleh diubah ke `0`.
 
 ```json
 {

@@ -98,6 +98,9 @@ Mengulang request yang sama akan selalu gagal.
 Satu field tidak memenuhi aturan. `message` selalu menyebut nama field, jadi
 bisa dipakai langsung untuk menunjuk kesalahan ke operator.
 
+Termasuk nilai enum di luar daftar yang sah di jalur faskes, mis. `status`
+layanan atau `kategori` diagnosa; pesannya menyebut nilai yang sah.
+
 Muncul juga pada endpoint GET yang kriteria pencariannya kurang lengkap,
 misalnya mencari anak tanpa menyebut nik maupun id orangtua.
 
@@ -112,7 +115,8 @@ Kombinasi key tidak sah atau rujuk-silang id tidak konsisten. Berbeda dari
 
 Mencakup bentuk flat yang disertai key nested, key `kunjungan` yang hilang, `anak.id` yang tidak sama dengan `kunjungan.id_anak`,
 `orangtua.id` yang tidak sama dengan `anak.id_orangtua`, key `orangtua` tanpa key
-`anak`, dan orangtua baru tanpa data anak baru.
+`anak`, dan orangtua baru tanpa data anak baru. Di jalur faskes, juga z-score
+satu indeks yang dikirim di `kunjungan` sekaligus sebagai observasi z-score.
 
 **Tindakan.** Susun ulang payload mengikuti salah satu bentuk yang sah. Pesan
 untuk kasus rujuk-silang mencantumkan kedua nilai yang berselisih.
@@ -132,7 +136,8 @@ payload, laporkan — kemungkinan ada ketidakcocokan antara validator dan skema.
 > Referensi tidak ditemukan
 
 Foreign key menunjuk baris yang tidak ada. Paling sering `kunjungan.id_anak`
-atau `anak.id_orangtua` merujuk data yang belum pernah dikirim.
+atau `anak.id_orangtua` merujuk data yang belum pernah dikirim. Di jalur faskes,
+juga rujukan yang `ref_faskes_tujuan`-nya belum terdaftar.
 
 **Tindakan.** Kirim data induknya lebih dulu, atau gabungkan dalam satu payload
 bentuk `REGISTRASI_LENGKAP` / `ANAK_BARU`.
