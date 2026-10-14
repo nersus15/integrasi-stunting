@@ -1210,6 +1210,26 @@ func (s *StreamService) CariAnak(a *types.Anak) *types.Anak {
 	return nil
 }
 
+func (s *StreamService) CariOrangtua(o *types.Orangtua) *types.Orangtua {
+	if o == nil {
+		return nil
+	}
+
+	if utils.IsFilled(o.IdSatusehat) {
+		if k, err := s.repository.FindOrangtuaBySatusehatId(*o.IdSatusehat, false); err == nil && k != nil {
+			return k
+		}
+	}
+
+	if utils.IsStrFilled(o.Nik) {
+		if k, err := s.repository.FindOrangTuaByNik(o.Nik, false); err == nil && k != nil {
+			return k
+		}
+	}
+
+	return nil
+}
+
 func (s *StreamService) verifyEncounterPemeriksaan(orgid string, p *types.PemeriksaanFaskes) error {
 	encounter := utils.StrPtr(p.Kunjungan.IdSatusehat)
 	if err := s.stunting.VerifyEncounterMilik(orgid, encounter, true); err != nil {
@@ -1290,6 +1310,8 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 		if !adaTandaStunting(p.Diagnosa, observasi) {
 			return nil, exceptions.TidakDisimpan.Messagef("tidak ada tanda stunting dan anak belum punya riwayat")
 		}
+
+		p.Anak.SourceData = fmt.Sprintf("faskes-api:%s", orgid)
 
 		anakBaru, err = siapkanAnakBaru(&p.Anak, nil)
 		if err != nil {
