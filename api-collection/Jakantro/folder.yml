@@ -4,8 +4,4 @@ info:
   seq: 1
 
 request:
-  auth:
-    type: apikey
-    key: X-API-KEY
-    value: "{{API_KEY}}"
-    placement: header
+  auth: inherit

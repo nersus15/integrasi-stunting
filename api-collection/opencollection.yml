@@ -2,6 +2,24 @@ opencollection: 1.0.0
 
 info:
   name: Integrasi IL
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  auth:
+    type: apikey
+    key: X-API-KEY
+    value: "{{API_KEY}}"
+    placement: header
 bundled: false
 extensions:
   bruno:
