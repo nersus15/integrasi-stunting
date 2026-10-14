@@ -35,17 +35,12 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 		return fmt.Errorf("id_posyandu tidak boleh kosong")
 	}
 
-	if !IsStrFilled(p.NoKk) {
-		return fmt.Errorf("no_kk tidak boleh kosong")
-	} else if !IsDigitsLen(p.NoKk, 16) {
+	if IsStrFilled(p.NoKk) && !IsDigitsLen(p.NoKk, 16) {
 		return fmt.Errorf("no_kk harus 16 digit angka")
 	}
 
-	if !IsStrFilled(p.NamaAyah) {
-		return fmt.Errorf("nama_ayah tidak boleh kosong")
-	}
-	if !IsStrFilled(p.NamaIbu) {
-		return fmt.Errorf("nama_ibu tidak boleh kosong")
+	if !IsStrFilled(p.NamaAyah) && !IsStrFilled(p.NamaIbu) {
+		return fmt.Errorf("nama_ayah atau nama_ibu harus diisi")
 	}
 
 	if !IsStrFilled(p.Nik) {
@@ -65,6 +60,39 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 	}
 	if !IsStrFilled(p.Alamat) {
 		return fmt.Errorf("alamat tidak boleh kosong")
+	}
+
+	if p.Kia != nil && *p.Kia != 0 && *p.Kia != 1 {
+		return fmt.Errorf("kia harus bernilai 0 atau 1")
+	}
+
+	if p.UsiaHamil != nil && *p.UsiaHamil < 0 {
+		return fmt.Errorf("usia_hamil tidak boleh bernilai negatif")
+	}
+	if p.KiaBayiKecil != nil && *p.KiaBayiKecil != 0 && *p.KiaBayiKecil != 1 {
+		return fmt.Errorf("kia_bayi_kecil harus bernilai 0 atau 1")
+	}
+
+	return nil
+}
+
+func ValidateOrangtuaFaskes(p types.OrangtuaPayload) error {
+	if !IsStrFilled(p.NamaAyah) && !IsStrFilled(p.NamaIbu) {
+		return fmt.Errorf("nama_ayah atau nama_ibu harus diisi")
+	}
+
+	if IsStrFilled(p.NoKk) && !IsDigitsLen(p.NoKk, 16) {
+		return fmt.Errorf("no_kk harus 16 digit angka")
+	}
+
+	if !IsStrFilled(p.Nik) {
+		return fmt.Errorf("nik tidak boleh kosong")
+	} else if !IsDigitsLen(p.Nik, 16) {
+		return fmt.Errorf("nik harus 16 digit angka")
+	}
+
+	if !IsStrFilled(p.Telepon) {
+		return fmt.Errorf("telepon tidak boleh kosong")
 	}
 
 	if p.Kia != nil && *p.Kia != 0 && *p.Kia != 1 {
