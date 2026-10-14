@@ -250,6 +250,14 @@ func StrPtr(s *string) string {
 	return *s
 }
 
+func PtrStr(s string, emptyToNil bool) *string {
+	if s == "" && emptyToNil {
+		return nil
+	} else {
+		return &s
+	}
+}
+
 func Substr(s string, start, length int) string {
 	runes := []rune(s)
 
