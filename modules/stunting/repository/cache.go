@@ -15,8 +15,9 @@ const (
 	ttlPendek  = 60 * time.Second
 )
 
-func keyOrangtuaId(id string) string   { return "OrangtuaByID::" + id }
-func keyOrangtuaNik(nik string) string { return "ORTU:NIK:" + nik }
+func keyOrangtuaId(id string) string                 { return "OrangtuaByID::" + id }
+func keyOrangtuaSatusehat(satusehatid string) string { return "ORANGTUA:SATUSEHAT:" + satusehatid }
+func keyOrangtuaNik(nik string) string               { return "ORTU:NIK:" + nik }
 
 func keyAnakId(id string) string         { return "ANAK:ID:" + id }
 func keyAnakNik(nik string) string       { return "ANAK:NIK:" + nik }
@@ -41,7 +42,7 @@ func (d *StuntingRepository) lupakan(keys ...string) {
 	}
 }
 
-func (d *StuntingRepository) lupakanAnak(anak *entity.Anak) {
+func (d *StuntingRepository) LupakanAnak(anak *entity.Anak) {
 	if anak == nil {
 		return
 	}
@@ -65,7 +66,7 @@ func (d *StuntingRepository) lupakanAnak(anak *entity.Anak) {
 	d.lupakan(keys...)
 }
 
-func (d *StuntingRepository) lupakanAnakTypes(a *types.Anak) {
+func (d *StuntingRepository) LupakanAnakTypes(a *types.Anak) {
 	if a == nil {
 		return
 	}
@@ -80,17 +81,17 @@ func (d *StuntingRepository) lupakanAnakTypes(a *types.Anak) {
 		e.SatusehatId = *a.IdSatusehat
 	}
 
-	d.lupakanAnak(e)
+	d.LupakanAnak(e)
 }
 
-func (d *StuntingRepository) lupakanRiwayatAnak(idAnak string) {
+func (d *StuntingRepository) LupakanRiwayatAnak(idAnak string) {
 	if idAnak == "" {
 		return
 	}
 	d.lupakan(keySummaryAnak(idAnak), keyListKunjungan(idAnak), keyListKesehatan(idAnak))
 }
 
-func (d *StuntingRepository) lupakanOrangtua(o *entity.Orangtua) {
+func (d *StuntingRepository) LupakanOrangtua(o *entity.Orangtua) {
 	if o == nil {
 		return
 	}
