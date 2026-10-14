@@ -87,6 +87,8 @@ func (s *StuntingService) FindOrangTua(id *string, nik *string, nokk *string, na
 }
 
 func (s *StuntingService) CreateAnak(anak *entity.Anak) (*types.Anak, error) {
+	// Timpa source data (tambahkan prefix jakantro: untuk data dari jakantro) untuk membedakan
+	anak.SourceData = fmt.Sprintf("jakantro:%s", anak.SourceData)
 	return s.Repository.CreateAnak(anak, nil)
 }
 
@@ -531,6 +533,20 @@ func (s *StuntingService) KunjunganByAnak(id string) (*types.KunjunganAnakArray,
 	}
 
 	return k, nil
+}
+
+// Region hapus
+func (s *StuntingService) DeleteAnakByID(id string, uid string) error {
+	if err := s.Repository.DeleteAnakByID(id, uid); err != nil {
+		return err
+	}
+
+	s.Background.Run("delete_cache_anak", func() {
+		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil, true); err == nil && anak != nil {
+			s.Repository.LupakanAnak(anak.ToPayload().ToEntity())
+		}
+	})
+	return nil
 }
 
 func (s *StuntingService) VerifyAccess(idposyandu, orgid *string) error {
