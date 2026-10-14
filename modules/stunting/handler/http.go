@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
@@ -42,10 +41,7 @@ func NewHttpHandler(wctx *core.AppContext, cfg *config.ModuleConfig, service *se
 // Region alternatif jalur ekstract payload satusehat untuk faskes
 // faskes diambil dari API key, id_faskes di body diabaikan
 func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
-	if err := h.khususFaskes(c); err != nil {
-		return h.kirimError(c, err)
-	}
-	orgid, _ := h.GetOrgid(c)
+	orgid := c.Locals("orgid").(*string)
 
 	p := new(types.PemeriksaanFaskes)
 	if err := c.BodyParser(p); err != nil {
@@ -72,14 +68,7 @@ func (h *HttpHandler) SimpanPemeriksaanFaskes(c *fiber.Ctx) error {
 func (h *HttpHandler) UpdateResourceBySatusehatId(c *fiber.Ctx) error {
 	resource := c.Params("resourceName", "")
 
-	if err := h.khususFaskes(c); err != nil {
-		return h.kirimError(c, err)
-	}
-
-	orgid, e := h.GetOrgid(c)
-	if e != nil {
-		return h.kirimError(c, e)
-	}
+	orgid := c.Locals("orgid").(*string)
 
 	if resource == "" {
 		return h.kirimError(c, exceptions.TidakDitemukan.Messagef("Endpoint tidak ditemukan"))
@@ -249,8 +238,8 @@ func (h *HttpHandler) kirimError(c *fiber.Ctx, err error) error {
 }
 
 func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
-	var orangtua types.OrangtuaPayload
 
+	var orangtua types.OrangtuaPayload
 	if err := c.BodyParser(&orangtua); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
@@ -269,9 +258,29 @@ func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(res)
 }
 
-func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
+func (h *HttpHandler) CreateOrangTuaFaskes(c *fiber.Ctx) error {
 	var orangtua types.OrangtuaPayload
 
+	if err := c.BodyParser(&orangtua); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+	utils.AbaikanFieldSistem(&orangtua)
+	orangtua.SatusehatId = nil
+
+	if err := utils.ValidateOrangtuaFaskes(orangtua); err != nil {
+		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
+	}
+
+	res, err := h.service.CreateOrangTua(orangtua.ToEntity())
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(res)
+}
+
+func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
+	var orangtua types.OrangtuaPayload
 	if err := c.BodyParser(&orangtua); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
@@ -281,10 +290,7 @@ func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	orgid, err := h.GetOrgid(c)
-	if err != nil {
-		return h.kirimError(c, err)
-	}
+	orgid := c.Locals("orgid").(*string)
 
 	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
 		return h.kirimError(c, err)
@@ -317,10 +323,7 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	orgid, err := h.GetOrgid(c)
-	if err != nil {
-		return h.kirimError(c, err)
-	}
+	orgid := c.Locals("orgid").(*string)
 
 	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
 		return h.kirimError(c, err)
@@ -330,8 +333,8 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 }
 
 func (h *HttpHandler) CreateAnak(c *fiber.Ctx) error {
-	var anak types.AnakPayload
 
+	var anak types.AnakPayload
 	if err := c.BodyParser(&anak); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
@@ -361,10 +364,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	orgid, err := h.GetOrgid(c)
-	if err != nil {
-		return h.kirimError(c, err)
-	}
+	orgid := c.Locals("orgid").(*string)
 
 	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
 		return h.kirimError(c, err)
@@ -415,10 +415,7 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 		return h.kirimError(c, err)
 	}
 
-	orgid, err := h.GetOrgid(c)
-	if err != nil {
-		return h.kirimError(c, err)
-	}
+	orgid := c.Locals("orgid").(*string)
 
 	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
 		return h.kirimError(c, err)
@@ -426,6 +423,10 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(anak)
 
+}
+
+func (h *HttpHandler) FindAnakByNIK(c *fiber.Ctx) error {
+	return nil
 }
 
 func (h *HttpHandler) CreateKunjungan(c *fiber.Ctx) error {
@@ -439,9 +440,6 @@ func (h *HttpHandler) CreateKunjungan(c *fiber.Ctx) error {
 
 // UpdateKunjunganById ini adalah handler yang dikhususkan untuk jakantro, karena id kunjungan dari jakantro = id pengukurna internal jakantro
 func (h *HttpHandler) UpdateKunjunganById(c *fiber.Ctx) error {
-	if err := h.khususJakantro(c); err != nil {
-		return h.kirimError(c, err)
-	}
 
 	id := c.Params("id", "")
 	if id == "" {
@@ -476,10 +474,6 @@ func (h *HttpHandler) CreateKesehatan(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(res)
 }
 func (h *HttpHandler) UpdateKesehatanById(c *fiber.Ctx) error {
-	if err := h.khususJakantro(c); err != nil {
-		return h.kirimError(c, err)
-	}
-
 	id := c.Params("id", "")
 	if id == "" {
 		return h.kirimError(c, exceptions.ParameterRequired.Messagef("Id harus dikirimkan sebagai parameter"))
@@ -504,7 +498,6 @@ func (h *HttpHandler) UpdateKesehatanById(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(res)
 }
-
 func (h *HttpHandler) FindKunjunganByIdAnak(c *fiber.Ctx) error {
 	id := c.Params("id", "")
 
@@ -606,68 +599,42 @@ func (h *HttpHandler) SummaryAnak(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *HttpHandler) GetOrgid(c *fiber.Ctx) (*string, error) {
-	// Cek permission
-	var orgid string
-	memorgid := new("")
-	apikey := auth.GetAPIKey(c)
-	memkey := "USERORGID::" + apikey
+// Region Delete
+func (h *HttpHandler) DeleteAnakByID(c *fiber.Ctx) error {
+	id := c.Params("id", "")
+	uid := auth.GetUserID(c)
 
-	if ok := h.memory.Get(memkey, memorgid); !ok {
-		groups := auth.GetUserGroups(c)
-		if groups == nil {
-			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
-		}
-		ada := false
-
-		for _, g := range groups {
-			if g == "jakantro" {
-				ada = true
-				orgid = g
-				break
-			} else if strings.Contains(g, "orgid:") {
-				ada = true
-				orgid = strings.Replace(g, "orgid:", "", 1)
-				break
-			}
-		}
-
-		if !ada {
-			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user", nil)
-		}
-
-		err := h.memory.Set(memkey, orgid, 24*time.Minute)
-
-		if err != nil {
-			logger.Error("CacheOrgid", err)
-		}
-	} else {
-		logger.Info("Orgid dari cache: " + *memorgid)
-		orgid = *memorgid
+	if !utils.IsStrFilled(id) {
+		return h.kirimError(c, exceptions.ParameterRequired.WithMessage("Parameter ID anak required", nil))
 	}
 
-	if !utils.IsStrFilled(orgid) {
-		return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
+	if err := h.service.DeleteAnakByID(id, uid); err != nil {
+		return h.kirimError(c, exceptions.Classify(err))
+	}
+	res := map[string]string{
+		"message": fmt.Sprintf("Berhasil menghapus anak dengan id #%s", id),
 	}
 
-	return &orgid, nil
+	return c.Status(fiber.StatusOK).JSON(res)
 }
-func (h *HttpHandler) khususFaskes(c *fiber.Ctx) error   { return h.khusus(c, "faskes") }
-func (h *HttpHandler) khususJakantro(c *fiber.Ctx) error { return h.khusus(c, "jakantro") }
 
-func (h *HttpHandler) khusus(c *fiber.Ctx, role string) error {
-	orgid, err := h.GetOrgid(c)
-
-	if err != nil {
-		return err
-	}
-
-	if orgid == nil || (role == "faskes" && utils.StrPtr(orgid) == "jakantro") || (role == "jakantro" && utils.StrPtr(orgid) != "jakantro") {
-		return exceptions.Forbidden.Messagef("endpoint ini hanya untuk %s", role)
-	}
-
+func (h *HttpHandler) DeleteOrangtuaByID(c *fiber.Ctx) error {
 	return nil
 }
+
+func (h *HttpHandler) DeleteKunjunganByID(c *fiber.Ctx) error {
+	return nil
+}
+
+func (h *HttpHandler) DeleteKesehatanBYID(c *fiber.Ctx) error {
+	return nil
+}
+
+// End Region
+
+// Region Delete Untuk Faskes (Alternatif jalur satusehat, kemungkinan untuk delete tidak bisa melalui jalur kafka stream)
+
+// End Region
 
 // DaftarKafkaGagal menampilkan pesan kafka yang belum berhasil diproses.
 func (h *HttpHandler) DaftarKafkaGagal(c *fiber.Ctx) error {
