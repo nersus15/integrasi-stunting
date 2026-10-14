@@ -2,11 +2,13 @@ package stunting
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
 	"github.com/nersus15/integrasi/mod-stunting/handler"
+	exceptions "github.com/nersus15/integrasi/mod-stunting/helper/Exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/repository"
 	"github.com/nersus15/integrasi/mod-stunting/service"
@@ -18,6 +20,7 @@ import (
 	appConfig "github.com/webcore-go/webcore/infra/config"
 	"github.com/webcore-go/webcore/infra/logger"
 	"github.com/webcore-go/webcore/port"
+	"github.com/webcore-go/webcore/port/auth"
 )
 
 const (
@@ -127,6 +130,29 @@ func (m *Module) Init(ctx *core.AppContext) error {
 		go kafkaConsumer.Run(ctx.Context)
 	}
 
+	// Custom global middleware for /api
+	ctx.Web.Use("/api", func(c *fiber.Ctx) error {
+		// get path and method
+		method := c.Method()
+		path := c.Path()
+
+		if method == fiber.MethodGet {
+			return c.Next()
+		}
+
+		var err error
+		if strings.HasPrefix(path, "/api/faskes") {
+			err = m.Khusus(c, "faskes")
+		} else {
+			err = m.Khusus(c, "jakantro")
+		}
+
+		if err != nil {
+			return err
+		}
+		return c.Next()
+	})
+
 	// Register routes
 	m.registerModuleRoute(ctx.Root)
 	m.registerRootRoute(ctx.Web)
@@ -152,7 +178,7 @@ func (m *Module) Init(ctx *core.AppContext) error {
 	}
 
 	// These can be accessed through the central registry
-	logger.Info("Module Stream initialized successfully")
+	logger.Info("Module Integrasi Stunting initialized successfully")
 
 	return nil
 }
@@ -183,6 +209,71 @@ func (m *Module) Repositories() map[string]any {
 	return map[string]any{
 		"stunting": m.repository,
 	}
+}
+
+// Authorization Middleware
+func (m *Module) Khusus(c *fiber.Ctx, role string) error {
+	orgid, err := m.GetOrgid(c)
+
+	if err != nil {
+		return err
+	}
+
+	if orgid == nil || (role == "faskes" && utils.StrPtr(orgid) == "jakantro") || (role == "jakantro" && utils.StrPtr(orgid) != "jakantro") {
+		return exceptions.Forbidden.Messagef("endpoint ini hanya untuk %s", role)
+	}
+
+	// pass orgid
+	c.Locals("orgid", orgid)
+
+	return nil
+}
+
+func (m *Module) GetOrgid(c *fiber.Ctx) (*string, error) {
+	// Cek permission
+	var orgid string
+	memorgid := new("")
+	apikey := auth.GetAPIKey(c)
+	memkey := "USERORGID::" + apikey
+
+	if ok := m.memory.Get(memkey, memorgid); !ok {
+		groups := auth.GetUserGroups(c)
+		if groups == nil {
+			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan untuk apikey #"+apikey, nil)
+		}
+		ada := false
+
+		for _, g := range groups {
+			if g == "jakantro" {
+				ada = true
+				orgid = g
+				break
+			} else if strings.Contains(g, "orgid:") {
+				ada = true
+				orgid = strings.Replace(g, "orgid:", "", 1)
+				break
+			}
+		}
+
+		if !ada {
+			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user", nil)
+		}
+
+		err := m.memory.Set(memkey, orgid, 24*time.Minute)
+
+		if err != nil {
+			logger.Error("CacheOrgid", err)
+		}
+	} else {
+		logger.Info("Orgid dari cache: " + *memorgid)
+		orgid = *memorgid
+	}
+
+	if !utils.IsStrFilled(orgid) {
+		return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
+	}
+
+	return &orgid, nil
 }
 
 // registerRoutes registers the module's routes
@@ -306,6 +397,47 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "DELETE",
+		Path:    "/anak/:id",
+		Handler: m.handler.DeleteAnakByID,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "DELETE",
+		Path:    "/orangtua/:id",
+		Handler: m.handler.DeleteOrangtuaByID,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "DELETE",
+		Path:    "/kunjungan/:id",
+		Handler: m.handler.DeleteKunjunganByID,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "DELETE",
+		Path:    "/kesehtan/:id",
+		Handler: m.handler.DeleteKesehatanBYID,
+		Root:    root,
+	})
+
+	// m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+	// 	Method: "DELETE",
+	// 	Path:   "/faskes/anak/:satusehatid",
+	// 	// Handler: ,
+	// })
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/faskes/orangtua",
+		Handler: m.handler.CreateOrangTuaFaskes,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "POST",
 		Path:    "/faskes/pemeriksaan",
 		Handler: m.handler.SimpanPemeriksaanFaskes,
@@ -319,6 +451,8 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 }
 
+func (m *Module) registerApiJakantroRoute(root fiber.Router) {
+}
 func (m *Module) registerRootRoute(web *fiber.App) {
 	moduleRoot := web.Group("/" + m.Name())
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
