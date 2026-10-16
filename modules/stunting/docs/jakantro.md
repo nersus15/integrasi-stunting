@@ -22,9 +22,9 @@ Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
 |---|---|---|---|
 | `id` | teks, maks 36 | ya | id buatan jakantro. Kunci pencarian di `PUT /api/orangtua` |
 | `id_posyandu` | teks, maks 36 | ya | posyandu tempat keluarga terdaftar. Menentukan puskesmas yang berhak mengakses keluarga ini |
-| `no_kk` | 16 digit angka | ya | nomor kartu keluarga, unik. Bentrok dijawab `409` `3003` |
+| `no_kk` | 16 digit angka | — | nomor kartu keluarga, unik. Bentrok dijawab `409` `3003` |
 | `nik` | 16 digit angka | ya | NIK orangtua. POST dengan NIK yang sudah terdaftar mengembalikan data yang ada, bukan error |
-| `nama_ayah`, `nama_ibu` | teks, maks 255 | ya | |
+| `nama_ayah`, `nama_ibu` | teks, maks 255 | salah satu | minimal salah satu terisi |
 | `telepon` | teks, maks 255 | ya | |
 | `rt`, `rw` | teks, 3 karakter | ya | dikembalikan dengan padding spasi sampai 3 karakter |
 | `alamat` | teks | ya | |
@@ -418,6 +418,12 @@ Satu orangtua, tanpa nested. Field-nya ada di [tabel `orangtua`](#orangtua).
 mengembalikan data yang sudah ada — bukan error — jadi endpoint ini idempotent
 terhadap NIK.
 
+Kalau `nik` itu milik orangtua yang sudah dihapus, baris lama dipulihkan dan
+diperbarui dengan data yang Anda kirim. Yang dikembalikan tetap `id` lama, bukan
+`id` di payload. Hal yang sama berlaku untuk key `orangtua` di
+`POST /api/kunjungan` dan `POST /api/kesehatan`: anak di payload itu ikut
+terhubung ke `id` lama.
+
 `no_kk` harus 16 digit angka dan unik. Bentrok `no_kk` kena `409` `3003`.
 
 ---
@@ -468,8 +474,8 @@ lain memindahkan anak ke orangtua itu. `imd` boleh diubah ke `0`.
 
 ### PUT /api/orangtua
 
-Sama dengan `PUT /api/anak`: dicari lewat `id`, hanya `id` yang wajib, field yang
-tidak dikirim dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
+Dicari lewat `id`. Selain `id`, `nik` dan salah satu dari `nama_ayah` atau
+`nama_ibu` wajib dikirim; field lain yang tidak dikirim dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
 `satusehat_id` dan `source_data` diabaikan, `kia` boleh diubah ke `0`.
 
 ```json
@@ -481,4 +487,4 @@ tidak dikirim dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
 ```
 
 Kedua endpoint ini juga dipakai faskes, dengan batasan yang dijelaskan di
-[Jalur faskes](?doc=faskes#put-apianak-dan-put-apiorangtua).
+[Jalur faskes](?doc=faskes#put-apifaskesanak-dan-put-apifaskesorangtua).

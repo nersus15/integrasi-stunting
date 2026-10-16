@@ -61,7 +61,7 @@ awalan `Organization/`.
 
 Hanya dipakai untuk mencocokkan anak, dan untuk membuat anak baru kalau belum
 terdaftar. Data anak yang sudah ada tidak diubah oleh endpoint ini; pakai
-[PUT /api/anak](#put-apianak-dan-put-apiorangtua).
+[PUT /api/faskes/anak](#put-apifaskesanak-dan-put-apifaskesorangtua).
 
 | key | tipe | wajib | keterangan |
 |---|---|---|---|
@@ -356,12 +356,13 @@ ini. Hasil bacanya pun identik; lihat [endpoint GET](?doc=baca).
 
 ---
 
-## PUT /api/anak dan PUT /api/orangtua
+## PUT /api/faskes/anak dan PUT /api/faskes/orangtua
 
-Faskes memakai endpoint yang sama dengan jakantro — lihat
-[PUT /api/anak](?doc=jakantro#put-apianak) dan
-[PUT /api/orangtua](?doc=jakantro#put-apiorangtua). Hanya `id` yang wajib,
-field yang tidak dikirim dipertahankan.
+Field-nya sama dengan [PUT /api/anak](?doc=jakantro#put-apianak) dan
+[PUT /api/orangtua](?doc=jakantro#put-apiorangtua): `id` wajib, dan untuk
+orangtua juga `nik` serta salah satu dari `nama_ayah` atau `nama_ibu`. Field yang
+tidak dikirim dipertahankan. Kunci jakantro ditolak `403` `1008` di sini, dan
+kunci faskes ditolak di `PUT /api/anak` dan `PUT /api/orangtua`.
 
 Data identitas dari faskes dianggap lebih terpercaya, jadi `nik` dan `no_kk`
 boleh Anda perbaiki. Dua field diabaikan kalau dikirim faskes, karena keduanya
@@ -369,13 +370,13 @@ menentukan siapa yang berhak atas data itu:
 
 | field | endpoint | alasan |
 |---|---|---|
-| `id_posyandu` | `PUT /api/orangtua` | memindah keluarga ke wilayah lain |
-| `id_orangtua` | `PUT /api/anak` | memindah anak ke keluarga lain |
+| `id_posyandu` | `PUT /api/faskes/orangtua` | memindah keluarga ke wilayah lain |
+| `id_orangtua` | `PUT /api/faskes/anak` | memindah anak ke keluarga lain |
 
 ## Hak akses anak dan orangtua
 
-Berlaku untuk `GET /api/anak/:id`, `GET /api/orangtua`, `PUT /api/anak`,
-`PUT /api/orangtua`, dan `POST /api/faskes/pemeriksaan` untuk anak yang sudah
+Berlaku untuk `GET /api/anak/:id`, `GET /api/orangtua`, `PUT /api/faskes/anak`,
+`PUT /api/faskes/orangtua`, dan `POST /api/faskes/pemeriksaan` untuk anak yang sudah
 terdaftar. Akses diberikan kalau salah satu terpenuhi:
 
 | pemanggil | syarat |
