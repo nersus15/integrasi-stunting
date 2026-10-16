@@ -80,7 +80,7 @@ type Orangtua struct {
 	bun.BaseModel `bun:"table:stunting.orangtua,alias:o"`
 
 	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
-	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),default:null" json:"satusehat_id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"satusehat_id"`
 	IDPosyandu   *string    `bun:"id_posyandu,type:varchar(36),nullzero" json:"id_posyandu"`
 	NoKK         string     `bun:"no_kk,type:varchar(16),nullzero,unique" json:"no_kk"`
 	NamaAyah     string     `bun:"nama_ayah,type:varchar(255),notnull" json:"nama_ayah"`

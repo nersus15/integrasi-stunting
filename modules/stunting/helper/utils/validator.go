@@ -140,12 +140,21 @@ func ValidateOrangtuaUpdate(p types.OrangtuaPayload) error {
 	if !IsStrFilled(p.Id) {
 		return fmt.Errorf("id tidak boleh kosong")
 	}
+
 	if IsStrFilled(p.NoKk) && !IsDigitsLen(p.NoKk, 16) {
 		return fmt.Errorf("no_kk harus 16 digit angka")
 	}
-	if IsStrFilled(p.Nik) && !IsDigitsLen(p.Nik, 16) {
+
+	if !IsStrFilled(p.NamaAyah) && !IsStrFilled(p.NamaIbu) {
+		return fmt.Errorf("nama_ayah atau nama_ibu harus diisi")
+	}
+
+	if !IsStrFilled(p.Nik) {
+		return fmt.Errorf("nik tidak boleh kosong")
+	} else if !IsDigitsLen(p.Nik, 16) {
 		return fmt.Errorf("nik harus 16 digit angka")
 	}
+
 	if p.Kia != nil && *p.Kia != 0 && *p.Kia != 1 {
 		return fmt.Errorf("kia harus bernilai 0 atau 1")
 	}
@@ -233,6 +242,32 @@ func ValidateAnak(p types.AnakPayload) error {
 
 	if !IsStrFilled(p.SourceData) {
 		return fmt.Errorf("source_data tidak boleh kosong")
+	}
+
+	return nil
+}
+
+func ValidateAnakFaskes(p types.AnakPayload) error {
+	if err := validateAnakDasar(p); err != nil {
+		return err
+	}
+
+	if p.AnakKe <= 0 {
+		return fmt.Errorf("anak_ke harus lebih dari 0")
+	}
+
+	if p.IMD != nil && *p.IMD != 0 && *p.IMD != 1 {
+		return fmt.Errorf("imd harus bernilai 0 atau 1")
+	}
+
+	if p.BBLahir <= 0 {
+		return fmt.Errorf("bb_lahir harus lebih dari 0")
+	}
+	if p.TBLahir <= 0 {
+		return fmt.Errorf("tb_lahir harus lebih dari 0")
+	}
+	if p.LKLahir <= 0 {
+		return fmt.Errorf("lk_lahir harus lebih dari 0")
 	}
 
 	return nil

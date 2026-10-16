@@ -756,14 +756,14 @@ func petakanLayanan(entry types2.BundleEntry) (*types.Layanan, *string, *string,
 func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunjungan *types.Kunjungan,
 	refFaskes *string, observasi []utils.HasilObservasi, diagnosa []types.Diagnosa,
 	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode, anakBaru *entity.Anak) (*string, bool, string, error) {
-	idAnak := ""
+	idAnak, idOrangtua := "", ""
 	if anak != nil {
-		idAnak = anak.Id
+		idAnak, idOrangtua = anak.Id, anak.IdOrangtua
 	}
 	// bundle tanpa Patient: anaknya dicari lewat IHS id dari envelope
 	if !utils.IsStrFilled(idAnak) && utils.IsFilled(ihsAnak) {
 		if a, err := s.repository.FindAnakBySatusehatId(*ihsAnak, false); err == nil && a != nil {
-			idAnak = a.Id
+			idAnak, idOrangtua = a.Id, a.IdOrangtua
 		}
 	}
 	if !utils.IsStrFilled(idAnak) {
@@ -909,8 +909,31 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 		logger.Error("ProsesTransaksiFHIR:SimpanDataMedis => " + err.Error())
 		return nil, false, "", err
 	}
+	s.lupakanAksesKlinis(idAnak, idOrangtua, refFaskes, data.Kunjungan != nil, data.Rujukan)
 
 	return idKunjungan, true, "", nil
+}
+
+// hanya rujukan baru, dan kunjungan baru untuk anak tanpa orangtua, yang mengubah akses klinis
+func (s *StreamService) lupakanAksesKlinis(idAnak, idOrangtua string, refFaskes *string, kunjunganBaru bool, rujukan []*entity.Rujukan) {
+	if kunjunganBaru && idOrangtua == "" && utils.IsFilled(refFaskes) {
+		s.repository.LupakanAksesKlinis(*refFaskes, idAnak, "")
+	}
+
+	orgid := map[string]bool{}
+	for _, r := range rujukan {
+		for _, ref := range []*string{r.RefFaskesAsal, r.RefFaskesTujuan} {
+			if utils.IsFilled(ref) {
+				orgid[*ref] = true
+			}
+		}
+	}
+	for o := range orgid {
+		s.repository.LupakanAksesKlinis(o, idAnak, "")
+		if idOrangtua != "" {
+			s.repository.LupakanAksesKlinis(o, "", idOrangtua)
+		}
+	}
 }
 
 func (s *StreamService) entityKunjungan(idAnak string, k *types.Kunjungan, refFaskes *string) *entity.Kunjungan {
@@ -1321,7 +1344,7 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 			return nil, exceptions.TidakDisimpan.Messagef("anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun")
 		}
 		anak = &p.Anak
-	} else if err := s.stunting.VerifyAksesAnak(&orgid, anak.Id); err != nil {
+	} else if _, err := s.stunting.VerifyAksesAnak(&orgid, anak, utils.PtrStr(anak.Id, true), nil); err != nil {
 		return nil, err
 	}
 

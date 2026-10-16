@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -32,6 +33,9 @@ func keyListKesehatan(idAnak string) string { return "LIST:KESEHATAN:" + idAnak 
 func keySummaryAnak(idAnak string) string   { return "SUMMARY:ANAK:" + idAnak }
 func keyKunjunganId(id string) string       { return "KUNJUNGAN:ID:" + id }
 func keyKesehatanId(id string) string       { return "KESEHATAN:ID:" + id }
+func keyAksesKlinis(orgid, idAnak, idOrangtua string) string {
+	return fmt.Sprintf("AKSESKLINIS:%s:%s:%s", orgid, idAnak, idOrangtua)
+}
 
 func (d *StuntingRepository) lupakan(keys ...string) {
 	for _, k := range keys {
@@ -95,9 +99,12 @@ func (d *StuntingRepository) LupakanOrangtua(o *entity.Orangtua) {
 	if o == nil {
 		return
 	}
-	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID))
+	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID), keyOrangtuaSatusehat(o.SatusehatId))
 }
 
+func (d *StuntingRepository) LupakanAksesKlinis(orgid, idAnak, idOrangtua string) {
+	d.lupakan(keyAksesKlinis(orgid, idAnak, idOrangtua))
+}
 func (d *StuntingRepository) GetStringByKey(key string) string {
 	out := new(string)
 	if ok := d.Memory.Get(key, out); !ok {
@@ -105,7 +112,17 @@ func (d *StuntingRepository) GetStringByKey(key string) string {
 	}
 	return utils.StrPtr(out)
 }
+func (d *StuntingRepository) GetBool(key string) (bool, foun bool) {
+	out := new(bool)
+	if ok := d.Memory.Get(key, out); !ok {
+		return false, false
+	}
+	return *out, true
 
+}
 func (d *StuntingRepository) SetStringByKey(key, value string, ttl time.Duration) {
+	d.Memory.Set(key, value, ttl)
+}
+func (d *StuntingRepository) SetBool(key string, value bool, ttl time.Duration) {
 	d.Memory.Set(key, value, ttl)
 }

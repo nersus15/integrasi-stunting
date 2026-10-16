@@ -597,9 +597,16 @@ func EncounterToKunjungan(entry types2.BundleEntry) (*types.Kunjungan, *string, 
 		return nil, nil, nil, fmt.Errorf("Gagal memetakan resource Encounter ke Kunjungan: %s", err.Error())
 	}
 
+	orgid := ""
+
+	if resource.ServiceProvider != nil && resource.ServiceProvider.Reference != nil {
+		orgid = strings.Replace(StrPtr(resource.ServiceProvider.Reference), "Organization/", "", 1)
+	}
+
 	k := &types.Kunjungan{
 		IdSatusehat:       entry.Base.Id,
 		TanggalPengukuran: tanggalEncounter(resource.Period),
+		SourceData:        PtrStr("faskes:"+orgid, true),
 	}
 
 	if resource.Period != nil {

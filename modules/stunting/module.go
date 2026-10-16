@@ -17,6 +17,7 @@ import (
 	kafka "github.com/webcore-go/lib-kafka"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/helper"
+	"github.com/webcore-go/webcore/app/out"
 	appConfig "github.com/webcore-go/webcore/infra/config"
 	"github.com/webcore-go/webcore/infra/logger"
 	"github.com/webcore-go/webcore/port"
@@ -137,6 +138,14 @@ func (m *Module) Init(ctx *core.AppContext) error {
 		path := c.Path()
 
 		if method == fiber.MethodGet {
+			orgid, err := m.GetOrgid(c)
+			if err != nil {
+				k := exceptions.Classify(err)
+				return c.Status(k.HttpCode).JSON(out.ErrorDetail(k.HttpCode, k.ErrorCode, k.Name, k.Message, k))
+			}
+
+			// pass orgid
+			c.Locals("orgid", orgid)
 			return c.Next()
 		}
 
@@ -148,13 +157,16 @@ func (m *Module) Init(ctx *core.AppContext) error {
 		}
 
 		if err != nil {
-			return err
+			k := exceptions.Classify(err)
+			return c.Status(k.HttpCode).JSON(out.ErrorDetail(k.HttpCode, k.ErrorCode, k.Name, k.Message, k))
 		}
 		return c.Next()
 	})
 
 	// Register routes
 	m.registerModuleRoute(ctx.Root)
+	m.registerApiJakantroRoute(ctx.Root)
+	m.registerApiFaskes(ctx.Root)
 	m.registerRootRoute(ctx.Web)
 
 	if m.config.Cron.Enabled {
@@ -239,7 +251,7 @@ func (m *Module) GetOrgid(c *fiber.Ctx) (*string, error) {
 	if ok := m.memory.Get(memkey, memorgid); !ok {
 		groups := auth.GetUserGroups(c)
 		if groups == nil {
-			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan untuk apikey #"+apikey, nil)
+			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
 		}
 		ada := false
 
@@ -344,6 +356,9 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.FindKesehatanById,
 		Root:    root,
 	})
+}
+
+func (m *Module) registerApiJakantroRoute(root fiber.Router) {
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "POST",
 		Path:    "/orangtua",
@@ -357,6 +372,21 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.CreateAnak,
 		Root:    root,
 	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/kunjungan",
+		Handler: m.handler.CreateKunjungan,
+		Root:    root,
+	})
+
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/kesehatan",
+		Handler: m.handler.CreateKesehatan,
+		Root:    root,
+	})
+
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
 		Path:    "/orangtua",
@@ -371,24 +401,12 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 	})
 
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kunjungan",
-		Handler: m.handler.CreateKunjungan,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
 		Path:    "/kunjungan/:id",
 		Handler: m.handler.UpdateKunjunganById,
 		Root:    root,
 	})
 
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kesehatan",
-		Handler: m.handler.CreateKesehatan,
-		Root:    root,
-	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
 		Path:    "/kesehatan/:id",
@@ -423,13 +441,15 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.DeleteKesehatanBYID,
 		Root:    root,
 	})
+}
 
-	// m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-	// 	Method: "DELETE",
-	// 	Path:   "/faskes/anak/:satusehatid",
-	// 	// Handler: ,
-	// })
-
+func (m *Module) registerApiFaskes(root fiber.Router) {
+	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
+		Method:  "POST",
+		Path:    "/faskes/anak",
+		Handler: m.handler.CreateAnakFaskes,
+		Root:    root,
+	})
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "POST",
 		Path:    "/faskes/orangtua",
@@ -443,15 +463,13 @@ func (m *Module) registerModuleRoute(root fiber.Router) {
 		Handler: m.handler.SimpanPemeriksaanFaskes,
 		Root:    root,
 	})
+
 	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
 		Method:  "PUT",
 		Path:    "/faskes/:resourceName",
 		Handler: m.handler.UpdateResourceBySatusehatId,
 		Root:    root,
 	})
-}
-
-func (m *Module) registerApiJakantroRoute(root fiber.Router) {
 }
 func (m *Module) registerRootRoute(web *fiber.App) {
 	moduleRoot := web.Group("/" + m.Name())

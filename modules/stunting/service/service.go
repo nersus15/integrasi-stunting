@@ -78,7 +78,7 @@ func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, orgid *s
 func (s *StuntingService) FindOrangTua(id *string, nik *string, nokk *string, nama_ayah *string, nama_ibu *string) (*types.Orangtua, error) {
 	switch {
 	case utils.IsFilled(id):
-		return s.Repository.FindOrangTuaById(*id)
+		return s.Repository.FindOrangTuaById(*id, true)
 	case utils.IsFilled(nik):
 		return s.Repository.FindOrangTuaByNik(*nik, true)
 	}
@@ -110,7 +110,11 @@ func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*typ
 	anak_db.UpdatedAt = new(time.Now())
 	anak_db.UpdatedBy = orgid
 
-	return s.Repository.UpdateAnakById(anak_db, nil, false)
+	res, err := s.Repository.UpdateAnakById(anak_db, nil, false)
+	if err == nil && a.IdOrangtua != anak_db.IDOrangtua {
+		s.Repository.LupakanAksesPerubahanOrangtua(anak_db.ID, a.IdOrangtua, anak_db.IDOrangtua)
+	}
+	return res, err
 }
 
 func (s *StuntingService) FindAnak(id, nik, orangtua *string, urutan *int16) (*types.Anak, error) {
@@ -349,6 +353,21 @@ func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, er
 }
 
 // Region Service Update Untuk FASKES (by satusehat id) Alternatif jalur ekstraksi payload satusehat
+func (s *StuntingService) UpdateAnakFaskes(orgid string, data *entity.Anak) (*types.Anak, error) {
+	if data == nil || (!utils.IsStrFilled(data.ID) && !utils.IsStrFilled(data.SatusehatId)) {
+		return nil, exceptions.KolomWajib.Messagef("Id atau id_satusehat wajib dikirim salah astu")
+	}
+
+	return s.UpdateAnakById(data, utils.PtrStr(orgid, true))
+}
+
+func (s *StuntingService) UpdateOrangtuaFaskes(orgid string, data *entity.Orangtua) (*types.Orangtua, error) {
+	if data == nil || (!utils.IsStrFilled(data.ID) && !utils.IsStrFilled(data.SatusehatId)) {
+		return nil, exceptions.KolomWajib.Messagef("Id atau id_satusehat wajib dikirim salah astu")
+	}
+
+	return s.UpdateOrangTuaById(data, utils.PtrStr(orgid, true))
+}
 func (s *StuntingService) UpdateKunjunganBySatusehatId(orgid string, data *entity.Kunjungan) (*types.Kunjungan, error) {
 	if data == nil || data.SatusehatId == nil {
 		return nil, exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim")
@@ -536,16 +555,31 @@ func (s *StuntingService) KunjunganByAnak(id string) (*types.KunjunganAnakArray,
 }
 
 // Region hapus
-func (s *StuntingService) DeleteAnakByID(id string, uid string) error {
-	if err := s.Repository.DeleteAnakByID(id, uid); err != nil {
+func (s *StuntingService) DeleteAnakByID(id string, orgid string) error {
+	if err := s.Repository.DeleteAnakByID(id, orgid); err != nil {
 		return err
 	}
 
 	s.Background.Run("delete_cache_anak", func() {
 		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil, true); err == nil && anak != nil {
 			s.Repository.LupakanAnak(anak.ToPayload().ToEntity())
+			s.Repository.LupakanAksesPerubahanOrangtua(anak.Id, anak.IdOrangtua)
 		}
 	})
+	return nil
+}
+
+func (s *StuntingService) DeleteOrangtuaByID(id, orgid string) error {
+	if err := s.Repository.DeleteOrangtuaByID(id, orgid); err != nil {
+		return err
+	}
+
+	s.Background.Run("delete_cache_orangtua", func() {
+		if orangtua, err := s.Repository.FindDeletedOrangtua(id, false); err == nil && orangtua != nil {
+			s.Repository.LupakanOrangtua(orangtua.ToPayload().ToEntity())
+		}
+	})
+
 	return nil
 }
 
@@ -754,45 +788,89 @@ func (s *StuntingService) VerifyAccessForUpdateFaskes(orgid string, jenis string
 	return nil
 }
 
-func (s *StuntingService) VerifyAksesOrangtua(orgid *string, idOrangtua string) error {
+func (s *StuntingService) VerifyAksesOrangtua(orgid *string, o *types.Orangtua, idOrangtua, IdSatusehat *string) (*types.Orangtua, error) {
 	if !utils.IsFilled(orgid) {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
+		return nil, exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
 	}
 	if *orgid == "jakantro" {
-		return nil
+		return nil, nil
 	}
 
-	orangtua, err := s.Repository.FindOrangTuaById(idOrangtua)
+	var orangtua *types.Orangtua
+	var err error
+
+	if o == nil {
+		// cari hanya jika memang belum dicari
+		if IdSatusehat != nil {
+			orangtua, err = s.Repository.FindOrangtuaBySatusehatId(utils.StrPtr(IdSatusehat), false)
+			if err != nil && errors.Is(err, sql.ErrNoRows) && utils.IsFilled(idOrangtua) {
+				// fallback search by id jika id di kirim
+				return s.VerifyAksesOrangtua(orgid, nil, idOrangtua, nil)
+			}
+		} else {
+			orangtua, err = s.Repository.FindOrangTuaById(utils.StrPtr(idOrangtua), false)
+		}
+
+	} else {
+		orangtua = o
+	}
+
 	if err != nil {
-		return exceptions.Classify(err)
+		return nil, exceptions.Classify(err)
 	}
-
-	return s.aksesWilayahAtauKlinis(*orgid, orangtua.IdPosyandu, "", idOrangtua)
+	if err := s.aksesWilayahAtauKlinis(*orgid, orangtua.IdPosyandu, "", orangtua.Id); err != nil {
+		return nil, err
+	}
+	return orangtua, err
 }
 
-func (s *StuntingService) VerifyAksesAnak(orgid *string, idAnak string) error {
+func (s *StuntingService) VerifyAksesAnak(orgid *string, a *types.Anak, idAnak, satusehatId *string) (*types.Anak, error) {
 	if !utils.IsFilled(orgid) {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
+		return nil, exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses", nil)
 	}
 	if *orgid == "jakantro" {
-		return nil
+		return nil, nil
 	}
 
-	anak, err := s.Repository.FindAnak(&idAnak, nil, nil, nil, false)
-	if err != nil {
-		return exceptions.Classify(err)
+	var anak *types.Anak
+	var e error
+
+	if a == nil {
+		// cari hanya jika memang belum dicari (ini untuk endpoint GET sebenarnya, dimana pengecekan akses dilakukan setelah anak ditemukan)
+		if satusehatId != nil {
+			anak, e = s.Repository.FindAnakBySatusehatId(utils.StrPtr(satusehatId), false)
+
+			if anak == nil && idAnak != nil && (errors.Is(e, sql.ErrNoRows)) {
+				// Fallback gunakan id jika anak tidak ditemukan dengan satusehat id, dan idAnak di kirimkan
+				return s.VerifyAksesAnak(orgid, nil, idAnak, nil)
+			}
+
+		} else {
+			anak, e = s.Repository.FindAnak(idAnak, nil, nil, nil, false)
+		}
+	} else {
+		anak = a
+	}
+
+	if e != nil {
+		return nil, exceptions.Classify(e)
 	}
 
 	var idPosyandu *string
+
 	if utils.IsStrFilled(anak.IdOrangtua) {
-		orangtua, err := s.Repository.FindOrangTuaById(anak.IdOrangtua)
+		orangtua, err := s.Repository.FindOrangTuaById(anak.IdOrangtua, false)
 		if err != nil {
-			return exceptions.Classify(err)
+			return nil, exceptions.Classify(err)
 		}
 		idPosyandu = orangtua.IdPosyandu
 	}
 
-	return s.aksesWilayahAtauKlinis(*orgid, idPosyandu, idAnak, "")
+	if err := s.aksesWilayahAtauKlinis(*orgid, idPosyandu, anak.Id, ""); err != nil {
+		return nil, err
+	}
+
+	return anak, nil
 }
 
 func (s *StuntingService) aksesWilayahAtauKlinis(orgid string, idPosyandu *string, idAnak, idOrangtua string) error {

@@ -17,7 +17,6 @@ import (
 	"github.com/webcore-go/webcore/app/out"
 	"github.com/webcore-go/webcore/infra/logger"
 	"github.com/webcore-go/webcore/port"
-	"github.com/webcore-go/webcore/port/auth"
 )
 
 type HttpHandler struct {
@@ -79,6 +78,10 @@ func (h *HttpHandler) UpdateResourceBySatusehatId(c *fiber.Ctx) error {
 	var err error
 
 	switch resource {
+	case "anak":
+		res, err = h.UpdateAnakFaskes(c, orgid)
+	case "orangtua":
+		res, err = h.UpdateOrangtuaFaskes(c, orgid)
 	case "kunjungan":
 		res, err = h.updateKunjunganBySatusehatId(c, orgid)
 	case "observasi":
@@ -100,6 +103,63 @@ func (h *HttpHandler) UpdateResourceBySatusehatId(c *fiber.Ctx) error {
 	} else {
 		return h.kirimError(c, err)
 	}
+}
+
+func (h *HttpHandler) UpdateAnakFaskes(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.AnakPayload)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	utils.AbaikanFieldSistem(payload)
+
+	anak, err := h.service.VerifyAksesAnak(orgid, nil, utils.PtrStr(payload.Id, true), payload.SatusehatId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !utils.IsStrFilled(payload.Id) {
+		payload.Id = anak.Id
+	}
+
+	if err := utils.ValidateAnakUpdate(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateAnakFaskes(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (h *HttpHandler) UpdateOrangtuaFaskes(c *fiber.Ctx, orgid *string) (any, error) {
+	payload := new(types.OrangtuaPayload)
+	if err := c.BodyParser(payload); err != nil {
+		return nil, exceptions.BodyRusak.New(err)
+	}
+
+	utils.AbaikanFieldSistem(payload)
+
+	orangtua, err := h.service.VerifyAksesOrangtua(orgid, nil, utils.PtrStr(payload.Id, true), payload.SatusehatId)
+	if err != nil {
+		return nil, err
+	}
+
+	if !utils.IsStrFilled(payload.Id) {
+		payload.Id = orangtua.Id
+	}
+	if err := utils.ValidateOrangtuaUpdate(*payload); err != nil {
+		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
+	}
+
+	res, err := h.service.UpdateOrangtuaFaskes(utils.StrPtr(orgid), payload.ToEntity())
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (h *HttpHandler) updateKunjunganBySatusehatId(c *fiber.Ctx, orgid *string) (any, error) {
@@ -264,8 +324,10 @@ func (h *HttpHandler) CreateOrangTuaFaskes(c *fiber.Ctx) error {
 	if err := c.BodyParser(&orangtua); err != nil {
 		return h.kirimError(c, exceptions.BodyRusak.New(err))
 	}
+
 	utils.AbaikanFieldSistem(&orangtua)
-	orangtua.SatusehatId = nil
+	orgid := c.Locals("orgid").(*string)
+	orangtua.SourceData = new("faskes:" + utils.StrPtr(orgid))
 
 	if err := utils.ValidateOrangtuaFaskes(orangtua); err != nil {
 		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
@@ -292,7 +354,7 @@ func (h *HttpHandler) UpdateOrantua(c *fiber.Ctx) error {
 
 	orgid := c.Locals("orgid").(*string)
 
-	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
+	if _, err := h.service.VerifyAksesOrangtua(orgid, nil, utils.PtrStr(orangtua.Id, true), orangtua.SatusehatId); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -325,7 +387,7 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 
 	orgid := c.Locals("orgid").(*string)
 
-	if err := h.service.VerifyAksesOrangtua(orgid, orangtua.Id); err != nil {
+	if _, err := h.service.VerifyAksesOrangtua(orgid, orangtua, utils.PtrStr(orangtua.Id, true), orangtua.IdSatusehat); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -352,6 +414,28 @@ func (h *HttpHandler) CreateAnak(c *fiber.Ctx) error {
 
 	return c.Status(http.StatusCreated).JSON(res)
 }
+func (h *HttpHandler) CreateAnakFaskes(c *fiber.Ctx) error {
+
+	var anak types.AnakPayload
+	if err := c.BodyParser(&anak); err != nil {
+		return h.kirimError(c, exceptions.BodyRusak.New(err))
+	}
+	orgid := c.Locals("orgid").(*string)
+	utils.AbaikanFieldSistem(&anak)
+
+	anak.SourceData = "faskes:" + utils.StrPtr(orgid)
+
+	if err := utils.ValidateAnak(anak); err != nil {
+		return h.kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
+	}
+
+	res, err := h.service.CreateAnak(anak.ToEntity())
+	if err != nil {
+		return h.kirimError(c, err)
+	}
+
+	return c.Status(http.StatusCreated).JSON(res)
+}
 func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 	var anak types.AnakPayload
 
@@ -366,7 +450,7 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 
 	orgid := c.Locals("orgid").(*string)
 
-	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
+	if _, err := h.service.VerifyAksesAnak(orgid, nil, utils.PtrStr(anak.Id, true), nil); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -417,7 +501,7 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 
 	orgid := c.Locals("orgid").(*string)
 
-	if err := h.service.VerifyAksesAnak(orgid, anak.Id); err != nil {
+	if _, err := h.service.VerifyAksesAnak(orgid, anak, utils.PtrStr(anak.Id, true), nil); err != nil {
 		return h.kirimError(c, err)
 	}
 
@@ -602,13 +686,13 @@ func (h *HttpHandler) SummaryAnak(c *fiber.Ctx) error {
 // Region Delete
 func (h *HttpHandler) DeleteAnakByID(c *fiber.Ctx) error {
 	id := c.Params("id", "")
-	uid := auth.GetUserID(c)
+	orgid := c.Locals("orgid").(*string)
 
 	if !utils.IsStrFilled(id) {
-		return h.kirimError(c, exceptions.ParameterRequired.WithMessage("Parameter ID anak required", nil))
+		return h.kirimError(c, exceptions.ParameterRequired.WithMessage("Parameter Id anak required", nil))
 	}
 
-	if err := h.service.DeleteAnakByID(id, uid); err != nil {
+	if err := h.service.DeleteAnakByID(id, *orgid); err != nil {
 		return h.kirimError(c, exceptions.Classify(err))
 	}
 	res := map[string]string{
@@ -619,7 +703,20 @@ func (h *HttpHandler) DeleteAnakByID(c *fiber.Ctx) error {
 }
 
 func (h *HttpHandler) DeleteOrangtuaByID(c *fiber.Ctx) error {
-	return nil
+	id := c.Params("id", "")
+	orgid := c.Locals("orgid").(*string)
+
+	if !utils.IsStrFilled(id) {
+		return h.kirimError(c, exceptions.ParameterRequired.Messagef("Parameeter Id orang tua harus dikirim"))
+	}
+
+	if err := h.service.DeleteOrangtuaByID(id, *orgid); err != nil {
+		return h.kirimError(c, exceptions.Classify(err))
+	}
+	res := map[string]string{
+		"message": fmt.Sprintf("Berhasil menghapus orang tua dengan id #%s", id),
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 func (h *HttpHandler) DeleteKunjunganByID(c *fiber.Ctx) error {
