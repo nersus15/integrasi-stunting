@@ -559,9 +559,11 @@ func (s *StuntingService) DeleteAnakByID(id string, orgid string) error {
 	if err := s.Repository.DeleteAnakByID(id, orgid); err != nil {
 		return err
 	}
+	// kunci id dihapus seketika karena dipakai cek akses; kunci lain menyusul di job latar
+	s.Repository.LupakanAnak(&entity.Anak{ID: id})
 
 	s.Background.Run("delete_cache_anak", func() {
-		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil, true); err == nil && anak != nil {
+		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil, false); err == nil && anak != nil {
 			s.Repository.LupakanAnak(anak.ToPayload().ToEntity())
 			s.Repository.LupakanAksesPerubahanOrangtua(anak.Id, anak.IdOrangtua)
 		}
@@ -573,6 +575,7 @@ func (s *StuntingService) DeleteOrangtuaByID(id, orgid string) error {
 	if err := s.Repository.DeleteOrangtuaByID(id, orgid); err != nil {
 		return err
 	}
+	s.Repository.LupakanOrangtua(&entity.Orangtua{ID: id})
 
 	s.Background.Run("delete_cache_orangtua", func() {
 		if orangtua, err := s.Repository.FindDeletedOrangtua(id, false); err == nil && orangtua != nil {
@@ -802,13 +805,13 @@ func (s *StuntingService) VerifyAksesOrangtua(orgid *string, o *types.Orangtua, 
 	if o == nil {
 		// cari hanya jika memang belum dicari
 		if IdSatusehat != nil {
-			orangtua, err = s.Repository.FindOrangtuaBySatusehatId(utils.StrPtr(IdSatusehat), false)
+			orangtua, err = s.Repository.FindOrangtuaBySatusehatId(utils.StrPtr(IdSatusehat), true)
 			if err != nil && errors.Is(err, sql.ErrNoRows) && utils.IsFilled(idOrangtua) {
 				// fallback search by id jika id di kirim
 				return s.VerifyAksesOrangtua(orgid, nil, idOrangtua, nil)
 			}
 		} else {
-			orangtua, err = s.Repository.FindOrangTuaById(utils.StrPtr(idOrangtua), false)
+			orangtua, err = s.Repository.FindOrangTuaById(utils.StrPtr(idOrangtua), true)
 		}
 
 	} else {
@@ -859,7 +862,7 @@ func (s *StuntingService) VerifyAksesAnak(orgid *string, a *types.Anak, idAnak, 
 	var idPosyandu *string
 
 	if utils.IsStrFilled(anak.IdOrangtua) {
-		orangtua, err := s.Repository.FindOrangTuaById(anak.IdOrangtua, false)
+		orangtua, err := s.Repository.FindOrangTuaById(anak.IdOrangtua, true)
 		if err != nil {
 			return nil, exceptions.Classify(err)
 		}

@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nersus15/integrasi/mod-stunting/config"
@@ -163,10 +165,7 @@ func (d *StuntingRepository) UpdateOrangTuaById(orangtua *entity.Orangtua, ctx c
 	if cariDulu {
 		res, err := d.FindOrangTuaById(orangtua.ID, false)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) || errors.Is(err, utils.ErrTidakDitemukan) {
-				return nil, exceptions.TidakDitemukan.Messagef("Orangtua dengan id: #%s tidak ditemukan", orangtua.ID)
-			}
-			return nil, exceptions.Internal.New(err)
+			return nil, exceptions.Classify(err)
 		}
 
 		if res == nil {
@@ -324,28 +323,32 @@ func (d *StuntingRepository) HubungkanAnakKeOrangTua(satusehatIdAnak string, idO
 }
 
 func (d *StuntingRepository) CreateOrangTua(orangtua *entity.Orangtua, ctx context.Context) (*types.Orangtua, error) {
-	// find before insert
-	r, err := d.FindOrangTuaByNik(orangtua.NIK, false)
-
-	if err == nil {
-		return r, nil
-	}
 	if ctx == nil {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(d.Context.Context, 10*time.Second)
 		defer cancel()
 	}
 
+	// satu pencarian: aktif dipakai ulang, terhapus dipulihkan, belum ada di-insert
 	var res *types.Orangtua
-	if bunDB, ok := d.Connection.GetConnection().(*bun.DB); ok {
-		pulih, err := pulihkanOrangtuaTerhapus(ctx, bunDB, orangtua)
+	lama, err := d.FindOrangTuaByNikWithDeleted(ctx, orangtua.NIK)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if lama != nil && lama.DeletedAt == nil {
+		return res.FromEntity(lama), nil
+	}
+	if lama != nil {
+		bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+		if !ok {
+			return nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+		}
+		pulih, err := pulihkanOrangtuaTerhapus(ctx, bunDB, lama, orangtua)
 		if err != nil {
 			return nil, err
 		}
-		if pulih != nil {
-			d.LupakanOrangtua(pulih)
-			return res.FromEntity(pulih), nil
-		}
+		d.LupakanOrangtua(pulih)
+		return res.FromEntity(pulih), nil
 	}
 
 	_, err = d.Connection.InsertOne(ctx, orangtua.TableName(), orangtua)
@@ -418,11 +421,7 @@ func (d *StuntingRepository) UpdateAnakById(anak *entity.Anak, ctx context.Conte
 		res, err := d.FindAnak(utils.PtrStr(anak.ID, true), anak.NIK, &anak.IDOrangtua, &anak.AnakKe, false)
 
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, exceptions.TidakDitemukan.Messagef("Anak dengan id: #%s tidak ditemukan", anak.ID)
-			} else {
-				return nil, exceptions.Internal.New(err)
-			}
+			return nil, exceptions.Classify(err)
 		}
 
 		if res == nil {
@@ -533,6 +532,10 @@ func (d *StuntingRepository) KunjunganTransaction(orangtua *entity.Orangtua, ana
 	}
 
 	d.LupakanOrangtua(orangtua)
+	// NIK yang sudah ada dipakai ulang atau dipulihkan: barisnya bisa beda id dari payload
+	if orangtua != nil && resOrangtua != nil && resOrangtua.Id != orangtua.ID {
+		d.LupakanOrangtua(resOrangtua.ToPayload().ToEntity())
+	}
 	d.LupakanAnak(anak)
 	if kunjungan != nil {
 		d.LupakanRiwayatAnak(kunjungan.IDAnak)
@@ -550,39 +553,41 @@ func CreateOrangTuaTx(ctx context.Context, tx bun.IDB, orangtua *entity.Orangtua
 	temp := new(entity.Orangtua)
 
 	// Cari dulu
-	err := tx.NewSelect().Model(temp).Where("nik = ?", orangtua.NIK).Limit(1).Scan(ctx)
+	err := tx.NewSelect().Model(temp).WhereAllWithDeleted().Where("nik = ?", orangtua.NIK).Limit(1).Scan(ctx)
 
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return nil, exceptions.Internal.WithMessage("gagal mencari data orangtua", err)
+	// jika ketemu
+	if err == nil {
+		if temp.DeletedAt == nil {
+			// Disini duplikat, tapi gunakan yang sudah ada dan jangan create baru
+			return res.FromEntity(temp), nil
 		}
-
-		if pulih, err := pulihkanOrangtuaTerhapus(ctx, tx, orangtua); err != nil || pulih != nil {
+		if pulih, err := pulihkanOrangtuaTerhapus(ctx, tx, temp, orangtua); err != nil || pulih != nil {
 			return res.FromEntity(pulih), err
 		}
-
-		// Insert
-		_, err1 := tx.NewInsert().Model(orangtua).Exec(ctx)
-		if err1 != nil {
-			return nil, err1
-		}
-
-		return res.FromEntity(orangtua), nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, exceptions.Internal.WithMessage("gagal mencari data orangtua", err)
 	}
 
-	return res.FromEntity(temp), nil
+	// Insert
+	_, err1 := tx.NewInsert().Model(orangtua).Exec(ctx)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	return res.FromEntity(orangtua), nil
 }
 
 // NIK yang hanya dipakai orangtua terhapus tidak ditolak: baris itu dipulihkan dan diperbarui dengan data baru
-func pulihkanOrangtuaTerhapus(ctx context.Context, tx bun.IDB, baru *entity.Orangtua) (*entity.Orangtua, error) {
-	lama := new(entity.Orangtua)
-	err := tx.NewSelect().Model(lama).WhereDeleted().Where("nik = ?", baru.NIK).Limit(1).Scan(ctx)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
+func pulihkanOrangtuaTerhapus(ctx context.Context, tx bun.IDB, lama, baru *entity.Orangtua) (*entity.Orangtua, error) {
+	// lama := new(entity.Orangtua)
+	// err := tx.NewSelect().Model(lama).WhereDeleted().Where("nik = ?", baru.NIK).Limit(1).Scan(ctx)
+	// if errors.Is(err, sql.ErrNoRows) {
+	// 	return nil, nil
+	// }
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	lama.Override(*baru, false)
 	now := time.Now()
@@ -694,6 +699,18 @@ func (d *StuntingRepository) FindOrangTuaByNik(nik string, loadCache bool) (*typ
 	}
 
 	return res, nil
+}
+
+// entity, bukan types: baris terhapus dipulihkan lewat UPDATE seluruh kolom, jadi tidak boleh ada kolom yang hilang
+func (d *StuntingRepository) FindOrangTuaByNikWithDeleted(ctx context.Context, nik string) (*entity.Orangtua, error) {
+	temp := new(entity.Orangtua)
+	filter := []port.DbExpression{{Expr: "nik = ?", Args: []any{nik}}}
+
+	// FindOne dengan nama tabel tidak memakai tag soft_delete, jadi baris terhapus ikut terbaca
+	if err := d.Connection.FindOne(ctx, temp, entity.Orangtua{}.TableName(), []string{"*"}, filter, map[string]int{}); err != nil {
+		return nil, err
+	}
+	return temp, nil
 }
 
 func (d *StuntingRepository) FindOrangTuaById(id string, loadCache bool) (*types.Orangtua, error) {
@@ -1147,7 +1164,6 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 		return nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
 	}
 
-	// id_induk IS NULL supaya komponen tidak muncul dua kali
 	err := bunDB.NewSelect().Model(anak).
 		Relation("Kunjungan", func(sq *bun.SelectQuery) *bun.SelectQuery {
 			return sq.Order("kj.tanggal_pengukuran ASC")
@@ -1155,19 +1171,16 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 		Relation("Kunjungan.Faskes").
 		Relation("Kunjungan.Episode").
 		Relation("Kunjungan.AtasRujukan").
-		Relation("Kunjungan.Observasi", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Where("ob.id_induk IS NULL").Order("ob.tanggal ASC", "ob.kode ASC")
+		Relation("Observasi", func(sq *bun.SelectQuery) *bun.SelectQuery {
+			return sq.Order("ob.tanggal ASC", "ob.kode ASC")
 		}).
-		Relation("Kunjungan.Observasi.Component", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Order("ob.kode ASC")
-		}).
-		Relation("Kunjungan.Diagnosa", func(sq *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Diagnosa", func(sq *bun.SelectQuery) *bun.SelectQuery {
 			return sq.Order("d.tanggal_catat ASC")
 		}).
-		Relation("Kunjungan.Layanan", func(sq *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Layanan", func(sq *bun.SelectQuery) *bun.SelectQuery {
 			return sq.Order("l.tanggal ASC")
 		}).
-		Relation("Kunjungan.Rujukan", func(sq *bun.SelectQuery) *bun.SelectQuery {
+		Relation("Rujukan", func(sq *bun.SelectQuery) *bun.SelectQuery {
 			return sq.Order("rj.tanggal ASC")
 		}).
 		Relation("Kesehatan", func(sq *bun.SelectQuery) *bun.SelectQuery {
@@ -1175,20 +1188,6 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 		}).
 		Relation("Episode", func(sq *bun.SelectQuery) *bun.SelectQuery {
 			return sq.Order("ep.mulai ASC")
-		}).
-		// Layanan dan Rujukan dipakai dua kali: daftar datar, dan ember menggantung
-		Relation("Observasi", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Where("ob.id_kunjungan IS NULL AND ob.id_induk IS NULL").Order("ob.tanggal ASC")
-		}).
-		Relation("Observasi.Component").
-		Relation("Diagnosa", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Where("d.id_kunjungan IS NULL")
-		}).
-		Relation("Layanan", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Order("l.tanggal ASC")
-		}).
-		Relation("Rujukan", func(sq *bun.SelectQuery) *bun.SelectQuery {
-			return sq.Order("rj.tanggal ASC")
 		}).
 		Where("a.id = ?", id).
 		Scan(ctx)
@@ -1200,6 +1199,7 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 		logger.Error(fmt.Sprintf("Summary Anak (id: %s): ", id) + err.Error())
 		return nil, err
 	}
+	bagiTurnunanKunjungan(anak)
 
 	var res *types.SummaryAnak
 	hasil := res.FromEntity(anak)
@@ -1207,6 +1207,100 @@ func (d *StuntingRepository) SummaryAnak(id string) (*types.SummaryAnak, error) 
 	return hasil, nil
 }
 
+func bagiTurnunanKunjungan(anak *entity.Anak) {
+	kunjungan := make(map[string]*entity.Kunjungan, len(anak.Kunjungan))
+
+	for _, k := range anak.Kunjungan {
+		kunjungan[k.ID] = k
+	}
+
+	tempat := func(idkunjungan *string) (k *entity.Kunjungan, simpan bool) {
+		if idkunjungan == nil {
+			return nil, true
+		}
+		k, ada := kunjungan[*idkunjungan]
+		return k, ada
+	}
+
+	induk := map[string]*entity.Observasi{}
+	var orphanObs []*entity.Observasi
+
+	for _, o := range anak.Observasi {
+		if o.IDInduk != nil {
+			continue
+		}
+		k, simpan := tempat(o.IDKunjungan)
+		if !simpan {
+			continue
+		}
+
+		induk[o.ID] = o
+		if k != nil {
+			// masukkan observasi ke kunjungan
+			k.Observasi = append(k.Observasi, o)
+		} else {
+			// observasi yang tidak memiliki kunjungan (mungkin belum dikirim) masukkan ke anak.observasi
+			orphanObs = append(orphanObs, o)
+		}
+	}
+
+	// Observasi.component, disimpan di tabel observasi sebagai child dari observation
+	for _, o := range anak.Observasi {
+		// jika o.IDInduk == nil berarti ini resource observation bukan observation.component
+		if o.IDInduk == nil {
+			continue
+		}
+		// cari induknya dari daftar, jika ada, masukkan o (observation.component ini) ke induknya (observation.component)
+		if p, ada := induk[*o.IDInduk]; ada {
+			p.Component = append(p.Component, o)
+		}
+	}
+
+	// Urutkan observation
+	for _, o := range induk {
+		slices.SortStableFunc(o.Component, func(a, b *entity.Observasi) int {
+			return strings.Compare(a.Kode, b.Kode)
+		})
+	}
+	anak.Observasi = orphanObs
+
+	var orphanDiagnosa []*entity.Diagnosa
+	for _, d := range anak.Diagnosa {
+		if k, simpan := tempat(d.IDKunjungan); k != nil {
+			k.Diagnosa = append(k.Diagnosa, d)
+		} else if simpan {
+			orphanDiagnosa = append(orphanDiagnosa, d)
+		}
+	}
+	anak.Diagnosa = orphanDiagnosa
+
+	// layanan & rujukan: daftar datar anak tetap memuat yang menggantung
+	var layanan []*entity.Layanan
+	for _, l := range anak.Layanan {
+		k, simpan := tempat(l.IDKunjungan)
+		if !simpan {
+			continue
+		}
+		if k != nil {
+			k.Layanan = append(k.Layanan, l)
+		}
+		layanan = append(layanan, l)
+	}
+	anak.Layanan = layanan
+
+	var rujukan []*entity.Rujukan
+	for _, r := range anak.Rujukan {
+		k, simpan := tempat(r.IDKunjungan)
+		if !simpan {
+			continue
+		}
+		if k != nil {
+			k.Rujukan = append(k.Rujukan, r)
+		}
+		rujukan = append(rujukan, r)
+	}
+	anak.Rujukan = rujukan
+}
 func (d *StuntingRepository) FindKunjunganById(id string) (*types.Kunjungan, error) {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*10)
 	defer cancel()
@@ -1758,6 +1852,15 @@ var belumDihapus = port.DbExpression{Expr: `"deletedAt"`, Args: []any{nil}}
 
 var tabelTurunan = []string{"stunting.observasi", "stunting.diagnosa", "stunting.layanan", "stunting.rujukan"}
 
+// keempat tabel disapu dalam satu statement; UPDATE di dalam WITH tetap dijalankan walau hasilnya tidak dibaca
+var sapuTurunan = func() string {
+	bagian := make([]string, len(tabelTurunan))
+	for i, tabel := range tabelTurunan {
+		bagian[i] = fmt.Sprintf(`t%d AS (UPDATE %s SET id_kunjungan = ?, "updatedAt" = ? WHERE ref_encounter = ? AND id_kunjungan IS NULL AND "deletedAt" IS NULL)`, i, tabel)
+	}
+	return "WITH " + strings.Join(bagian, ", ") + " SELECT 1"
+}()
+
 func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Context) error {
 	if data == nil {
 		return exceptions.BodyRusak.New(nil)
@@ -1795,14 +1898,13 @@ func (d *StuntingRepository) SimpanDataMedis(data *DataMedis, ctx context.Contex
 
 			// sapu turunan yang lebih dulu tiba di bundle lain
 			if utils.IsFilled(data.RefEncounter) {
-				for _, tabel := range tabelTurunan {
-					if _, err := tx.NewUpdate().Table(tabel).
-						Set("id_kunjungan = ?", data.Kunjungan.ID).
-						Set(`"updatedAt" = ?`, time.Now()).
-						Where(`ref_encounter = ? AND id_kunjungan IS NULL AND "deletedAt" IS NULL`, *data.RefEncounter).
-						Exec(ctx); err != nil {
-						return err
-					}
+				now := time.Now()
+				args := make([]any, 0, 3*len(tabelTurunan))
+				for range tabelTurunan {
+					args = append(args, data.Kunjungan.ID, now, *data.RefEncounter)
+				}
+				if _, err := tx.NewRaw(sapuTurunan, args...).Exec(ctx); err != nil {
+					return err
 				}
 			}
 		}
