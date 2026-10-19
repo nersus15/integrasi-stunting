@@ -107,7 +107,7 @@ type Anak struct {
 	bun.BaseModel `bun:"table:stunting.anak,alias:a"`
 
 	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
-	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),default:null" json:"satusehat_id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"satusehat_id"`
 	IDOrangtua   string     `bun:"id_orangtua,type:varchar(36),nullzero" json:"id_orangtua"`
 	Nama         string     `bun:"nama,type:varchar(255),notnull" json:"nama"`
 	NIK          *string    `bun:"nik,type:varchar(16),nullzero,unique" json:"nik"`
