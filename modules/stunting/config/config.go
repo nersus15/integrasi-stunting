@@ -80,14 +80,12 @@ func (c *ModuleConfig) SetEnvBindings() map[string]string {
 		"module.fhir.source.priority": "MODULE_FHIR_SOURCE_PRIORITY",
 		"module.fhir.source.header":   "MODULE_FHIR_SOURCE_PRIORITY_HEADER",
 
-		// Kafka
 		"kafka.enabled": "KAFKA_ENABLED",
 		"kafka.brokers": "KAFKA_BROKERS",
 		"kafka.group":   "KAFKA_GROUP_ID",
 		"kafka.offset":  "KAFKA_AUTO_OFFSET_RESET",
 		"kafka.topics":  "KAFKA_TOPICS",
 
-		// CRON
 		"module.fhir.cron.enabled":          "CRON_ENABLED",
 		"module.fhir.cron.schedule":         "CRON_SCHEDULE",
 		"module.fhir.cron.backup_chunksize": "CRON_BACKUP_CHUNKSIZE",

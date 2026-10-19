@@ -1,7 +1,7 @@
 [build]
 cmd = "go build -o ./tmp/main ./app/main.go"
 entrypoint = ["./tmp/main", "stunting"]
-exclude_dir = ["go"]
+exclude_dir = ["go", "tmp", "tests", "vendor", "testdata"]
 poll = true
 poll_interval = 500
 

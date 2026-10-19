@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
-	"github.com/uptrace/bun/driver/pgdriver"
 	"github.com/webcore-go/webcore/infra/logger"
 )
 
-// Kind adalah cetakan satu macam kesalahan.
+var ErrTidakDitemukan = errors.New("data tidak ditemukan")
+
 type Kind struct {
 	HttpCode  int
 	ErrorCode int
@@ -20,8 +19,7 @@ type Kind struct {
 	Message   string
 }
 
-// Error adalah kesalahan siap kirim. Sebab aslinya disimpan tapi tidak ikut ke
-// klien: Error() hanya mengembalikan Message.
+// Error() hanya berisi Message, sebab asli tidak ikut ke klien
 type Error struct {
 	HttpCode  int
 	ErrorCode int
@@ -33,26 +31,21 @@ type Error struct {
 
 func (e *Error) Error() string { return e.Message }
 
-// Unwrap menjaga errors.Is dan errors.As tetap bekerja terhadap sebab aslinya.
 func (e *Error) Unwrap() error { return e.cause }
 
-// Cause mengembalikan error asli untuk keperluan log.
 func (e *Error) Cause() error { return e.cause }
 
-// New memakai pesan bawaan Kind.
 func (k Kind) New(cause error) *Error {
 	return &Error{k.HttpCode, k.ErrorCode, k.Name, k.Message, cause}
 }
 
-// WithMessage mengganti pesan bawaan, misalnya untuk menyebut field yang gagal.
 func (k Kind) WithMessage(message string, cause error) *Error {
-	if !utils.IsStrFilled(message) {
+	if strings.TrimSpace(message) == "" {
 		message = k.Message
 	}
 	return &Error{k.HttpCode, k.ErrorCode, k.Name, message, cause}
 }
 
-// Messagef seperti WithMessage tapi memformat pesannya, tanpa sebab.
 func (k Kind) Messagef(format string, args ...any) *Error {
 	return &Error{k.HttpCode, k.ErrorCode, k.Name, fmt.Sprintf(format, args...), nil}
 }
@@ -98,8 +91,11 @@ var (
 	TidakTersedia = Kind{503, 5002, "SERVICE_UNAVAILABLE", "Layanan sedang sibuk, silakan coba lagi"}
 )
 
-// Classify menerjemahkan error apa pun menjadi *Error siap kirim.
-// Error yang sudah bertipe *Error dikembalikan apa adanya.
+// penerjemah galat dari adapter, mis. driver database
+var penerjemah []func(error) *Error
+
+func DaftarkanPenerjemah(f func(error) *Error) { penerjemah = append(penerjemah, f) }
+
 func Classify(err error) *Error {
 	if err == nil {
 		return nil
@@ -115,48 +111,14 @@ func Classify(err error) *Error {
 	}
 
 	// jaring pengaman supaya ErrNoRows tetap 404, bukan 500
-	if errors.Is(err, utils.ErrTidakDitemukan) || errors.Is(err, databasesql.ErrNoRows) {
+	if errors.Is(err, ErrTidakDitemukan) || errors.Is(err, databasesql.ErrNoRows) {
 		return TidakDitemukan.New(err)
 	}
 
-	var pg pgdriver.Error
-	if !errors.As(err, &pg) {
-		return Internal.New(err)
-	}
-
-	if pg.StatementTimeout() {
-		return TidakTersedia.New(err)
-	}
-
-	switch pg.Field('C') {
-	case "23505": // unique_violation, mencakup primary key
-		switch pg.Field('n') {
-		case "pk_orangtua":
-			return DuplikatId.WithMessage("id orangtua sudah dipakai", err)
-		case "pk_anak":
-			return DuplikatId.WithMessage("id anak sudah dipakai", err)
-		case "pk_kunjungan":
-			return DuplikatId.WithMessage("id kunjungan sudah dipakai", err)
-		case "pk_kesehatan":
-			return DuplikatId.WithMessage("id kesehatan sudah dipakai", err)
-		case "uq_orangtua_nik":
-			return DuplikatNikOrangtua.New(err)
-		case "uq_orangtua_no_kk":
-			return DuplikatNoKK.New(err)
-		case "uq_anak_nik":
-			return DuplikatNikAnak.New(err)
+	for _, terjemah := range penerjemah {
+		if e := terjemah(err); e != nil {
+			return e
 		}
-		return Duplikat.New(err)
-
-	case "23503": // foreign_key_violation
-		return ReferensiHilang.New(err)
-
-	case "23502": // not_null_violation
-		return KolomWajib.WithMessage("kolom wajib tidak boleh kosong: "+pg.Field('c'), err)
-	}
-
-	if pg.IntegrityViolation() || strings.HasPrefix(pg.Field('C'), "22") {
-		return Constraint.New(err)
 	}
 
 	return Internal.New(err)

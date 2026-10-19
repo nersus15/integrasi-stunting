@@ -16,10 +16,6 @@ import (
 	"github.com/yuin/goldmark/parser"
 )
 
-// berkasDocs memuat dokumentasi ke dalam biner, sehingga yang disajikan selalu
-// sama dengan versi yang sedang berjalan -- tidak bergantung pada berkas di
-// disk yang bisa tertinggal saat deploy.
-//
 //go:embed docs/*.md docs/kerangka.html docs/gaya.css docs/cari.js
 var berkasDocs embed.FS
 
@@ -29,8 +25,7 @@ type dokumen struct {
 	ket    string
 }
 
-// Hanya nama yang terdaftar di sini yang dilayani. Tanpa daftar ini, parameter
-// "doc" bisa dipakai menjelajah berkas lain di dalam embed.FS.
+// hanya dokumen di daftar ini yang bisa dibuka lewat ?doc
 var daftarDokumen = map[string]dokumen{
 	"index": {
 		berkas: "docs/index.md",
@@ -64,21 +59,13 @@ var daftarDokumen = map[string]dokumen{
 	},
 }
 
-// md merender markdown ke HTML. GFM dinyalakan karena dokumentasi banyak
-// memakai tabel; auto heading id supaya tiap bagian bisa ditaut langsung.
-// Raw HTML sengaja TIDAK diizinkan -- dokumen ini tidak membutuhkannya, dan
-// mematikannya menutup satu jalan masuk seandainya isinya kelak datang dari
-// sumber yang kurang tepercaya.
+// raw HTML dimatikan, dokumen tidak membutuhkannya
 var md = goldmark.New(
 	goldmark.WithExtensions(extension.GFM),
 	goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 )
 
-// Docs menyajikan dokumentasi sebagai halaman HTML bergaya.
-//
-//	GET /stunting/docs              -> index, dirender
-//	GET /stunting/docs?doc=errors   -> katalog error, dirender
-//	GET /stunting/docs?raw=1        -> markdown mentah, untuk curl dan skrip
+// GET /stunting/docs[?doc=nama][&raw=1]
 func (m *Module) Docs(c *fiber.Ctx) error {
 	docsSekali.Do(siapkanDocs)
 	if docsGalat != nil {
@@ -128,7 +115,7 @@ type asetDocs struct {
 	tipe string
 }
 
-// isi docs ter-embed dan tidak berubah selama proses hidup, cukup dirender sekali
+// isi embed tidak berubah, cukup dirender sekali
 var (
 	docsSekali  sync.Once
 	docsHalaman map[string]halamanDocs
@@ -196,12 +183,10 @@ func (m *Module) docsGagal(c *fiber.Ctx, apa string, err error) error {
 	})
 }
 
-// urutanDokumen menentukan urutan tampil di nav. Sengaja ditulis manual, bukan
-// diurut abjad: index adalah pintu masuk dan harus memimpin.
+// urutan nav, index selalu pertama
 var urutanDokumen = []string{"index", "jakantro", "faskes", "baca", "contoh", "errors"}
 
-// daftarHalamanJSON dipakai skrip pencarian untuk tahu halaman apa saja yang
-// boleh diambil versi mentahnya.
+// daftar halaman untuk skrip pencarian
 func daftarHalamanJSON() string {
 	var b strings.Builder
 	b.WriteByte('[')
@@ -228,8 +213,7 @@ func navDokumen(aktif string) string {
 	return b.String()
 }
 
-// sorotKotak memberi warna pada blockquote yang diawali penanda, supaya hal
-// penting tidak tenggelam. Blockquote lain dibiarkan apa adanya.
+// warnai blockquote yang diawali penanda
 func sorotKotak(s string) string {
 	for penanda, kelas := range map[string]string{
 		"<strong>Penting.</strong>":   "penting",
@@ -244,10 +228,7 @@ func sorotKotak(s string) string {
 	return s
 }
 
-// bungkusTabel membungkus setiap tabel dengan pembungkus bergulir, supaya tabel
-// lebar tidak membuat seluruh halaman bergeser mendatar. goldmark tidak punya
-// opsi untuk ini, dan markdown-nya milik kita sendiri, jadi penggantian teks
-// biasa sudah memadai.
+// tabel lebar dibungkus agar bisa digulir mendatar
 func bungkusTabel(s string) string {
 	s = strings.ReplaceAll(s, "<table>", `<div class="tabel"><table>`)
 	return strings.ReplaceAll(s, "</table>", "</table></div>")

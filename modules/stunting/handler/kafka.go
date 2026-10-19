@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 
 	"github.com/nersus15/integrasi/mod-stunting/config"
-	exceptions "github.com/nersus15/integrasi/mod-stunting/helper/Exceptions"
+	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/service"
 	backgroundworker "github.com/nersus15/lib-background-worker"
@@ -28,17 +28,15 @@ type KafkaHandler struct {
 	config        *config.ModuleConfig
 	background    *backgroundworker.BackgroundWorker
 	memory        *port.ICacheMemory
-	// kafka         *port.IKafka
 }
 
 func NewKafkaHandler(ctx *core.AppContext, service *service.StuntingService, stream *service.StreamService, config *config.ModuleConfig, background *backgroundworker.BackgroundWorker, memory *port.ICacheMemory) *KafkaHandler {
 	return &KafkaHandler{
-		context:    ctx,
-		service:    service,
-		config:     config,
-		background: background,
-		memory:     memory,
-		// kafka:         kafka,
+		context:       ctx,
+		service:       service,
+		config:        config,
+		background:    background,
+		memory:        memory,
 		streamService: stream,
 	}
 }
@@ -73,7 +71,6 @@ func (k *KafkaHandler) proses(data []byte) (key string, err error) {
 		key = sidikPesan(data)
 	}
 
-	// susun ulang bundle dengan request payload dan response
 	bundle, _, e := k.streamService.SusunUlangBundle(transaction)
 
 	if e != nil {
@@ -84,7 +81,6 @@ func (k *KafkaHandler) proses(data []byte) (key string, err error) {
 		return key, exceptions.Internal.Messagef("Bundle transaksi FHIR kosong")
 	}
 
-	// proses selanjutnya adalah untuk ekstraksi data
 	return key, k.streamService.ProsesTransaksiFHIR(bundle, transaction.Patient)
 }
 

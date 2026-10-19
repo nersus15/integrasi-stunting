@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
-	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 )
 
@@ -81,24 +80,6 @@ func (d *StuntingRepository) LupakanAnak(anak *entity.Anak) {
 	d.lupakan(keys...)
 }
 
-func (d *StuntingRepository) LupakanAnakTypes(a *types.Anak) {
-	if a == nil {
-		return
-	}
-
-	e := &entity.Anak{
-		ID:         a.Id,
-		IDOrangtua: a.IdOrangtua,
-		NIK:        a.Nik,
-		AnakKe:     a.AnakKe,
-	}
-	if a.IdSatusehat != nil {
-		e.SatusehatId = *a.IdSatusehat
-	}
-
-	d.LupakanAnak(e)
-}
-
 func (d *StuntingRepository) LupakanRiwayatAnak(idAnak string) {
 	if idAnak == "" {
 		return
@@ -123,7 +104,7 @@ func (d *StuntingRepository) GetStringByKey(key string) string {
 	}
 	return utils.StrPtr(out)
 }
-func (d *StuntingRepository) GetBool(key string) (bool, foun bool) {
+func (d *StuntingRepository) GetBool(key string) (nilai bool, ada bool) {
 	out := new(bool)
 	if ok := d.Memory.Get(key, out); !ok {
 		return false, false

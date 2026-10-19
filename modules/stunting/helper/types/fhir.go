@@ -5,7 +5,6 @@ import "github.com/samply/golang-fhir-models/fhir-models/fhir"
 type BundleEntryResponse struct {
 	fhir.BundleEntryResponse
 
-	// Override
 	Id           *string `bson:"resourceID" json:"resourceID"`
 	ResourceType *string `bson:"resourceType" json:"resourceType"`
 }

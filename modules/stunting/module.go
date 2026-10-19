@@ -2,13 +2,9 @@ package stunting
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
 	"github.com/nersus15/integrasi/mod-stunting/handler"
-	exceptions "github.com/nersus15/integrasi/mod-stunting/helper/Exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/repository"
 	"github.com/nersus15/integrasi/mod-stunting/service"
@@ -17,11 +13,9 @@ import (
 	kafka "github.com/webcore-go/lib-kafka"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/helper"
-	"github.com/webcore-go/webcore/app/out"
 	appConfig "github.com/webcore-go/webcore/infra/config"
 	"github.com/webcore-go/webcore/infra/logger"
 	"github.com/webcore-go/webcore/port"
-	"github.com/webcore-go/webcore/port/auth"
 )
 
 const (
@@ -29,7 +23,6 @@ const (
 	ModuleVersion = "1.0.0"
 )
 
-// Module implements the module.Module interface
 type Module struct {
 	config     *config.ModuleConfig
 	service    *service.StuntingService
@@ -42,35 +35,28 @@ type Module struct {
 	kafka      *handler.KafkaHandler
 }
 
-// NewModule creates a new Module instance
 func NewModule() *Module {
 	return &Module{}
 }
 
-// Name returns the unique name of the module
 func (m *Module) Name() string {
 	return ModuleName
 }
 
-// Version returns the version of the module
 func (m *Module) Version() string {
 	return ModuleVersion
 }
 
-// Dependencies returns the dependencies of the module to other modules
 func (m *Module) Dependencies() []string {
 	return []string{}
 }
 
-// Init initializes the module with the given app and dependencies
 func (m *Module) Init(ctx *core.AppContext) error {
-	// Load configuration into ModuleConfig (bind to key)
 	m.config = &config.ModuleConfig{}
 	if err := appConfig.LoadDefaultConfigModule("fhir", m.config); err != nil {
 		return err
 	}
 
-	// Register services and repositories
 	libMem, ok := core.Instance().Context.GetDefaultSingletonInstance("cache:redis")
 	if !ok {
 		return fmt.Errorf("Gagal memuat instance Redis")
@@ -89,14 +75,11 @@ func (m *Module) Init(ctx *core.AppContext) error {
 
 	m.repository = repository.NewStuntingRepository(ctx, m.config, db, m.memory)
 
-	// Jalankan migrasi otomatis hanya jika database driver menggunakan sqlite
-	// if ctx.Config.Database.Driver == "sqlite" {
 	migrationDir := fmt.Sprintf("migration/stunting/%s", ctx.Config.Database.Driver)
 	err := m.repository.StartMigration(db.GetConnection(), ctx.Config.Database.Driver, "stunting", "up", migrationDir, nil)
 	if err != nil {
 		return fmt.Errorf("Gagal menjalankan migrasi otomatis: %s", err)
 	}
-	// }
 
 	workerlib, err := ctx.StartSingletonInstance("backgroundworker")
 
@@ -111,7 +94,7 @@ func (m *Module) Init(ctx *core.AppContext) error {
 	m.service = service.NewStuntingService(ctx, m.config, m.repository, m.background)
 
 	streamService := service.NewStreamService(ctx, m.service, m.config, m.repository, m.background)
-	m.handler = handler.NewHttpHandler(ctx, m.config, m.service, streamService, m.background, m.memory)
+	m.handler = handler.NewHttpHandler(ctx, m.config, m.service, streamService)
 
 	if ctx.Config.Kafka.Enabled {
 		m.kafka = handler.NewKafkaHandler(ctx, m.service, streamService, m.config, m.background, &m.memory)
@@ -131,46 +114,14 @@ func (m *Module) Init(ctx *core.AppContext) error {
 		go kafkaConsumer.Run(ctx.Context)
 	}
 
-	// Custom global middleware for /api
-	ctx.Web.Use("/api", func(c *fiber.Ctx) error {
-		// get path and method
-		method := c.Method()
-		path := c.Path()
+	ctx.Web.Use("/api", handler.Otorisasi(m.memory))
 
-		if method == fiber.MethodGet {
-			orgid, err := m.GetOrgid(c)
-			if err != nil {
-				k := exceptions.Classify(err)
-				return c.Status(k.HttpCode).JSON(out.ErrorDetail(k.HttpCode, k.ErrorCode, k.Name, k.Message, k))
-			}
-
-			// pass orgid
-			c.Locals("orgid", orgid)
-			return c.Next()
-		}
-
-		var err error
-		if strings.HasPrefix(path, "/api/faskes") {
-			err = m.Khusus(c, "faskes")
-		} else {
-			err = m.Khusus(c, "jakantro")
-		}
-
-		if err != nil {
-			k := exceptions.Classify(err)
-			return c.Status(k.HttpCode).JSON(out.ErrorDetail(k.HttpCode, k.ErrorCode, k.Name, k.Message, k))
-		}
-		return c.Next()
-	})
-
-	// Register routes
 	m.registerModuleRoute(ctx.Root)
 	m.registerApiJakantroRoute(ctx.Root)
 	m.registerApiFaskes(ctx.Root)
 	m.registerRootRoute(ctx.Web)
 
 	if m.config.Cron.Enabled {
-		// Inisiai CronJob
 		cronLoader, err := ctx.GetDefaultLibraryLoader("cron")
 
 		if err != nil {
@@ -189,7 +140,6 @@ func (m *Module) Init(ctx *core.AppContext) error {
 
 	}
 
-	// These can be accessed through the central registry
 	logger.Info("Module Integrasi Stunting initialized successfully")
 
 	return nil
@@ -207,321 +157,14 @@ func (m *Module) Routes() []*core.ModuleRoute {
 	return m.routes
 }
 
-// Services returns the services provided by this module
 func (m *Module) Services() map[string]any {
-	// Return services that can be used by other modules
 	return map[string]any{
 		"stunting": m.service,
 	}
 }
 
-// Repositories returns the repositories provided by this module
 func (m *Module) Repositories() map[string]any {
-	// Return repositories that can be used by other modules
 	return map[string]any{
 		"stunting": m.repository,
 	}
-}
-
-// Authorization Middleware
-func (m *Module) Khusus(c *fiber.Ctx, role string) error {
-	orgid, err := m.GetOrgid(c)
-
-	if err != nil {
-		return err
-	}
-
-	if orgid == nil || (role == "faskes" && utils.StrPtr(orgid) == "jakantro") || (role == "jakantro" && utils.StrPtr(orgid) != "jakantro") {
-		return exceptions.Forbidden.Messagef("endpoint ini hanya untuk %s", role)
-	}
-
-	// pass orgid
-	c.Locals("orgid", orgid)
-
-	return nil
-}
-
-func (m *Module) GetOrgid(c *fiber.Ctx) (*string, error) {
-	// Cek permission
-	var orgid string
-	memorgid := new("")
-	apikey := auth.GetAPIKey(c)
-	memkey := "USERORGID::" + apikey
-
-	if ok := m.memory.Get(memkey, memorgid); !ok {
-		groups := auth.GetUserGroups(c)
-		if groups == nil {
-			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
-		}
-		ada := false
-
-		for _, g := range groups {
-			if g == "jakantro" {
-				ada = true
-				orgid = g
-				break
-			} else if strings.Contains(g, "orgid:") {
-				ada = true
-				orgid = strings.Replace(g, "orgid:", "", 1)
-				break
-			}
-		}
-
-		if !ada {
-			return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user", nil)
-		}
-
-		err := m.memory.Set(memkey, orgid, 24*time.Minute)
-
-		if err != nil {
-			logger.Error("CacheOrgid", err)
-		}
-	} else {
-		logger.Info("Orgid dari cache: " + *memorgid)
-		orgid = *memorgid
-	}
-
-	if !utils.IsStrFilled(orgid) {
-		return nil, exceptions.Forbidden.WithMessage("Gagal verifikasi hak akses user: user group tidak ditemukan", nil)
-	}
-
-	return &orgid, nil
-}
-
-// registerRoutes registers the module's routes
-func (m *Module) registerModuleRoute(root fiber.Router) {
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/kafka/gagal",
-		Handler: m.handler.DaftarKafkaGagal,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kafka/gagal/retry",
-		Handler: m.handler.RetrySemuaKafkaGagal,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kafka/gagal/:id/retry",
-		Handler: m.handler.RetryKafkaGagal,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/orangtua/:id?",
-		Handler: m.handler.FindOrangTua,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/orangtua/:id/anak",
-		Handler: m.handler.ListAnak,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/anak/:id?",
-		Handler: m.handler.FindAnak,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/anak/:id/kunjungan",
-		Handler: m.handler.FindKunjunganByIdAnak,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/anak/:id/kesehatan",
-		Handler: m.handler.FindKesehatanByIdAnak,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/anak/:id/summary",
-		Handler: m.handler.SummaryAnak,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/kunjungan/:id",
-		Handler: m.handler.FindKunjunganById,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/kesehatan/:id",
-		Handler: m.handler.FindKesehatanById,
-		Root:    root,
-	})
-}
-
-func (m *Module) registerApiJakantroRoute(root fiber.Router) {
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/orangtua",
-		Handler: m.handler.CreateOrangTua,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/anak",
-		Handler: m.handler.CreateAnak,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kunjungan",
-		Handler: m.handler.CreateKunjungan,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/kesehatan",
-		Handler: m.handler.CreateKesehatan,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "PUT",
-		Path:    "/orangtua",
-		Handler: m.handler.UpdateOrantua,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "PUT",
-		Path:    "/anak",
-		Handler: m.handler.UpdateAnak,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "PUT",
-		Path:    "/kunjungan/:id",
-		Handler: m.handler.UpdateKunjunganById,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "PUT",
-		Path:    "/kesehatan/:id",
-		Handler: m.handler.UpdateKesehatanById,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "DELETE",
-		Path:    "/anak/:id",
-		Handler: m.handler.DeleteAnakByID,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "DELETE",
-		Path:    "/orangtua/:id",
-		Handler: m.handler.DeleteOrangtuaByID,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "DELETE",
-		Path:    "/kunjungan/:id",
-		Handler: m.handler.DeleteKunjunganByID,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "DELETE",
-		Path:    "/kesehtan/:id",
-		Handler: m.handler.DeleteKesehatanBYID,
-		Root:    root,
-	})
-}
-
-func (m *Module) registerApiFaskes(root fiber.Router) {
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/faskes/anak",
-		Handler: m.handler.CreateAnakFaskes,
-		Root:    root,
-	})
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/faskes/orangtua",
-		Handler: m.handler.CreateOrangTuaFaskes,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "POST",
-		Path:    "/faskes/pemeriksaan",
-		Handler: m.handler.SimpanPemeriksaanFaskes,
-		Root:    root,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "PUT",
-		Path:    "/faskes/:resourceName",
-		Handler: m.handler.UpdateResourceBySatusehatId,
-		Root:    root,
-	})
-}
-func (m *Module) registerRootRoute(web *fiber.App) {
-	moduleRoot := web.Group("/" + m.Name())
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/health",
-		Handler: m.Health,
-		Root:    moduleRoot,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/info",
-		Handler: m.Info,
-		Root:    moduleRoot,
-	})
-
-	m.routes = core.AppendRouteToArray(m.routes, &core.ModuleRoute{
-		Method:  "GET",
-		Path:    "/docs",
-		Handler: m.Docs,
-		Root:    moduleRoot,
-	})
-}
-
-// ModuleHealth returns the health status of the module
-func (m *Module) Health(c *fiber.Ctx) error {
-	health := map[string]any{
-		"status":    "healthy",
-		"module":    ModuleName,
-		"version":   ModuleVersion,
-		"timestamp": time.Now().Format(time.RFC3339),
-	}
-	return c.JSON(health)
-}
-
-func (m *Module) Info(c *fiber.Ctx) error {
-	endpoints := []string{}
-	for _, endpoint := range m.routes {
-		endpoint := endpoint.Method + " " + endpoint.Path
-		endpoints = append(endpoints, endpoint)
-	}
-
-	path := "/" + ModuleName
-
-	info := map[string]any{
-		"name":        ModuleName,
-		"version":     ModuleVersion,
-		"description": "Integrasi data Stunting",
-		"path":        path,
-		"endpoints":   endpoints,
-		"config":      m.config,
-	}
-	return c.JSON(info)
 }
