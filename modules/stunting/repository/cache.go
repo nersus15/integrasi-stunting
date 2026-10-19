@@ -37,12 +37,23 @@ func keyAksesKlinis(orgid, idAnak, idOrangtua string) string {
 	return fmt.Sprintf("AKSESKLINIS:%s:%s:%s", orgid, idAnak, idOrangtua)
 }
 
+var JedaLupakanUlang = 12 * time.Second
+
 func (d *StuntingRepository) lupakan(keys ...string) {
+	var dihapus []string
 	for _, k := range keys {
 		if k == "" {
 			continue
 		}
 		_ = d.Memory.Delete(k)
+		dihapus = append(dihapus, k)
+	}
+	if len(dihapus) > 0 && JedaLupakanUlang > 0 {
+		time.AfterFunc(JedaLupakanUlang, func() {
+			for _, k := range dihapus {
+				_ = d.Memory.Delete(k)
+			}
+		})
 	}
 }
 
