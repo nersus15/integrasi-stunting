@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
+	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/helper/validasi"
 	"github.com/webcore-go/webcore/infra/logger"
 )
@@ -86,5 +87,19 @@ func (h *HttpHandler) FindKesehatanById(c *fiber.Ctx) error {
 }
 
 func (h *HttpHandler) DeleteKesehatanByID(c *fiber.Ctx) error {
-	return nil
+	id := c.Params("id", "")
+	orgid := c.Locals("orgid").(*string)
+
+	if !utils.IsStrFilled(id) {
+		return kirimError(c, exceptions.ParameterRequired.WithMessage("Parameter Id kesehatan required", nil))
+	}
+
+	if err := h.service.DeleteKesehatanById(id, *orgid); err != nil {
+		return kirimError(c, exceptions.Classify(err))
+	}
+	res := map[string]string{
+		"message": fmt.Sprintf("Berhasil menghapus data kesehatan dengan id #%s", id),
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
 }

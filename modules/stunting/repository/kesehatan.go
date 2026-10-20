@@ -130,6 +130,28 @@ func (d *StuntingRepository) CreateKesehatan(kesehatan *entity.Kesehatan, ctx co
 	return kesehatan, nil
 }
 
+func (d *StuntingRepository) DeleteKesehatanById(id, orgid string) error {
+	ctx, cancel := context.WithTimeout(d.Context.Context, 5*time.Second)
+	defer cancel()
+
+	filter := []port.DbExpression{
+		{Expr: "id", Args: []any{id}},
+	}
+	emptyModel := new(entity.Kesehatan)
+	affected, err := d.Connection.DeleteOne(ctx, emptyModel, filter)
+
+	if err != nil {
+		logger.Debug("Delete Kesehatan By Id", "id", id, "err", helper.ToLogJSON(err.Error()))
+		return err
+	}
+
+	if affected < 1 {
+		return exceptions.TidakDitemukan.Messagef("Anak dengan id #%s tidak ditemukan", id)
+	}
+
+	return nil
+}
+
 func CreateKesehatanTx(ctx context.Context, tx bun.IDB, kesehatan *entity.Kesehatan) (*entity.Kesehatan, error) {
 	if kesehatan == nil {
 		return nil, nil

@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
@@ -55,7 +56,9 @@ func (d *StuntingRepository) lupakan(keys ...string) {
 		})
 	}
 }
-
+func (d *StuntingRepository) Lupakan(keys ...string) {
+	d.lupakan(keys...)
+}
 func (d *StuntingRepository) LupakanAnak(anak *entity.Anak) {
 	if anak == nil {
 		return
@@ -117,4 +120,41 @@ func (d *StuntingRepository) SetStringByKey(key, value string, ttl time.Duration
 }
 func (d *StuntingRepository) SetBool(key string, value bool, ttl time.Duration) {
 	d.Memory.Set(key, value, ttl)
+}
+
+func (d *StuntingRepository) GetKey(resource, diff string, varian *string) *string {
+	switch strings.ToLower(resource) {
+	case "anak", "orangtua":
+		if !utils.IsFilled(varian) {
+			return nil
+		}
+
+		switch utils.StrPtr(varian) {
+		case "id":
+			if strings.EqualFold(resource, "anak") {
+				return utils.PtrStr(keyAnakId(diff), true)
+			}
+			return utils.PtrStr(keyOrangtuaId(diff), true)
+
+		case "nik":
+			if strings.EqualFold(resource, "anak") {
+				return utils.PtrStr(keyAnakNik(diff), true)
+			}
+			return utils.PtrStr(keyOrangtuaNik(diff), true)
+
+		case "satusehat":
+			if strings.EqualFold(resource, "anak") {
+				return utils.PtrStr(keyAnakSatusehat(diff), true)
+			}
+			return utils.PtrStr(keyOrangtuaSatusehat(diff), true)
+		}
+
+	case "kunjungan":
+		return utils.PtrStr(keyKunjunganId(diff), true)
+
+	case "kesehatan":
+		return utils.PtrStr(keyKesehatanId(diff), true)
+	}
+
+	return nil
 }

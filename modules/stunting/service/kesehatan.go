@@ -100,3 +100,15 @@ func (s *StuntingService) FindKesehatanById(id string) (*types.Kesehatan, error)
 	e, err := s.Repository.FindKesehatanById(id)
 	return keDTO((*types.Kesehatan).FromEntity, e, err)
 }
+
+func (s *StuntingService) DeleteKesehatanById(id, orgid string) error {
+	if err := s.Repository.DeleteKesehatanById(id, orgid); err != nil {
+		return err
+	}
+
+	// Hapus cache
+	if memkey := s.Repository.GetKey("kesehatan", id, nil); memkey != nil {
+		s.Repository.Lupakan(*memkey)
+	}
+	return nil
+}
