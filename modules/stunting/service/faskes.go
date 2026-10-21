@@ -31,6 +31,7 @@ func (s *StuntingService) UpdateKunjunganBySatusehatId(orgid string, data *entit
 	if err := s.syaratUbahFaskes(orgid, "kunjungan", data.SatusehatId); err != nil {
 		return nil, err
 	}
+	data.UpdatedBy = &orgid
 	gabungan, err := s.Repository.UpdateKunjunganBySatusehatId(data, false)
 
 	if err != nil {
@@ -166,10 +167,14 @@ func (s *StuntingService) UpdateEpisodeBySatusehatId(orgid string, data *entity.
 
 func errSatusehatWajib() error { return exceptions.KolomWajib.Messagef("id_satusehat wajib dikirim") }
 
-// hanya faskes pemilik, lewat id_satusehat
+// hanya pembuat kunjungannya, dicari lewat id_satusehat
 func (s *StuntingService) syaratUbahFaskes(orgid, jenis string, satusehatId *string) error {
 	if satusehatId == nil {
 		return errSatusehatWajib()
 	}
-	return s.VerifyAccessForUpdateFaskes(orgid, jenis, *satusehatId)
+	pembuat, err := s.pembuatDataMedis(jenis, *satusehatId)
+	if err != nil {
+		return err
+	}
+	return s.Akses(orgid, AksiUbah, Sasaran{Jenis: jenis, Id: *satusehatId, Pembuat: pembuat})
 }

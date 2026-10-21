@@ -6,7 +6,6 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
-	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/helper/validasi"
 )
 
@@ -58,7 +57,9 @@ func (s *StuntingService) CreateKunjungan(body []byte) (*types.KunjunganAnak, er
 			payload.Orangtua = nil
 		}
 
-		orangtua, anak, kunjungan, err = s.Repository.KunjunganTransaction(payload.Orangtua.ToEntity(), payload.Anak.ToEntity(), payload.Kunjungan.ToEntity())
+		o, a, k := payload.Orangtua.ToEntity(), payload.Anak.ToEntity(), payload.Kunjungan.ToEntity()
+		tandaiJakantro(o, a, k, nil)
+		orangtua, anak, kunjungan, err = s.Repository.KunjunganTransaction(o, a, k)
 
 		if err != nil {
 			return nil, exceptions.Classify(err)
@@ -69,7 +70,9 @@ func (s *StuntingService) CreateKunjungan(body []byte) (*types.KunjunganAnak, er
 			return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 		}
 
-		kunjungan, err = s.Repository.CreateKunjungan(payloadKunjungan.ToEntity(), nil)
+		k := payloadKunjungan.ToEntity()
+		tandaiJakantro(nil, nil, k, nil)
+		kunjungan, err = s.Repository.CreateKunjungan(k, nil)
 
 		if err != nil {
 			return nil, exceptions.Classify(err)
@@ -85,18 +88,17 @@ func (s *StuntingService) CreateKunjungan(body []byte) (*types.KunjunganAnak, er
 	return res, nil
 }
 
-func (s *StuntingService) UpdateKunjunganById(payload *types.KunjunganPayload, id string) (*types.Kunjungan, error) {
+func (s *StuntingService) UpdateKunjunganById(payload *types.KunjunganPayload, id, orgid string) (*types.Kunjungan, error) {
 	lama, err := s.Repository.FindKunjunganById(id)
 	if err != nil {
 		return nil, exceptions.Classify(err)
 	}
-
-	if lama.IDFaskes != nil {
-		// berarti kunjungan ini bukan dari jakantro, dan jakantro tidak boleh update
-		return nil, exceptions.Forbidden.Messagef("Kunjungan dengan id:%s dibuat oleh faskes:%s. jakantro tidak boleh update", id, utils.StrPtr(lama.IDFaskes))
+	if err := s.Akses(orgid, AksiUbah, sasaranKunjungan(lama)); err != nil {
+		return nil, err
 	}
 
 	lama.Override(*payload.ToEntity(), false)
+	lama.UpdatedBy = &orgid
 	e, err := s.Repository.UpdateKunjunganById(id, lama, false)
 	return keDTO((*types.Kunjungan).FromEntity, e, err)
 }
@@ -136,4 +138,19 @@ func identitasRespons(jenis validasi.JenisPayload, orangtua *entity.Orangtua, an
 		idOrangtua, o = &orangtua.ID, (*types.Orangtua)(nil).FromEntity(orangtua)
 	}
 	return idOrangtua, &anak.ID, o, (*types.Anak)(nil).FromEntity(anak)
+}
+
+func (s *StuntingService) DeleteKunjunganById(id, orgid string) error {
+	lama, err := s.Repository.FindKunjunganById(id)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+	if err := s.Akses(orgid, AksiHapus, sasaranKunjungan(lama)); err != nil {
+		return err
+	}
+	if err := s.Repository.DeleteKunjunganById(id, orgid); err != nil {
+		return err
+	}
+	s.Repository.LupakanKunjungan(lama)
+	return nil
 }

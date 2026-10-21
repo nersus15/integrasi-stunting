@@ -5,13 +5,19 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 )
 
-func (s *StuntingService) CreateOrangTua(orangtua *entity.Orangtua) (*types.Orangtua, error) {
+func (s *StuntingService) CreateOrangTua(orangtua *entity.Orangtua, orgid string) (*types.Orangtua, error) {
+	if orgid != pembuatJakantro {
+		orangtua.ID = uuid.NewString()
+	}
+	asalPemanggil(orgid, orangtua.SourceData).orangtua(orangtua)
 	e, err := s.Repository.CreateOrangTua(orangtua, nil)
 	return keDTO((*types.Orangtua).FromEntity, e, err)
 }
@@ -24,10 +30,16 @@ func (s *StuntingService) UpdateOrangTuaById(orangtua *entity.Orangtua, orgid *s
 		}
 		return nil, err
 	}
+	if err := s.Akses(utils.StrPtr(orgid), AksiUbah, sasaranOrangtua(lama)); err != nil {
+		return nil, err
+	}
 
-	if utils.StrPtr(orgid) != "jakantro" {
+	switch {
+	case utils.StrPtr(orgid) != pembuatJakantro:
 		orangtua.IDPosyandu = nil
-	} else {
+	case !dibuatOleh(lama.CreatedBy, pembuatJakantro):
+		orangtua.SatusehatId, orangtua.NIK = "", ""
+	default:
 		orangtua.SatusehatId = ""
 	}
 
@@ -55,6 +67,14 @@ func (s *StuntingService) cariOrangtua(id, nik *string) (*entity.Orangtua, error
 }
 
 func (s *StuntingService) DeleteOrangtuaByID(id, orgid string) error {
+	// created_by tidak pernah berubah, jadi aman dibaca dari cache
+	lama, err := s.Repository.FindOrangTuaById(id, true)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+	if err := s.Akses(orgid, AksiHapus, sasaranOrangtua(lama)); err != nil {
+		return err
+	}
 	if err := s.Repository.DeleteOrangtuaByID(id, orgid); err != nil {
 		return err
 	}

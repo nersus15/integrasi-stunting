@@ -9,13 +9,17 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/validasi"
 )
 
-func (s *StuntingService) UpdateKesehatanById(payload *types.KesehatanPayload, id string) (*types.Kesehatan, error) {
+func (s *StuntingService) UpdateKesehatanById(payload *types.KesehatanPayload, id, orgid string) (*types.Kesehatan, error) {
 	lama, err := s.Repository.FindKesehatanById(id)
 	if err != nil {
 		return nil, exceptions.Classify(err)
 	}
+	if err := s.Akses(orgid, AksiUbah, sasaranKesehatan(lama)); err != nil {
+		return nil, err
+	}
 
 	lama.Override(*payload.ToEntity(), false)
+	lama.UpdatedBy = &orgid
 	e, err := s.Repository.UpdateKesehatanById(id, lama, false)
 	return keDTO((*types.Kesehatan).FromEntity, e, err)
 }
@@ -63,8 +67,9 @@ func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, er
 			payload.Orangtua = nil
 		}
 
-		orangtua, anak, kesehatan, err = s.Repository.KesehatanTransaction(
-			payload.Orangtua.ToEntity(), payload.Anak.ToEntity(), payload.Kesehatan.ToEntity())
+		o, a, h := payload.Orangtua.ToEntity(), payload.Anak.ToEntity(), payload.Kesehatan.ToEntity()
+		tandaiJakantro(o, a, nil, h)
+		orangtua, anak, kesehatan, err = s.Repository.KesehatanTransaction(o, a, h)
 
 		if err != nil {
 			return nil, exceptions.Classify(err)
@@ -75,7 +80,9 @@ func (s *StuntingService) CreateKesehatan(body []byte) (*types.KesehatanAnak, er
 			return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 		}
 
-		kesehatan, err = s.Repository.CreateKesehatan(payloadKesehatan.ToEntity(), nil)
+		h := payloadKesehatan.ToEntity()
+		tandaiJakantro(nil, nil, nil, h)
+		kesehatan, err = s.Repository.CreateKesehatan(h, nil)
 
 		if err != nil {
 			return nil, exceptions.Classify(err)
@@ -102,13 +109,16 @@ func (s *StuntingService) FindKesehatanById(id string) (*types.Kesehatan, error)
 }
 
 func (s *StuntingService) DeleteKesehatanById(id, orgid string) error {
+	lama, err := s.Repository.FindKesehatanById(id)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+	if err := s.Akses(orgid, AksiHapus, sasaranKesehatan(lama)); err != nil {
+		return err
+	}
 	if err := s.Repository.DeleteKesehatanById(id, orgid); err != nil {
 		return err
 	}
-
-	// Hapus cache
-	if memkey := s.Repository.GetKey("kesehatan", id, nil); memkey != nil {
-		s.Repository.Lupakan(*memkey)
-	}
+	s.Repository.LupakanKesehatan(lama)
 	return nil
 }

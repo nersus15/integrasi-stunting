@@ -1,8 +1,9 @@
 package service
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
@@ -10,9 +11,14 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 )
 
-func (s *StuntingService) CreateAnak(anak *entity.Anak) (*types.Anak, error) {
-	// prefix jakantro: untuk membedakan sumber data
-	anak.SourceData = fmt.Sprintf("jakantro:%s", anak.SourceData)
+func (s *StuntingService) CreateAnak(anak *entity.Anak, orgid string) (*types.Anak, error) {
+	if err := s.AksesOrangtua(orgid, AksiUbah, anak.IDOrangtua); err != nil {
+		return nil, err
+	}
+	if orgid != pembuatJakantro {
+		anak.ID = uuid.NewString()
+	}
+	asalPemanggil(orgid, &anak.SourceData).anak(anak)
 	e, err := s.Repository.CreateAnak(anak, nil)
 	return keDTO((*types.Anak).FromEntity, e, err)
 }
@@ -22,10 +28,17 @@ func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*typ
 	if err != nil || lama == nil {
 		return nil, exceptions.TidakDitemukan.Messagef("Data anak tidak ditemukan")
 	}
+	if err := s.Akses(utils.StrPtr(orgid), AksiUbah, sasaranAnak(lama)); err != nil {
+		return nil, err
+	}
 
-	if utils.StrPtr(orgid) != "jakantro" {
+	switch {
+	case utils.StrPtr(orgid) != pembuatJakantro:
 		anak.IDOrangtua = ""
-	} else {
+	case !dibuatOleh(lama.CreatedBy, pembuatJakantro):
+		// anak buatan faskes/SatuSehat: jakantro tidak boleh mengubah nik atau memindah keluarga
+		anak.SatusehatId, anak.NIK, anak.IDOrangtua = "", nil, ""
+	default:
 		anak.SatusehatId = ""
 	}
 
@@ -57,6 +70,14 @@ func (s *StuntingService) SummaryAnak(id string) (*types.SummaryAnak, error) {
 }
 
 func (s *StuntingService) DeleteAnakByID(id string, orgid string) error {
+	// created_by tidak pernah berubah, jadi aman dibaca dari cache
+	lama, err := s.Repository.FindAnak(&id, nil, nil, nil, true)
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+	if err := s.Akses(orgid, AksiHapus, sasaranAnak(lama)); err != nil {
+		return err
+	}
 	if err := s.Repository.DeleteAnakByID(id, orgid); err != nil {
 		return err
 	}
