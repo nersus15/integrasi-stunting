@@ -90,6 +90,20 @@ func (d *StuntingRepository) LupakanRiwayatAnak(idAnak string) {
 	d.lupakan(keySummaryAnak(idAnak), keyListKunjungan(idAnak), keyListKesehatan(idAnak))
 }
 
+func (d *StuntingRepository) LupakanKunjungan(k *entity.Kunjungan) {
+	if k != nil {
+		d.lupakan(keyKunjunganId(k.ID))
+		d.LupakanRiwayatAnak(k.IDAnak)
+	}
+}
+
+func (d *StuntingRepository) LupakanKesehatan(h *entity.Kesehatan) {
+	if h != nil {
+		d.lupakan(keyKesehatanId(h.ID))
+		d.LupakanRiwayatAnak(h.IDAnak)
+	}
+}
+
 func (d *StuntingRepository) LupakanOrangtua(o *entity.Orangtua) {
 	if o == nil {
 		return

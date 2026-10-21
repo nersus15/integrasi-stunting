@@ -218,3 +218,27 @@ func (d *StuntingRepository) UpdateUkurKunjungan(id string, kolom map[string]any
 
 	return nil
 }
+
+func (d *StuntingRepository) DeleteKunjunganById(id, orgid string) error {
+	filter := []port.DbExpression{
+		{Expr: "id", Args: []any{id}},
+		{Expr: `"deletedAt"`, Args: []any{nil}},
+	}
+	ctx, cancel := context.WithTimeout(d.Context.Context, 5*time.Second)
+	defer cancel()
+
+	input := map[string]any{
+		"deletedAt":  time.Now(),
+		"deleted_by": orgid,
+	}
+	affected, err := d.Connection.UpdateOne(ctx, entity.Kunjungan{}.TableName(), filter, input)
+
+	if err != nil {
+		return exceptions.Classify(err)
+	}
+	if affected < 1 {
+		return exceptions.TidakDitemukan.Messagef("Kunjungan dengan id #%s tidak ditemukan", id)
+	}
+
+	return nil
+}

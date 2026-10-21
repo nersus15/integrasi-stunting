@@ -134,21 +134,15 @@ func (d *StuntingRepository) DeleteKesehatanById(id, orgid string) error {
 	ctx, cancel := context.WithTimeout(d.Context.Context, 5*time.Second)
 	defer cancel()
 
-	filter := []port.DbExpression{
-		{Expr: "id", Args: []any{id}},
-	}
-	emptyModel := new(entity.Kesehatan)
-	affected, err := d.Connection.DeleteOne(ctx, emptyModel, filter)
-
+	filter := []port.DbExpression{{Expr: "id", Args: []any{id}}, belumDihapus}
+	input := map[string]any{"deletedAt": time.Now(), "deleted_by": orgid}
+	affected, err := d.Connection.UpdateOne(ctx, entity.Kesehatan{}.TableName(), filter, input)
 	if err != nil {
-		logger.Debug("Delete Kesehatan By Id", "id", id, "err", helper.ToLogJSON(err.Error()))
 		return err
 	}
-
 	if affected < 1 {
-		return exceptions.TidakDitemukan.Messagef("Anak dengan id #%s tidak ditemukan", id)
+		return exceptions.TidakDitemukan.Messagef("Kesehatan dengan id #%s tidak ditemukan", id)
 	}
-
 	return nil
 }
 

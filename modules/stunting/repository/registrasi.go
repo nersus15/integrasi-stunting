@@ -3,12 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
-	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/uptrace/bun"
 	"github.com/webcore-go/webcore/infra/logger"
 )
@@ -18,7 +16,6 @@ func (d *StuntingRepository) KunjunganTransaction(orangtua *entity.Orangtua, ana
 		if idAnak != nil {
 			kunjungan.IDAnak = *idAnak
 		}
-		kunjungan.SourceData = sumberJakantro(kunjungan.SourceData)
 		_, err := CreateKunjunganTx(ctx, tx, kunjungan)
 		return err
 	})
@@ -36,7 +33,6 @@ func (d *StuntingRepository) KesehatanTransaction(orangtua *entity.Orangtua, ana
 		if idAnak != nil {
 			kesehatan.IDAnak = *idAnak
 		}
-		kesehatan.SourceData = sumberJakantro(kesehatan.SourceData)
 		_, err := CreateKesehatanTx(ctx, tx, kesehatan)
 		return err
 	})
@@ -91,11 +87,4 @@ func (d *StuntingRepository) registrasi(orangtua *entity.Orangtua, anak *entity.
 	}
 	d.LupakanAnak(anak)
 	return resOrangtua, resAnak, nil
-}
-
-func sumberJakantro(sumber *string) *string {
-	if sumber == nil {
-		return nil
-	}
-	return utils.PtrStr(fmt.Sprintf("jakantro:%s", *sumber), true)
 }

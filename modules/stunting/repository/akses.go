@@ -11,32 +11,8 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/uptrace/bun"
-	"github.com/webcore-go/webcore/app/helper"
 	"github.com/webcore-go/webcore/infra/logger"
-	"github.com/webcore-go/webcore/port"
 )
-
-func (d *StuntingRepository) OrgIdByEncounterSId(satusehat_id string) (*string, error) {
-	if !utils.IsStrFilled(satusehat_id) {
-		return nil, exceptions.Forbidden.WithMessage("Gagal Verifikasi", nil)
-	}
-	kunjungan := new(entity.Kunjungan)
-	filter := []port.DbExpression{{
-		Expr: "kj.satusehat_id",
-		Args: []any{satusehat_id},
-	},
-	}
-	if err := d.Connection.FindOne(d.Context.Context, kunjungan, "[me],Faskes", []string{"faskes.id", "faskes.id_induk", "faskes.satusehat_id"}, filter, map[string]int{}); err != nil {
-		return nil, exceptions.Classify(err)
-	}
-
-	logger.Info(fmt.Sprintf("OrgIdByEncounterSId (%s): ", satusehat_id) + helper.ToLogJSON(kunjungan))
-	if kunjungan.Faskes == nil {
-		return nil, nil
-	}
-
-	return kunjungan.Faskes.SatusehatID, nil
-}
 
 func (d *StuntingRepository) AksesKlinis(orgid string, idAnak string, idOrangtua string) (bool, error) {
 	if res, found := d.GetBool(keyAksesKlinis(orgid, idAnak, idOrangtua)); found {
@@ -107,24 +83,4 @@ func (d *StuntingRepository) LupakanAksesPerubahanOrangtua(idAnak string, idOran
 			}
 		}
 	}
-}
-
-func (d *StuntingRepository) OrgIdByKunjunganId(id string) (*string, error) {
-	if !utils.IsStrFilled(id) {
-		return nil, exceptions.Forbidden.WithMessage("Gagal Verifikasi", nil)
-	}
-
-	kunjungan := new(entity.Kunjungan)
-	filter := []port.DbExpression{{Expr: "kj.id", Args: []any{id}}}
-
-	if err := d.Connection.FindOne(d.Context.Context, kunjungan, "[me],Faskes",
-		[]string{"faskes.id", "faskes.id_induk", "faskes.satusehat_id"}, filter, map[string]int{}); err != nil {
-		return nil, exceptions.Classify(err)
-	}
-
-	if kunjungan.Faskes == nil {
-		return nil, exceptions.Forbidden.WithMessage("Gagal Verifikasi: kunjungan tanpa faskes", nil)
-	}
-
-	return kunjungan.Faskes.SatusehatID, nil
 }

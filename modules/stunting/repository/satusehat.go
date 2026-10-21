@@ -161,9 +161,11 @@ func (d *StuntingRepository) UpdateKunjunganBySatusehatId(data *entity.Kunjungan
 		input = StructToMap(gabungan)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 
 	d.lupakan(keyKunjunganId(lama.ID))
 
@@ -203,9 +205,11 @@ func (d *StuntingRepository) UpdateObservasiBySatusehatId(data *entity.Observasi
 		input = StructToMap(gabungan)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 
 	return gabungan, nil
 }
@@ -263,15 +267,17 @@ func (d *StuntingRepository) FindLayananBySatusehatId(satusehatId string) (*enti
 	return tmp, nil
 }
 
-func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *string, idAnak string, kolom map[string]any) error {
+// waktu update dikembalikan supaya respons menampilkan updated_at yang baru
+func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *string, idAnak string, kolom map[string]any) (*time.Time, error) {
 	if !utils.IsFilled(satusehatId) {
-		return exceptions.KolomWajib.Messagef("Id satusehat harus sudah terisi")
+		return nil, exceptions.KolomWajib.Messagef("Id satusehat harus sudah terisi")
 	}
 	if len(kolom) == 0 {
-		return exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
+		return nil, exceptions.BentukPayload.Messagef("Tidak ada data untuk di update")
 	}
 
-	kolom["updatedAt"] = time.Now()
+	waktu := time.Now()
+	kolom["updatedAt"] = waktu
 
 	filter := []port.DbExpression{
 		{Expr: "satusehat_id = ?", Args: []any{*satusehatId}},
@@ -279,12 +285,12 @@ func (d *StuntingRepository) updateBySatusehatId(tabel string, satusehatId *stri
 
 	if _, err := d.Connection.Update(d.Context.Context, tabel, filter, kolom); err != nil {
 		logger.Error(fmt.Sprintf("updateBySatusehatId %s (%s): ", tabel, *satusehatId) + err.Error())
-		return err
+		return nil, err
 	}
 
 	d.LupakanRiwayatAnak(idAnak)
 
-	return nil
+	return &waktu, nil
 }
 
 func (d *StuntingRepository) UpdateDiagnosaBySatusehatId(data *entity.Diagnosa, stream bool) (*entity.Diagnosa, error) {
@@ -316,9 +322,11 @@ func (d *StuntingRepository) UpdateDiagnosaBySatusehatId(data *entity.Diagnosa, 
 		input = StructToMap(lama)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 
 	if stream {
 		return nil, nil
@@ -355,9 +363,11 @@ func (d *StuntingRepository) UpdateLayananBySatusehatId(data *entity.Layanan, st
 		input = StructToMap(lama)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 
 	if stream {
 		return nil, nil
@@ -392,9 +402,11 @@ func (d *StuntingRepository) UpdateRujukanBySatusehatId(data *entity.Rujukan, st
 		input = StructToMap(lama)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 	// akses klinis hanya bergantung jenis dan tanggal, keduanya hanya berubah lewat stream
 	if stream && (data.Jenis != lama.Jenis || !samaWaktu(data.Tanggal, lama.Tanggal)) {
 		idOrangtua := ""
@@ -449,9 +461,11 @@ func (d *StuntingRepository) UpdateEpisodeBySatusehatId(data *entity.Episode, st
 		input = StructToMap(lama)
 	}
 
-	if err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input); err != nil {
+	waktu, err := d.updateBySatusehatId(data.TableName(), data.SatusehatId, lama.IDAnak, input)
+	if err != nil {
 		return nil, err
 	}
+	lama.UpdatedAt = waktu
 
 	if stream {
 		return nil, nil
