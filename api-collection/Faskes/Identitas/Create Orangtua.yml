@@ -1,0 +1,26 @@
+info:
+  name: Create Orangtua
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/faskes/orangtua"
+  body:
+    type: json
+    data: |-
+      {
+        "id_posyandu": "POS-JAKARTA-01",
+        "nik": "3175040101900021",
+        "id_satusehat": "RP99001100021",
+        "nama_ibu": "Nur Aini",
+        "telepon": "081311112222",
+        "alamat": "Jl. Mawar No. 3"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

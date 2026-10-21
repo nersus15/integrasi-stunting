@@ -1,20 +1,17 @@
 info:
   name: Update Anak
   type: http
-  seq: 1
+  seq: 3
 
 http:
   method: PUT
-  url: "{{BASE_URL}}/anak"
+  url: "{{BASE_URL}}/faskes/anak"
   body:
     type: json
     data: |-
       {
-        "id": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
-        "nik": "3175041503240003",
-        "nama": "Rizky Ramadhan",
-        "tanggal_lahir": "2024-03-15",
-        "jenis_kelamin": "L"
+        "id_satusehat": "P99001100031",
+        "nama": "Bima Saputra Pratama"
       }
   auth: inherit
 

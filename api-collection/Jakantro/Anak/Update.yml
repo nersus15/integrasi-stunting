@@ -11,8 +11,7 @@ http:
     data: |-
       {
         "id": "b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68",
-        "nama": "Rizky Ramadhan Putra",
-        "nik": "3175041503240003"
+        "nama": "Rizky Ramadhan Putra"
       }
   auth: inherit
 

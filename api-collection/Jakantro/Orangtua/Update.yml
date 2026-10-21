@@ -11,8 +11,6 @@ http:
     data: |-
       {
         "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
-        "nik": "3175040101900002",
-        "nama_ibu": "Dewi Lestari",
         "telepon": "081299990000",
         "alamat": "Jl. Kenanga No. 14"
       }

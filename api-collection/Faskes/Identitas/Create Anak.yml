@@ -1,0 +1,30 @@
+info:
+  name: Create Anak
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{BASE_URL}}/faskes/anak"
+  body:
+    type: json
+    data: |-
+      {
+        "id_orangtua": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+        "id_satusehat": "P99001100031",
+        "nik": "3175041503250031",
+        "nama": "Bima Saputra",
+        "tanggal_lahir": "2025-07-01",
+        "jenis_kelamin": "L",
+        "anak_ke": 3,
+        "bb_lahir": 3.1,
+        "tb_lahir": 49.0,
+        "lk_lahir": 34.0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

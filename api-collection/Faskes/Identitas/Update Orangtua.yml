@@ -1,20 +1,17 @@
 info:
   name: Update Orangtua
   type: http
-  seq: 2
+  seq: 4
 
 http:
   method: PUT
-  url: "{{BASE_URL}}/orangtua"
+  url: "{{BASE_URL}}/faskes/orangtua"
   body:
     type: json
     data: |-
       {
-        "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
-        "nik": "3175040101900002",
-        "no_kk": "3175042509870001",
-        "nama_ibu": "Dewi Lestari",
-        "telepon": "081234567890"
+        "id_satusehat": "RP99001100021",
+        "telepon": "081311113333"
       }
   auth: inherit
 
