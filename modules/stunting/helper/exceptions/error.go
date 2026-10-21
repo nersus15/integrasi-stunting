@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/webcore-go/webcore/infra/logger"
 )
 
@@ -119,6 +120,10 @@ func Classify(err error) *Error {
 		if e := terjemah(err); e != nil {
 			return e
 		}
+	}
+
+	if utils.DumpAktif() {
+		return Internal.WithMessage(err.Error(), err)
 	}
 
 	return Internal.New(err)

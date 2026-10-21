@@ -101,12 +101,6 @@ dikirim jakantro. Kunjungan dari jakantro selalu tetap milik jakantro.
 | `penyuluhan_rujukan` | `0`/`1` | — | anak dirujuk |
 | `source_data` | teks, maks 36 | — | penanda sumber data. Tidak bisa diubah setelah dibuat |
 
----|---|---|
-| `orangtua` | `id`, `id_posyandu`, `no_kk`, `nik`, `nama_ayah`, `nama_ibu`, `telepon`, `rt`, `rw`, `alamat`, `kia` | `no_kk` dan `nik` 16 digit angka. `kia` hanya `0`/`1`. `usia_hamil` tidak boleh negatif, `kia_bayi_kecil` hanya `0`/`1` |
-| `anak` | `id`, `id_orangtua`, `nama`, `tanggal_lahir`, `jenis_kelamin`, `anak_ke`, `imd`, `bb_lahir`, `tb_lahir`, `lk_lahir`, `source_data` | `jenis_kelamin` hanya `L`/`P`. `anak_ke`, `bb_lahir`, `tb_lahir`, `lk_lahir` harus > 0. `imd` hanya `0`/`1`. `nik` opsional, tapi kalau dikirim harus 16 digit |
-| `kunjungan` | `id`, `id_anak`, `tanggal_pengukuran` | field ukuran opsional, tapi kalau dikirim harus > 0. `asi_*`, `vit_*`, `pitting_edema`, `kelas_ibu_balita` hanya `0`/`1` |
-| `kesehatan` | `id`, `id_anak`, `tanggal_pemantauan` | `tbc_*`, `layanan_*`, `penyuluhan_*` opsional, hanya `0`/`1` |
-
 ---
 
 ## POST /api/kunjungan
@@ -323,7 +317,11 @@ lain mengikuti [tabel `kunjungan`](#kunjungan). Field yang tidak dikirim
 > **Awas.** Kunjungan yang dibuat faskes tidak boleh diubah jakantro.
 > Percobaannya dijawab `403` `1008` dengan menyebut faskes pembuatnya.
 
-`id`, `id_anak`, dan `source_data` tidak ikut berubah meski dikirim.
+`id`, `id_anak`, dan `source_data` tidak ikut berubah meski dikirim; `id` yang
+dipakai selalu yang ada di path.
+
+`200` mengembalikan kunjungan hasil pembaruan, `404` `2001` kalau kunjungannya
+tidak ada atau sudah dihapus.
 
 ---
 
@@ -390,7 +388,8 @@ dipakai sebagai flag `0`/`1`.
 
 Bentuknya sama dengan `PUT /api/kunjungan/:id`: `id`, `id_anak`, dan
 `tanggal_pemantauan` wajib, field yang tidak dikirim dipertahankan, dan `id`,
-`id_anak`, serta `source_data` tidak berubah.
+`id_anak`, serta `source_data` tidak berubah. `200` mengembalikan kesehatan hasil
+pembaruan, `404` `2001` kalau datanya tidak ada atau sudah dihapus.
 
 ---
 
@@ -475,16 +474,60 @@ lain memindahkan anak ke orangtua itu. `imd` boleh diubah ke `0`.
 ### PUT /api/orangtua
 
 Dicari lewat `id`. Selain `id`, `nik` dan salah satu dari `nama_ayah` atau
-`nama_ibu` wajib dikirim; field lain yang tidak dikirim dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
+`nama_ibu` wajib dikirim, sama seperti POST; field lain yang tidak dikirim
+dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
 `satusehat_id` dan `source_data` diabaikan, `kia` boleh diubah ke `0`.
 
 ```json
 {
   "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
+  "nik": "3175040101900002",
+  "nama_ibu": "Dewi Lestari",
   "telepon": "081299990000",
   "alamat": "Jl. Kenanga No. 14"
 }
 ```
 
-Kedua endpoint ini juga dipakai faskes, dengan batasan yang dijelaskan di
-[Jalur faskes](?doc=faskes#put-apifaskesanak-dan-put-apifaskesorangtua).
+`200` mengembalikan orangtua hasil pembaruan, `404` `2001` kalau orangtuanya
+tidak ada.
+
+`PUT /api/anak` dan `PUT /api/orangtua` khusus jakantro; kunci faskes ditolak
+`403` `1008`. Faskes memakai
+[PUT /api/faskes/anak dan PUT /api/faskes/orangtua](?doc=faskes#put-apifaskesanak-dan-put-apifaskesorangtua).
+
+---
+
+## DELETE
+
+```
+DELETE /api/orangtua/:id
+DELETE /api/anak/:id
+DELETE /api/kunjungan/:id
+DELETE /api/kesehatan/:id
+```
+
+Khusus jakantro; kunci faskes ditolak `403` `1008`. `id` pada path adalah id
+yang Anda tentukan saat membuatnya.
+
+Penghapusan bersifat soft delete: barisnya ditandai terhapus (`deleted_at`, dan
+`deleted_by` berisi pemanggil), tidak dibuang dari database.
+
+```json
+{ "message": "Berhasil menghapus anak dengan id #b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68" }
+```
+
+| jawaban | arti |
+|---|---|
+| `200` | terhapus |
+| `403` `1008` | kunjungan itu dibuat faskes; sama seperti PUT, jakantro tidak boleh menghapusnya |
+| `404` `2001` | datanya tidak ada atau sudah dihapus. Menghapus dua kali tidak dianggap berhasil |
+
+Setelah dihapus, data itu dijawab `404` oleh GET dan tidak muncul lagi di
+daftar mana pun: anak di `GET /api/orangtua/:id/anak`, kunjungan dan kesehatan
+di riwayat anak maupun [summary](?doc=baca#get-apianakidsummary).
+
+Penghapusan tidak berantai. Menghapus orangtua tidak menghapus anaknya, dan
+menghapus anak tidak menghapus kunjungan atau kesehatannya.
+
+NIK orangtua yang sudah dihapus bisa didaftarkan lagi lewat
+[POST /api/orangtua](#post-apiorangtua): baris lamanya dipulihkan.

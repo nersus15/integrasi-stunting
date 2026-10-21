@@ -3,7 +3,8 @@
 Seluruh endpoint baca, berlaku sama untuk data dari jakantro maupun faskes —
 asal data tidak membedakan cara membacanya.
 
-Semua butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`.
+Semua butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`, termasuk
+data yang sudah dihapus.
 
 ## GET /api/orangtua/:id
 
@@ -160,13 +161,17 @@ disalin mentah-mentah. Payload siap salin ada di [Contoh Payload](?doc=contoh).
 | `episode` | episode perawatan (`EpisodeOfCare`), satu episode bisa mencakup banyak kunjungan di faskes berbeda |
 | `kunjungan` | riwayat kunjungan, urut `tanggal_pengukuran` naik. Tiap kunjungan membawa data medisnya sendiri |
 | `kesehatan` | kuisioner pemantauan dari posyandu |
-| `layanan` | **semua** layanan lintas kunjungan, datar dan kronologis |
-| `rujukan` | **semua** rujukan lintas kunjungan, beserta tindak lanjutnya |
+| `layanan` | **semua** layanan anak, datar dan kronologis, termasuk yang masih menggantung |
+| `rujukan` | **semua** rujukan anak beserta tindak lanjutnya, termasuk yang masih menggantung |
 | `menggantung` | data medis yang sudah tiba tapi Encounter-nya belum, jadi belum menempel ke kunjungan mana pun |
 
 `layanan` dan `rujukan` sengaja diulang datar di tingkat atas supaya jejak
 penanganan dan alur rujukan bisa dibaca sekali lihat, tanpa menelusuri satu per
-satu kunjungan. Isinya sama dengan yang tersebar di dalam `kunjungan`.
+satu kunjungan. Isinya gabungan yang tersebar di dalam `kunjungan` dan yang ada
+di `menggantung`.
+
+Kunjungan yang sudah dihapus tidak ikut tampil, begitu juga observasi,
+diagnosa, layanan, dan rujukan miliknya, termasuk di daftar tingkat atas.
 
 ### Isi tiap `kunjungan`
 
@@ -287,6 +292,9 @@ Data medis bisa tiba sebelum `Encounter`-nya. Baris seperti itu disimpan dengan
 `id_kunjungan` `null` dan ditampung di sini, lalu tersambung sendiri begitu
 Encounter-nya masuk. Kalau tidak ditampilkan, data itu tidak terlihat di mana
 pun.
+
+Urutannya kronologis: `observasi` dan `layanan` menurut `tanggal`, `diagnosa`
+menurut `tanggal_catat`, `rujukan` menurut `tanggal`.
 
 ## GET /api/kunjungan/:id dan GET /api/kesehatan/:id
 
