@@ -10,6 +10,7 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/helper/validasi"
+	"github.com/nersus15/integrasi/mod-stunting/service"
 )
 
 func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
@@ -25,7 +26,7 @@ func (h *HttpHandler) CreateOrangTua(c *fiber.Ctx) error {
 		return kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	res, err := h.service.CreateOrangTua(orangtua.ToEntity())
+	res, err := h.service.CreateOrangTua(orangtua.ToEntity(), utils.StrPtr(c.Locals("orgid").(*string)))
 	if err != nil {
 		return kirimError(c, err)
 	}
@@ -45,11 +46,6 @@ func (h *HttpHandler) UpdateOrangtua(c *fiber.Ctx) error {
 	}
 
 	orgid := c.Locals("orgid").(*string)
-
-	if _, err := h.service.VerifyAksesOrangtua(orgid, nil, utils.PtrStr(orangtua.Id, true), orangtua.SatusehatId); err != nil {
-		return kirimError(c, err)
-	}
-
 	res, err := h.service.UpdateOrangTuaById(orangtua.ToEntity(), orgid)
 	if err != nil {
 		return kirimError(c, err)
@@ -77,9 +73,7 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 		return kirimError(c, err)
 	}
 
-	orgid := c.Locals("orgid").(*string)
-
-	if _, err := h.service.VerifyAksesOrangtua(orgid, orangtua, utils.PtrStr(orangtua.Id, true), orangtua.IdSatusehat); err != nil {
+	if err := h.service.AksesOrangtua(orgidPemanggil(c), service.AksiBaca, orangtua.Id); err != nil {
 		return kirimError(c, err)
 	}
 

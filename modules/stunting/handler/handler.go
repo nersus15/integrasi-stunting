@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
+	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/service"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/out"
@@ -33,4 +34,9 @@ func kirimError(c *fiber.Ctx, err error) error {
 		k.Message,
 		k,
 	))
+}
+
+func orgidPemanggil(c *fiber.Ctx) string {
+	orgid, _ := c.Locals("orgid").(*string)
+	return utils.StrPtr(orgid)
 }

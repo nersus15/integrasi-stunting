@@ -10,6 +10,7 @@ import (
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/helper/validasi"
+	"github.com/nersus15/integrasi/mod-stunting/service"
 	"github.com/webcore-go/webcore/infra/logger"
 )
 
@@ -26,7 +27,7 @@ func (h *HttpHandler) CreateAnak(c *fiber.Ctx) error {
 		return kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	res, err := h.service.CreateAnak(anak.ToEntity())
+	res, err := h.service.CreateAnak(anak.ToEntity(), utils.StrPtr(c.Locals("orgid").(*string)))
 	if err != nil {
 		return kirimError(c, err)
 	}
@@ -46,11 +47,6 @@ func (h *HttpHandler) UpdateAnak(c *fiber.Ctx) error {
 	}
 
 	orgid := c.Locals("orgid").(*string)
-
-	if _, err := h.service.VerifyAksesAnak(orgid, nil, utils.PtrStr(anak.Id, true), nil); err != nil {
-		return kirimError(c, err)
-	}
-
 	res, err := h.service.UpdateAnakById(anak.ToEntity(), orgid)
 
 	if err != nil {
@@ -76,6 +72,10 @@ func (h *HttpHandler) ListAnak(c *fiber.Ctx) error {
 		return kirimError(c, err)
 	}
 
+	if err := h.service.AksesOrangtua(orgidPemanggil(c), service.AksiBaca, idorangtua); err != nil {
+		return kirimError(c, err)
+	}
+
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
@@ -96,9 +96,7 @@ func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
 		return kirimError(c, err)
 	}
 
-	orgid := c.Locals("orgid").(*string)
-
-	if _, err := h.service.VerifyAksesAnak(orgid, anak, utils.PtrStr(anak.Id, true), nil); err != nil {
+	if err := h.service.AksesAnak(orgidPemanggil(c), service.AksiBaca, anak.Id); err != nil {
 		return kirimError(c, err)
 	}
 
@@ -125,6 +123,10 @@ func (h *HttpHandler) SummaryAnak(c *fiber.Ctx) error {
 	}
 	if err != nil {
 		logger.Error("SummaryAnak: " + err.Error())
+		return kirimError(c, err)
+	}
+
+	if err := h.service.AksesAnak(orgidPemanggil(c), service.AksiBaca, id); err != nil {
 		return kirimError(c, err)
 	}
 

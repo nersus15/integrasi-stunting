@@ -87,14 +87,11 @@ func (h *HttpHandler) UpdateAnakFaskes(c *fiber.Ctx, orgid *string) (any, error)
 
 	validasi.AbaikanFieldSistem(payload)
 
-	anak, err := h.service.VerifyAksesAnak(orgid, nil, utils.PtrStr(payload.Id, true), payload.SatusehatId)
+	anak, err := h.service.TemukanAnak(utils.PtrStr(payload.Id, true), payload.SatusehatId)
 	if err != nil {
 		return nil, err
 	}
-
-	if !utils.IsStrFilled(payload.Id) {
-		payload.Id = anak.Id
-	}
+	payload.Id = anak.ID
 
 	if err := validasi.ValidateAnakUpdate(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
@@ -116,14 +113,11 @@ func (h *HttpHandler) UpdateOrangtuaFaskes(c *fiber.Ctx, orgid *string) (any, er
 
 	validasi.AbaikanFieldSistem(payload)
 
-	orangtua, err := h.service.VerifyAksesOrangtua(orgid, nil, utils.PtrStr(payload.Id, true), payload.SatusehatId)
+	orangtua, err := h.service.TemukanOrangtua(utils.PtrStr(payload.Id, true), payload.SatusehatId)
 	if err != nil {
 		return nil, err
 	}
-
-	if !utils.IsStrFilled(payload.Id) {
-		payload.Id = orangtua.Id
-	}
+	payload.Id = orangtua.ID
 	if err := validasi.ValidateOrangtuaUpdate(*payload); err != nil {
 		return nil, exceptions.Validasi.WithMessage(err.Error(), err)
 	}
@@ -145,13 +139,12 @@ func (h *HttpHandler) CreateOrangTuaFaskes(c *fiber.Ctx) error {
 
 	validasi.AbaikanFieldSistem(&orangtua)
 	orgid := c.Locals("orgid").(*string)
-	orangtua.SourceData = new("faskes:" + utils.StrPtr(orgid))
 
 	if err := validasi.ValidateOrangtuaFaskes(orangtua); err != nil {
 		return kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	res, err := h.service.CreateOrangTua(orangtua.ToEntity())
+	res, err := h.service.CreateOrangTua(orangtua.ToEntity(), utils.StrPtr(orgid))
 	if err != nil {
 		return kirimError(c, err)
 	}
@@ -167,13 +160,11 @@ func (h *HttpHandler) CreateAnakFaskes(c *fiber.Ctx) error {
 	orgid := c.Locals("orgid").(*string)
 	validasi.AbaikanFieldSistem(&anak)
 
-	anak.SourceData = "faskes:" + utils.StrPtr(orgid)
-
-	if err := validasi.ValidateAnak(anak); err != nil {
+	if err := validasi.ValidateAnakFaskes(anak); err != nil {
 		return kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	res, err := h.service.CreateAnak(anak.ToEntity())
+	res, err := h.service.CreateAnak(anak.ToEntity(), utils.StrPtr(orgid))
 	if err != nil {
 		return kirimError(c, err)
 	}
