@@ -430,3 +430,11 @@ faskes, karena keduanya menentukan siapa yang berhak atas data itu:
 |---|---|---|
 | `id_posyandu` | `PUT /api/faskes/orangtua` | memindah keluarga ke wilayah lain |
 | `id_orangtua` | `PUT /api/faskes/anak` | memindah anak ke keluarga lain |
+
+## Hak akses anak dan orangtua
+
+Faskes bisa membaca dan memperbarui anak serta orangtua kalau posyandu
+keluarganya ada di wilayah kerja Anda, anak itu sedang dirujuk ke faskes Anda,
+atau Anda mencatat kunjungan anak yang belum terhubung ke orangtua. Rincian
+syaratnya ada di [Hak akses faskes](?doc=index#hak-akses-faskes), dan aturan
+untuk setiap endpoint di [Aturan akses](?doc=index#aturan-akses).
