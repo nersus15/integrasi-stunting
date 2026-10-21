@@ -9,7 +9,7 @@ import (
 type Faskes struct {
 	Id          string     `json:"id"`
 	IdInduk     *string    `json:"id_induk"`
-	SatusehatId *string    `json:"satusehat_id"`
+	SatusehatId *string    `json:"id_satusehat"`
 	Nama        string     `json:"nama"`
 	Jenis       string     `json:"jenis"`
 	Wilayah     *string    `json:"wilayah"`
@@ -24,7 +24,7 @@ type Faskes struct {
 type FaskesDetail struct {
 	Id          string     `json:"id"`
 	Induk       *Faskes    `json:"induk"`
-	SatusehatId *string    `json:"satusehat_id"`
+	SatusehatId *string    `json:"id_satusehat"`
 	Nama        string     `json:"nama"`
 	Jenis       string     `json:"jenis"`
 	Wilayah     *string    `json:"wilayah"`
@@ -66,7 +66,7 @@ type PosyanduDetail struct {
 type FaskesPayload struct {
 	Id          string     `json:"id"`
 	IdInduk     *string    `json:"id_induk"`
-	SatusehatId *string    `json:"satusehat_id"`
+	SatusehatId *string    `json:"id_satusehat"`
 	Nama        string     `json:"nama"`
 	Jenis       string     `json:"jenis"`
 	Wilayah     *string    `json:"wilayah"`

@@ -24,6 +24,7 @@ type Anak struct {
 	UpdatedAt    *time.Time `json:"updated_at"`
 	DeletedAt    *time.Time `json:"deleted_at"`
 	SourceData   string     `json:"source_data"`
+	CreatedBy    *string    `json:"created_by"`
 	StatusAktif  *string    `json:"status_aktif"`
 	UpdatedBy    *string    `json:"updated_by"`
 	DeletedBy    *string    `json:"deleted_by"`
@@ -36,7 +37,7 @@ type ListAnak struct {
 
 type AnakPayload struct {
 	Id           string     `json:"id"`
-	SatusehatId  *string    `json:"satusehat_id"`
+	SatusehatId  *string    `json:"id_satusehat"`
 	IDOrangtua   string     `json:"id_orangtua"`
 	Nama         string     `json:"nama"`
 	NIK          *string    `json:"nik"`
@@ -48,6 +49,7 @@ type AnakPayload struct {
 	TBLahir      float32    `json:"tb_lahir"`
 	LKLahir      float32    `json:"lk_lahir"`
 	SourceData   string     `json:"source_data"`
+	CreatedBy    *string    `json:"created_by"`
 	StatusAktif  *string    `json:"status_aktif"`
 	UpdatedBy    *string    `json:"updated_by"`
 	DeletedBy    *string    `json:"deleted_by"`
@@ -90,6 +92,7 @@ func (a *Anak) FromEntity(e *entity.Anak) *Anak {
 		UpdatedAt:    e.UpdatedAt,
 		DeletedAt:    e.DeletedAt,
 		SourceData:   e.SourceData,
+		CreatedBy:    e.CreatedBy,
 		StatusAktif:  e.StatusAktif,
 		UpdatedBy:    e.UpdatedBy,
 		DeletedBy:    e.DeletedBy,
@@ -122,6 +125,7 @@ func (p *Anak) ToPayload() *AnakPayload {
 		TBLahir:      p.TbLahir,
 		LKLahir:      p.LkLahir,
 		SourceData:   p.SourceData,
+		CreatedBy:    p.CreatedBy,
 		StatusAktif:  p.StatusAktif,
 		UpdatedBy:    p.UpdatedBy,
 		DeletedBy:    p.DeletedBy,
@@ -166,6 +170,7 @@ func (p *AnakPayload) ToEntity() *entity.Anak {
 		TBLahir:      p.TBLahir,
 		LKLahir:      p.LKLahir,
 		SourceData:   p.SourceData,
+		CreatedBy:    p.CreatedBy,
 		StatusAktif:  p.StatusAktif,
 		UpdatedBy:    p.UpdatedBy,
 		DeletedBy:    p.DeletedBy,

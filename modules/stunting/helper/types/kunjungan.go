@@ -38,6 +38,7 @@ type Kunjungan struct {
 	UpdatedAt         *time.Time `json:"updated_at"`
 	DeletedAt         *time.Time `json:"deleted_at"`
 	SourceData        *string    `json:"source_data"`
+	CreatedBy         *string    `json:"created_by"`
 	UpdatedBy         *string    `json:"updated_by"`
 	DeletedBy         *string    `json:"deleted_by"`
 	IdFaskes          *string    `json:"id_faskes"`
@@ -97,6 +98,7 @@ type KunjunganPayload struct {
 	ZScoreTBU         *float64   `json:"zscore_tbu"`
 	ZScoreBBTB        *float64   `json:"zscore_bbtb"`
 	SourceData        *string    `json:"source_data"`
+	CreatedBy         *string    `json:"created_by"`
 	UpdatedBy         *string    `json:"updated_by"`
 	DeletedBy         *string    `json:"deleted_by"`
 	CreatedAt         *time.Time `json:"created_at"`
@@ -150,6 +152,7 @@ func (kj *Kunjungan) FromEntity(e *entity.Kunjungan) *Kunjungan {
 		UpdatedAt:         e.UpdatedAt,
 		DeletedAt:         e.DeletedAt,
 		SourceData:        e.SourceData,
+		CreatedBy:         e.CreatedBy,
 		UpdatedBy:         e.UpdatedBy,
 		DeletedBy:         e.DeletedBy,
 		IdFaskes:          e.IDFaskes,
@@ -204,6 +207,7 @@ func (p *Kunjungan) ToPayload() *KunjunganPayload {
 		ZScoreTBU:         p.ZscoreTbu,
 		ZScoreBBTB:        p.ZscoreBbtb,
 		SourceData:        p.SourceData,
+		CreatedBy:         p.CreatedBy,
 		UpdatedBy:         p.UpdatedBy,
 		DeletedBy:         p.DeletedBy,
 		UpdatedAt:         p.UpdatedAt,
@@ -245,6 +249,7 @@ func (p *KunjunganPayload) ToEntity() *entity.Kunjungan {
 		ZScoreTBU:         p.ZScoreTBU,
 		ZScoreBBTB:        p.ZScoreBBTB,
 		SourceData:        p.SourceData,
+		CreatedBy:         p.CreatedBy,
 		UpdatedBy:         p.UpdatedBy,
 		DeletedBy:         p.DeletedBy,
 		Stunting:          p.Stunting,

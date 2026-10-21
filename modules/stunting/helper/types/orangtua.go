@@ -23,6 +23,7 @@ type Orangtua struct {
 	UpdatedAt    *time.Time `json:"updated_at"`
 	DeletedAt    *time.Time `json:"deleted_at"`
 	SourceData   *string    `json:"source_data"`
+	CreatedBy    *string    `json:"created_by"`
 	UsiaHamil    *int16     `json:"usia_hamil"`
 	KiaBayiKecil *int16     `json:"kia_bayi_kecil"`
 	UpdatedBy    *string    `json:"updated_by"`
@@ -31,7 +32,7 @@ type Orangtua struct {
 
 type OrangtuaPayload struct {
 	Id           string     `json:"id"`
-	SatusehatId  *string    `json:"satusehat_id"`
+	SatusehatId  *string    `json:"id_satusehat"`
 	IdPosyandu   string     `json:"id_posyandu"`
 	NoKk         string     `json:"no_kk"`
 	NamaAyah     string     `json:"nama_ayah"`
@@ -43,6 +44,7 @@ type OrangtuaPayload struct {
 	Alamat       string     `json:"alamat"`
 	Kia          *int16     `json:"kia"`
 	SourceData   *string    `json:"source_data"`
+	CreatedBy    *string    `json:"created_by"`
 	UsiaHamil    *int16     `json:"usia_hamil"`
 	KiaBayiKecil *int16     `json:"kia_bayi_kecil"`
 	UpdatedBy    *string    `json:"updated_by"`
@@ -80,6 +82,7 @@ func (o *Orangtua) FromEntity(e *entity.Orangtua) *Orangtua {
 		UpdatedAt:    e.UpdatedAt,
 		DeletedAt:    e.DeletedAt,
 		SourceData:   e.SourceData,
+		CreatedBy:    e.CreatedBy,
 		UsiaHamil:    e.UsiaHamil,
 		KiaBayiKecil: e.KIABayiKecil,
 		UpdatedBy:    e.UpdatedBy,
@@ -111,6 +114,7 @@ func (p *Orangtua) ToPayload() *OrangtuaPayload {
 		Alamat:       p.Alamat,
 		Kia:          &p.Kia,
 		SourceData:   p.SourceData,
+		CreatedBy:    p.CreatedBy,
 		UsiaHamil:    p.UsiaHamil,
 		KiaBayiKecil: p.KiaBayiKecil,
 		UpdatedBy:    p.UpdatedBy,
@@ -144,6 +148,7 @@ func (p *OrangtuaPayload) ToEntity() *entity.Orangtua {
 		Alamat:       p.Alamat,
 		KIA:          p.Kia,
 		SourceData:   p.SourceData,
+		CreatedBy:    p.CreatedBy,
 		UsiaHamil:    p.UsiaHamil,
 		KIABayiKecil: p.KiaBayiKecil,
 		UpdatedBy:    p.UpdatedBy,

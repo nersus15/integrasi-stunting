@@ -26,6 +26,9 @@ type Kesehatan struct {
 	UpdatedAt         *time.Time `json:"updated_at"`
 	DeletedAt         *time.Time `json:"deleted_at"`
 	SourceData        *string    `json:"source_data"`
+	CreatedBy         *string    `json:"created_by"`
+	UpdatedBy         *string    `json:"updated_by"`
+	DeletedBy         *string    `json:"deleted_by"`
 }
 
 type KesehatanAnak struct {
@@ -58,6 +61,9 @@ type KesehatanPayload struct {
 	PenyuluhanEdukasi *int16     `json:"penyuluhan_edukasi"`
 	PenyuluhanRujukan *int16     `json:"penyuluhan_rujukan"`
 	SourceData        *string    `json:"source_data"`
+	CreatedBy         *string    `json:"created_by"`
+	UpdatedBy         *string    `json:"updated_by"`
+	DeletedBy         *string    `json:"deleted_by"`
 	CreatedAt         *time.Time `json:"created_at"`
 	UpdatedAt         *time.Time `json:"updated_at"`
 	DeletedAt         *time.Time `json:"deleted_at"`
@@ -96,6 +102,9 @@ func (k *Kesehatan) FromEntity(e *entity.Kesehatan) *Kesehatan {
 		UpdatedAt:         e.UpdatedAt,
 		DeletedAt:         e.DeletedAt,
 		SourceData:        e.SourceData,
+		CreatedBy:         e.CreatedBy,
+		UpdatedBy:         e.UpdatedBy,
+		DeletedBy:         e.DeletedBy,
 	}
 }
 
@@ -121,6 +130,9 @@ func (p *Kesehatan) ToPayload() *KesehatanPayload {
 		PenyuluhanEdukasi: p.PenyuluhanEdukasi,
 		PenyuluhanRujukan: p.PenyuluhanRujukan,
 		SourceData:        p.SourceData,
+		CreatedBy:         p.CreatedBy,
+		UpdatedBy:         p.UpdatedBy,
+		DeletedBy:         p.DeletedBy,
 		CreatedAt:         &p.CreatedAt,
 		UpdatedAt:         p.UpdatedAt,
 		DeletedAt:         p.DeletedAt,
@@ -150,6 +162,9 @@ func (p *KesehatanPayload) ToEntity() *entity.Kesehatan {
 		PenyuluhanEdukasi: p.PenyuluhanEdukasi,
 		PenyuluhanRujukan: p.PenyuluhanRujukan,
 		SourceData:        p.SourceData,
+		CreatedBy:         p.CreatedBy,
+		UpdatedBy:         p.UpdatedBy,
+		DeletedBy:         p.DeletedBy,
 	}
 
 	// timestamp dari jakantro; kalau tidak dikirim, database yang mengisi
