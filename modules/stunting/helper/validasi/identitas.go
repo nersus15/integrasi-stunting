@@ -3,6 +3,7 @@ package validasi
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
@@ -28,7 +29,7 @@ func ValidateOrangtua(p types.OrangtuaPayload) error {
 	// id datang dari jakantro, bukan digenerate server
 	return pertama(wajib(p.Id, "id"), wajib(p.IdPosyandu, "id_posyandu"), cekNoKk(p), cekNamaOrangtua(p, "harus diisi"),
 		cekNikOrangtua(p), wajib(p.Telepon, "telepon"), wajib(p.Rt, "rt"), wajib(p.Rw, "rw"), wajib(p.Alamat, "alamat"),
-		cekFlagOrangtua(p))
+		cekFlagOrangtua(p), CekLabelSumber(utils.StrPtr(p.SourceData)))
 }
 
 func ValidateOrangtuaFaskes(p types.OrangtuaPayload) error {
@@ -63,7 +64,7 @@ func ValidateAnakUpdate(p types.AnakPayload) error {
 
 // versi longgar untuk data dari Kafka
 func ValidateOrangtuaUpdate(p types.OrangtuaPayload) error {
-	return pertama(wajib(p.Id, "id"), cekNoKk(p), cekNamaOrangtua(p, "harus diisi"), cekNikOrangtua(p), cekFlagOrangtua(p))
+	return pertama(wajib(p.Id, "id"), cekNoKk(p), cekNikTerisi(p), cekFlagOrangtua(p))
 }
 
 func ValidateOrangtuaStream(p types.OrangtuaPayload) error {
@@ -72,9 +73,6 @@ func ValidateOrangtuaStream(p types.OrangtuaPayload) error {
 
 // identitas anak, berlaku untuk semua sumber data
 func validateAnakDasar(p types.AnakPayload) error {
-	if !utils.IsStrFilled(p.Id) {
-		return fmt.Errorf("id tidak boleh kosong")
-	}
 	if !utils.IsStrFilled(p.Nama) {
 		return fmt.Errorf("nama tidak boleh kosong")
 	}
@@ -99,16 +97,17 @@ func validateAnakDasar(p types.AnakPayload) error {
 
 // versi ketat untuk data dari jakantro
 func ValidateAnak(p types.AnakPayload) error {
-	return pertama(validateAnakDasar(p), wajib(p.IDOrangtua, "id_orangtua"), cekLahirAnak(p), wajib(p.SourceData, "source_data"))
+	return pertama(wajib(p.Id, "id"), validateAnakDasar(p), wajib(p.IDOrangtua, "id_orangtua"), cekLahirAnak(p), wajib(p.SourceData, "source_data"),
+		CekLabelSumber(p.SourceData))
 }
 
 func ValidateAnakFaskes(p types.AnakPayload) error {
-	return pertama(validateAnakDasar(p), cekLahirAnak(p))
+	return pertama(validateAnakDasar(p), wajib(p.IDOrangtua, "id_orangtua"), cekLahirAnak(p))
 }
 
 // versi longgar untuk data dari Kafka
 func ValidateAnakStream(p types.AnakPayload) error {
-	return validateAnakDasar(p)
+	return pertama(wajib(p.Id, "id"), validateAnakDasar(p))
 }
 
 // pertama mengembalikan galat pertama sesuai urutan pemeriksaan
@@ -133,6 +132,14 @@ func cekNikOrangtua(p types.OrangtuaPayload) error {
 		return fmt.Errorf("nik tidak boleh kosong")
 	}
 	if !utils.IsDigitsLen(p.Nik, 16) {
+		return fmt.Errorf("nik harus 16 digit angka")
+	}
+	return nil
+}
+
+// PUT: nik boleh tidak dikirim, tapi kalau dikirim harus benar
+func cekNikTerisi(p types.OrangtuaPayload) error {
+	if utils.IsStrFilled(p.Nik) && !utils.IsDigitsLen(p.Nik, 16) {
 		return fmt.Errorf("nik harus 16 digit angka")
 	}
 	return nil
@@ -181,6 +188,14 @@ func cekLahirAnak(p types.AnakPayload) error {
 	}
 	if p.LKLahir <= 0 {
 		return fmt.Errorf("lk_lahir harus lebih dari 0")
+	}
+	return nil
+}
+
+// source_data tersimpan maks 50, label jakantro diberi awalan "jakantro:"
+func CekLabelSumber(label string) error {
+	if utf8.RuneCountInString(strings.TrimSpace(label)) > 41 {
+		return fmt.Errorf("source_data maksimal 41 karakter")
 	}
 	return nil
 }

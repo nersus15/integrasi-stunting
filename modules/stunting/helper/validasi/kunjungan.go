@@ -23,6 +23,9 @@ func ValidateKesehatan(p types.KesehatanPayload) error {
 	if !utils.IsValidDate(p.TanggalPemantauan) {
 		return fmt.Errorf("tanggal_pemantauan harus berformat YYYY-MM-DD")
 	}
+	if err := CekLabelSumber(utils.StrPtr(p.SourceData)); err != nil {
+		return err
+	}
 
 	// nullable, hanya divalidasi jika dikirim
 	flags := map[string]*int16{
@@ -62,6 +65,9 @@ func ValidateKunjungan(p types.KunjunganPayload) error {
 	}
 	if !utils.IsValidDate(p.TanggalPengukuran) {
 		return fmt.Errorf("tanggal_pengukuran harus berformat YYYY-MM-DD")
+	}
+	if err := CekLabelSumber(utils.StrPtr(p.SourceData)); err != nil {
+		return err
 	}
 
 	// nullable, harus > 0 jika dikirim

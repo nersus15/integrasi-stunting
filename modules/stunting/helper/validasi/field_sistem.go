@@ -6,6 +6,7 @@ var fieldSistem = map[string]bool{
 	"CreatedAt": true,
 	"UpdatedAt": true,
 	"DeletedAt": true,
+	"CreatedBy": true,
 	"UpdatedBy": true,
 	"DeletedBy": true,
 }
