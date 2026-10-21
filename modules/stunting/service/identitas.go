@@ -26,6 +26,7 @@ func (s *StreamService) PastikanAnak(anak *types.Anak, anakKe *int) (*types.Anak
 	if err != nil || e == nil {
 		return nil, err
 	}
+	asalStream("").anak(e)
 	baru, err := s.repository.CreateAnak(e, nil)
 	return keDTO((*types.Anak).FromEntity, baru, err)
 }
@@ -126,6 +127,7 @@ func (s *StreamService) simpanOrangtua(orangtua *types.Orangtua, perluUpdate boo
 		if orangtua.IdSatusehat != nil {
 			e.SatusehatId = *orangtua.IdSatusehat
 		}
+		asalStream("").orangtua(e)
 
 		o, err := s.repository.CreateOrangTua(e, nil)
 		if err != nil {
@@ -135,13 +137,20 @@ func (s *StreamService) simpanOrangtua(orangtua *types.Orangtua, perluUpdate boo
 		idOrangtua = o.ID
 
 	case perluUpdate:
-		// sudah ada tapi satusehat_id-nya masih kosong
+		// identitas dari SatuSehat menimpa baris lama; created_by dan source_data tetap
+		lama, err := s.repository.FindOrangTuaById(idOrangtua, false)
+		if err != nil {
+			logger.Error("ProsesTransaksiFHIR:UpdateOrangtua => " + err.Error())
+			break
+		}
 		e := orangtua.ToPayload().ToEntity()
 		if orangtua.IdSatusehat != nil {
 			e.SatusehatId = *orangtua.IdSatusehat
 		}
+		lama.Override(*e, false)
+		lama.UpdatedBy = new(pembuatSatusehat)
 
-		if _, err := s.repository.UpdateOrangTuaById(e, nil, true); err != nil {
+		if _, err := s.repository.UpdateOrangTuaById(lama, nil, false); err != nil {
 			logger.Error("ProsesTransaksiFHIR:UpdateOrangtua => " + err.Error())
 		}
 	}

@@ -2,7 +2,6 @@ package satusehat
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/nersus15/integrasi/mod-stunting/helper/types"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
@@ -16,16 +15,9 @@ func EncounterToKunjungan(entry types2.BundleEntry) (*types.Kunjungan, *string, 
 		return nil, nil, nil, fmt.Errorf("Gagal memetakan resource Encounter ke Kunjungan: %s", err.Error())
 	}
 
-	orgid := ""
-
-	if resource.ServiceProvider != nil && resource.ServiceProvider.Reference != nil {
-		orgid = strings.Replace(utils.StrPtr(resource.ServiceProvider.Reference), "Organization/", "", 1)
-	}
-
 	k := &types.Kunjungan{
 		IdSatusehat:       entry.Base.Id,
 		TanggalPengukuran: tanggalEncounter(resource.Period),
-		SourceData:        utils.PtrStr("faskes:"+orgid, true),
 	}
 
 	if resource.Period != nil {

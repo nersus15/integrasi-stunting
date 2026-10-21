@@ -17,7 +17,7 @@ import (
 // alasan hanya terisi kalau sengaja tidak disimpan; kegagalan sebenarnya lewat error
 func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunjungan *types.Kunjungan,
 	refFaskes *string, observasi []satusehat.HasilObservasi, diagnosa []types.Diagnosa,
-	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode, anakBaru *entity.Anak) (*string, bool, string, error) {
+	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode, anakBaru *entity.Anak, asalKunjungan asal) (*string, bool, string, error) {
 	idAnak, idOrangtua := "", ""
 	if anak != nil {
 		idAnak, idOrangtua = anak.Id, anak.IdOrangtua
@@ -84,6 +84,7 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 			idKunjungan, statusLama, faskesKunjungan, sudahAda = &lama.Id, lama.Stunting, lama.IdFaskes, true
 		} else {
 			e := s.entityKunjungan(idAnak, kunjungan, refFaskes)
+			asalKunjungan.kunjungan(e)
 			data.Kunjungan = e
 			data.RefEncounter = kunjungan.IdSatusehat
 			idKunjungan, faskesKunjungan = &e.ID, e.IDFaskes

@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/nersus15/integrasi/mod-stunting/entity"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
@@ -13,7 +12,7 @@ import (
 
 func (s *StreamService) verifyEncounterPemeriksaan(orgid string, p *types.PemeriksaanFaskes) error {
 	encounter := utils.StrPtr(p.Kunjungan.IdSatusehat)
-	if err := s.stunting.VerifyEncounterMilik(orgid, encounter, true); err != nil {
+	if err := s.stunting.AksesEncounter(orgid, encounter, true); err != nil {
 		return err
 	}
 
@@ -35,7 +34,7 @@ func (s *StreamService) verifyEncounterPemeriksaan(orgid string, p *types.Pemeri
 		if !utils.IsFilled(ref) || *ref == encounter {
 			continue
 		}
-		if err := s.stunting.VerifyEncounterMilik(orgid, *ref, false); err != nil {
+		if err := s.stunting.AksesEncounter(orgid, *ref, false); err != nil {
 			return err
 		}
 	}
@@ -92,8 +91,6 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 			return nil, exceptions.TidakDisimpan.Messagef("tidak ada tanda stunting dan anak belum punya riwayat")
 		}
 
-		p.Anak.SourceData = fmt.Sprintf("faskes-api:%s", orgid)
-
 		anakBaru, err = siapkanAnakBaru(&p.Anak, nil)
 		if err != nil {
 			return nil, err
@@ -101,8 +98,9 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 		if anakBaru == nil {
 			return nil, exceptions.TidakDisimpan.Messagef("anak bukan sasaran pemantauan, umurnya sudah lewat 5 tahun")
 		}
+		asalFaskes(orgid).anak(anakBaru)
 		anak = &p.Anak
-	} else if _, err := s.stunting.VerifyAksesAnak(&orgid, anak, utils.PtrStr(anak.Id, true), nil); err != nil {
+	} else if err := s.stunting.AksesAnak(orgid, AksiUbah, anak.Id); err != nil {
 		return nil, err
 	}
 
@@ -114,7 +112,7 @@ func (s *StreamService) SimpanPemeriksaanFaskes(p *types.PemeriksaanFaskes, orgi
 	kunjungan.IdFaskes = &faskes.ID
 
 	idKunjungan, disimpan, alasan, err := s.simpanDataMedis(anak, anak.IdSatusehat, &kunjungan, &orgid,
-		observasi, p.Diagnosa, p.Layanan, p.Rujukan, p.Episode, anakBaru)
+		observasi, p.Diagnosa, p.Layanan, p.Rujukan, p.Episode, anakBaru, asalFaskes(orgid))
 
 	if err != nil {
 		return nil, err

@@ -191,15 +191,13 @@ func (s *StreamService) bacaPatient(entry types2.BundleEntry, update bool, isi *
 		return
 	}
 
-	isi.anak = anakDTO(s.repository.FindAnak(nil, tmp.Nik, nil, nil, false))
+	lama, _ := s.repository.FindAnak(nil, tmp.Nik, nil, nil, false)
+	isi.anak = anakDTO(lama, nil)
 	if isi.anak != nil {
-		anak := isi.anak
-		berubah := timpaAnakDariFHIR(anak, tmp)
-
-		if berubah && !utils.IsFilled(anak.UpdatedBy) && anak.IdSatusehat != nil {
-			anak.UpdatedBy = new("Orgid")
-
-			if _, err := s.repository.UpdateAnakById(anak.ToPayload().ToEntity(), nil, true); err != nil {
+		if timpaAnakDariFHIR(isi.anak, tmp) && isi.anak.IdSatusehat != nil {
+			lama.Override(*isi.anak.ToPayload().ToEntity(), false)
+			lama.UpdatedBy = new(pembuatSatusehat)
+			if _, err := s.repository.UpdateAnakById(lama, nil, false); err != nil {
 				logger.Error("ProsesTransaksiFHIR:UpdateDataAnak => " + err.Error())
 			}
 		}
@@ -293,7 +291,7 @@ func (s *StreamService) simpanIsiBundle(isi *isiBundle) error {
 	}
 
 	if isi.adaDataMedis() {
-		_, _, alasan, err := s.simpanDataMedis(isi.anak, isi.idAnakSatusehat, isi.kunjungan, isi.refFaskes, isi.observasi, isi.diagnosa, isi.layanan, isi.rujukan, isi.episode, nil)
+		_, _, alasan, err := s.simpanDataMedis(isi.anak, isi.idAnakSatusehat, isi.kunjungan, isi.refFaskes, isi.observasi, isi.diagnosa, isi.layanan, isi.rujukan, isi.episode, nil, asalStream(utils.StrPtr(isi.refFaskes)))
 		if err != nil {
 			return err
 		}
