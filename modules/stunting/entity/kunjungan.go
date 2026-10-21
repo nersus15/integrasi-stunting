@@ -40,11 +40,12 @@ type Kunjungan struct {
 	CreatedAt         time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt         *time.Time `bun:"updatedAt" json:"updated_at"`
 	DeletedAt         *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
-	SourceData        *string    `bun:"source_data,type:char(36)" json:"source_data"`
+	SourceData        *string    `bun:"source_data,type:varchar(50)" json:"source_data"`
+	CreatedBy         *string    `bun:"created_by,type:varchar(100)" json:"created_by"`
 	UpdatedBy         *string    `bun:"updated_by,type:varchar(100)" json:"updated_by"`
 	DeletedBy         *string    `bun:"deleted_by,type:varchar(100)" json:"deleted_by"`
 	IDFaskes          *string    `bun:"id_faskes,type:varchar(36),nullzero" json:"id_faskes"`
-	SatusehatId       *string    `bun:"satusehat_id,type:varchar(36),nullzero" json:"satusehat_id"`
+	SatusehatId       *string    `bun:"satusehat_id,type:varchar(36),nullzero" json:"id_satusehat"`
 	IDEpisode         *string    `bun:"id_episode,type:varchar(36),nullzero" json:"id_episode"`
 	RefEpisode        *string    `bun:"ref_episode,type:varchar(36),nullzero" json:"ref_episode"`
 	IDRujukan         *string    `bun:"id_rujukan,type:varchar(36),nullzero" json:"id_rujukan"`
@@ -63,7 +64,7 @@ type Kunjungan struct {
 }
 
 type Encounter struct {
-	SatusehatId string `bun:"satusehat_id,pk,type:char(36),default:null" json:"satusehat_id"`
+	SatusehatId string `bun:"satusehat_id,pk,type:char(36),default:null" json:"id_satusehat"`
 	Anak        string `bun:"anak,type:char(36),default:null" json:"anak"`
 }
 
@@ -95,6 +96,7 @@ func (e *Kunjungan) Override(new Kunjungan, force bool) {
 		"CreatedAt":   true,
 		"DeletedAt":   true,
 		"DeletedBy":   true,
+		"CreatedBy":   true,
 		"SourceData":  true,
 		"Anak":        true,
 		"Faskes":      true,

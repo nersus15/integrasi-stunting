@@ -33,7 +33,7 @@ type Episode struct {
 	ID          string     `bun:"id,pk,type:varchar(36)" json:"id"`
 	IDAnak      string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	IDFaskes    *string    `bun:"id_faskes,type:varchar(36),nullzero" json:"id_faskes"`
-	SatusehatId *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatId *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	System      *string    `bun:"system,type:varchar(255)" json:"system"`
 	Kode        *string    `bun:"kode,type:varchar(50)" json:"kode"`
 	Display     *string    `bun:"display,type:varchar(255)" json:"display"`
@@ -56,7 +56,7 @@ type Observasi struct {
 	IDKunjungan     *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
 	IDInduk         *string    `bun:"id_induk,type:varchar(36),nullzero" json:"id_induk"`
 	RefEncounter    *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
-	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	System          string     `bun:"system,type:varchar(255),notnull" json:"system"`
 	Kode            string     `bun:"kode,type:varchar(50),notnull" json:"kode"`
 	Display         *string    `bun:"display,type:varchar(255)" json:"display"`
@@ -86,7 +86,7 @@ type Diagnosa struct {
 	IDAnak             string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	IDKunjungan        *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
 	RefEncounter       *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
-	SatusehatId        *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatId        *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	Jenis              string     `bun:"jenis,type:varchar(20),notnull" json:"jenis"`
 	System             string     `bun:"system,type:varchar(255),notnull" json:"system"`
 	Kode               string     `bun:"kode,type:varchar(50),notnull" json:"kode"`
@@ -112,7 +112,7 @@ type Layanan struct {
 	IDAnak       string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	IDKunjungan  *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
 	RefEncounter *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
-	SatusehatId  *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatId  *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	Jenis        string     `bun:"jenis,type:varchar(30),notnull" json:"jenis"`
 	System       *string    `bun:"system,type:varchar(255)" json:"system"`
 	Kode         *string    `bun:"kode,type:varchar(50)" json:"kode"`
@@ -138,7 +138,7 @@ type Rujukan struct {
 	IDAnak          string     `bun:"id_anak,type:varchar(36),notnull" json:"id_anak"`
 	IDKunjungan     *string    `bun:"id_kunjungan,type:varchar(36),nullzero" json:"id_kunjungan"`
 	RefEncounter    *string    `bun:"ref_encounter,type:varchar(36),nullzero" json:"ref_encounter"`
-	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatId     *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	Jenis           string     `bun:"jenis,type:varchar(20),notnull" json:"jenis"`
 	IDFaskesAsal    *string    `bun:"id_faskes_asal,type:varchar(36),nullzero" json:"id_faskes_asal"`
 	IDFaskesTujuan  *string    `bun:"id_faskes_tujuan,type:varchar(36),nullzero" json:"id_faskes_tujuan"`

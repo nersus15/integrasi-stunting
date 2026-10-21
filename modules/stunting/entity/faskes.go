@@ -12,7 +12,7 @@ type Faskes struct {
 
 	ID          string     `bun:"id,pk,type:varchar(36)" json:"id"`
 	IDInduk     *string    `bun:"id_induk,type:varchar(36)" json:"id_induk"`
-	SatusehatID *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"satusehat_id"`
+	SatusehatID *string    `bun:"satusehat_id,type:varchar(36),nullzero,unique" json:"id_satusehat"`
 	Nama        string     `bun:"nama,type:varchar(100),notnull" json:"nama"`
 	Jenis       string     `bun:"jenis,type:varchar(36),notnull" json:"jenis"`
 	Wilayah     *string    `bun:"wilayah,type:varchar(13)" json:"wilayah"`

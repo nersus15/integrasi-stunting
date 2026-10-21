@@ -11,7 +11,7 @@ type Anak struct {
 	bun.BaseModel `bun:"table:stunting.anak,alias:a"`
 
 	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
-	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"satusehat_id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"id_satusehat"`
 	IDOrangtua   string     `bun:"id_orangtua,type:varchar(36),nullzero" json:"id_orangtua"`
 	Nama         string     `bun:"nama,type:varchar(255),notnull" json:"nama"`
 	NIK          *string    `bun:"nik,type:varchar(16),nullzero,unique" json:"nik"`
@@ -25,8 +25,9 @@ type Anak struct {
 	CreatedAt    time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    *time.Time `bun:"updatedAt" json:"updated_at"`
 	DeletedAt    *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
-	SourceData   string     `bun:"source_data,type:char(36),notnull" json:"source_data"`
+	SourceData   string     `bun:"source_data,type:varchar(50),notnull" json:"source_data"`
 	StatusAktif  *string    `bun:"status_aktif,type:varchar(20)" json:"status_aktif"`
+	CreatedBy    *string    `bun:"created_by,type:varchar(100)" json:"created_by"`
 	UpdatedBy    *string    `bun:"updated_by,type:varchar(100)" json:"updated_by"`
 	DeletedBy    *string    `bun:"deleted_by,type:varchar(100)" json:"deleted_by"`
 
@@ -66,6 +67,7 @@ func (e *Anak) Override(new Anak, force bool) {
 		"CreatedAt":  true,
 		"DeletedAt":  true,
 		"DeletedBy":  true,
+		"CreatedBy":  true,
 		"SourceData": true,
 		"Orangtua":   true,
 		"Kunjungan":  true,

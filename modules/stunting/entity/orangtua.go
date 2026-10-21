@@ -11,7 +11,7 @@ type Orangtua struct {
 	bun.BaseModel `bun:"table:stunting.orangtua,alias:o"`
 
 	ID           string     `bun:"id,pk,type:varchar(36)" json:"id"`
-	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"satusehat_id"`
+	SatusehatId  string     `bun:"satusehat_id,type:varchar(36),nullzero,default:null" json:"id_satusehat"`
 	IDPosyandu   *string    `bun:"id_posyandu,type:varchar(36),nullzero" json:"id_posyandu"`
 	NoKK         string     `bun:"no_kk,type:varchar(16),nullzero,unique" json:"no_kk"`
 	NamaAyah     string     `bun:"nama_ayah,type:varchar(255),notnull" json:"nama_ayah"`
@@ -25,9 +25,10 @@ type Orangtua struct {
 	CreatedAt    time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    *time.Time `bun:"updatedAt" json:"updated_at"`
 	DeletedAt    *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
-	SourceData   *string    `bun:"source_data,type:char(36)" json:"source_data"`
+	SourceData   *string    `bun:"source_data,type:varchar(50)" json:"source_data"`
 	UsiaHamil    *int16     `bun:"usia_hamil,type:smallint" json:"usia_hamil"`
 	KIABayiKecil *int16     `bun:"kia_bayi_kecil,type:smallint" json:"kia_bayi_kecil"`
+	CreatedBy    *string    `bun:"created_by,type:varchar(100)" json:"created_by"`
 	UpdatedBy    *string    `bun:"updated_by,type:varchar(100)" json:"updated_by"`
 	DeletedBy    *string    `bun:"deleted_by,type:varchar(100)" json:"deleted_by"`
 
@@ -60,6 +61,7 @@ func (e *Orangtua) Override(new Orangtua, force bool) {
 		"CreatedAt":  true,
 		"DeletedAt":  true,
 		"DeletedBy":  true,
+		"CreatedBy":  true,
 		"SourceData": true,
 		"Anak":       true,
 	}

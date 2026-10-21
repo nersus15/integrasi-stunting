@@ -28,7 +28,10 @@ type Kesehatan struct {
 	CreatedAt         time.Time  `bun:"createdAt,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt         *time.Time `bun:"updatedAt" json:"updated_at"`
 	DeletedAt         *time.Time `bun:"deletedAt,soft_delete" json:"deleted_at,omitempty"`
-	SourceData        *string    `bun:"source_data,type:char(36)" json:"source_data"`
+	SourceData        *string    `bun:"source_data,type:varchar(50)" json:"source_data"`
+	CreatedBy         *string    `bun:"created_by,type:varchar(100)" json:"created_by"`
+	UpdatedBy         *string    `bun:"updated_by,type:varchar(100)" json:"updated_by"`
+	DeletedBy         *string    `bun:"deleted_by,type:varchar(100)" json:"deleted_by"`
 
 	Anak *Anak `bun:"rel:belongs-to,join:id_anak=id" json:"anak,omitempty"`
 }
@@ -56,6 +59,8 @@ func (e *Kesehatan) Override(new Kesehatan, force bool) {
 		"IDAnak":     true,
 		"CreatedAt":  true,
 		"DeletedAt":  true,
+		"DeletedBy":  true,
+		"CreatedBy":  true,
 		"SourceData": true,
 		"Anak":       true,
 	}
