@@ -14,7 +14,8 @@ Kolom **wajib** berlaku untuk POST. Aturan PUT ada di bagian endpoint
 masing-masing.
 
 Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
-`updated_by`, `deleted_by` — diabaikan kalau dikirim, di semua endpoint.
+`created_by`, `updated_by`, `deleted_by` — diabaikan kalau dikirim, di semua
+endpoint.
 
 ### `orangtua`
 
@@ -31,8 +32,8 @@ Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
 | `kia` | `0`/`1` | — | keluarga memiliki buku KIA. Kosong berarti `0` |
 | `usia_hamil` | bilangan bulat ≥ 0 | — | usia kehamilan ibu, kalau sedang hamil |
 | `kia_bayi_kecil` | `0`/`1` | — | memiliki buku KIA bayi kecil |
-| `source_data` | teks, maks 36 | — | penanda sumber data. Kosong memakai default database. Tidak bisa diubah setelah dibuat |
-| `satusehat_id` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
+| `source_data` | teks, maks 41 | — | label sumber data, disimpan sebagai `jakantro:<label>`, atau `jakantro` kalau tidak dikirim (lihat [asal data](?doc=index#asal-data-dan-kolom-audit)). Tidak bisa diubah setelah dibuat |
+| `id_satusehat` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
 
 ### `anak`
 
@@ -49,9 +50,9 @@ Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
 | `bb_lahir` | angka > 0 | ya | berat lahir, kg |
 | `tb_lahir` | angka > 0 | ya | panjang lahir, cm |
 | `lk_lahir` | angka > 0 | ya | lingkar kepala saat lahir, cm |
-| `source_data` | teks, maks 36 | ya | penanda sumber data, mis. `jakantro`. Tidak bisa diubah setelah dibuat |
+| `source_data` | teks, maks 41 | ya | label sumber data, mis. id kader atau posyandu di sistem Anda. Disimpan sebagai `jakantro:<label>`. Tidak bisa diubah setelah dibuat |
 | `status_aktif` | teks, maks 20 | — | bawaan `aktif`. Disimpan apa adanya, tidak dipakai logika service |
-| `satusehat_id` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
+| `id_satusehat` | — | — | **diabaikan** dari jakantro; diisi jalur SatuSehat |
 
 ### `kunjungan`
 
@@ -74,7 +75,7 @@ Kolom yang diisi sistem — `created_at`, `updated_at`, `deleted_at`,
 | `kelas_ibu_balita` | `0`/`1` | — | ibu mengikuti kelas ibu balita |
 | `status_bbu`, `status_tbu`, `status_bbtb` | teks | — | status gizi BB/U, TB/U, BB/TB hasil hitungan Anda, mis. `Sangat Pendek`. Labelnya mengikuti [tabel status gizi](?doc=faskes#z-score-dan-status-gizi) |
 | `zscore_bbu`, `zscore_tbu`, `zscore_bbtb` | angka | — | z-score pasangan status di atas, disimpan 2 desimal |
-| `source_data` | teks, maks 36 | — | penanda sumber data. Tidak bisa diubah setelah dibuat |
+| `source_data` | teks, maks 41 | — | label sumber data, disimpan sebagai `jakantro:<label>`, atau `jakantro` kalau tidak dikirim. Tidak bisa diubah setelah dibuat |
 
 `id_satusehat`, `id_faskes`, `stunting`, `ref_episode`, `ref_rujukan`,
 `id_episode`, dan `id_rujukan` milik jalur faskes dan **diabaikan** kalau
@@ -99,7 +100,7 @@ dikirim jakantro. Kunjungan dari jakantro selalu tetap milik jakantro.
 | `layanan_mt_pangan` | `0`/`1` | — | mendapat makanan tambahan pangan lokal |
 | `penyuluhan_edukasi` | `0`/`1` | — | orangtua mendapat penyuluhan atau edukasi |
 | `penyuluhan_rujukan` | `0`/`1` | — | anak dirujuk |
-| `source_data` | teks, maks 36 | — | penanda sumber data. Tidak bisa diubah setelah dibuat |
+| `source_data` | teks, maks 41 | — | label sumber data, disimpan sebagai `jakantro:<label>`, atau `jakantro` kalau tidak dikirim. Tidak bisa diubah setelah dibuat |
 
 ---
 
@@ -142,7 +143,7 @@ transaction; kalau ada yang gagal, tidak ada yang tersimpan.
     "bb_lahir": 3.2,
     "tb_lahir": 49.5,
     "lk_lahir": 34.0,
-    "source_data": "jakantro"
+    "source_data": "kader-01"
   },
   "kunjungan": {
     "id": "c1e48a72-9d35-4b80-a6f3-52d7e9418b04",
@@ -180,7 +181,8 @@ baru dibuat:
     "created_at": "2026-08-28T04:04:51.489267Z",
     "updated_at": null,
     "deleted_at": null,
-    "source_data": "20f11c5c-5a29-11f0-a136-5749ce66d036",
+    "source_data": "jakantro",
+    "created_by": "jakantro",
     "usia_hamil": null,
     "kia_bayi_kecil": null
   },
@@ -231,7 +233,7 @@ dihilangkan sama sekali.
     "bb_lahir": 2.9,
     "tb_lahir": 47.0,
     "lk_lahir": 33.0,
-    "source_data": "jakantro"
+    "source_data": "kader-01"
   },
   "kunjungan": {
     "id": "f4a92b57-8e31-4d06-9c85-7b1e2f6a3d90",
@@ -314,8 +316,8 @@ lain mengikuti [tabel `kunjungan`](#kunjungan). Field yang tidak dikirim
 **tidak dihapus** — nilainya yang sekarang dipertahankan. Jadi mengirim
 `berat_badan` saja tidak akan mengosongkan tinggi badan.
 
-> **Awas.** Kunjungan yang dibuat faskes tidak boleh diubah jakantro.
-> Percobaannya dijawab `403` `1008` dengan menyebut faskes pembuatnya.
+> **Awas.** Kunjungan hanya bisa diubah pembuatnya. Kunjungan yang dibuat faskes
+> dijawab `403` `1008`.
 
 `id`, `id_anak`, dan `source_data` tidak ikut berubah meski dikirim; `id` yang
 dipakai selalu yang ada di path.
@@ -376,7 +378,10 @@ Contoh bentuk flat:
     "created_at": "2026-08-28T04:04:51.501846Z",
     "updated_at": null,
     "deleted_at": null,
-    "source_data": "20f11c5c-5a29-11f0-a136-5749ce66d036"
+    "source_data": "jakantro",
+    "created_by": "jakantro",
+    "updated_by": null,
+    "deleted_by": null
   }
 }
 ```
@@ -388,7 +393,8 @@ dipakai sebagai flag `0`/`1`.
 
 Bentuknya sama dengan `PUT /api/kunjungan/:id`: `id`, `id_anak`, dan
 `tanggal_pemantauan` wajib, field yang tidak dikirim dipertahankan, dan `id`,
-`id_anak`, serta `source_data` tidak berubah. `200` mengembalikan kesehatan hasil
+`id_anak`, serta `source_data` tidak berubah. Kesehatan hanya bisa diubah
+pembuatnya. `200` mengembalikan kesehatan hasil
 pembaruan, `404` `2001` kalau datanya tidak ada atau sudah dihapus.
 
 ---
@@ -444,7 +450,7 @@ Satu anak pada orangtua yang sudah ada. Field-nya ada di [tabel `anak`](#anak).
   "bb_lahir": 3.0,
   "tb_lahir": 48.0,
   "lk_lahir": 33.5,
-  "source_data": "jakantro"
+  "source_data": "kader-01"
 }
 ```
 
@@ -467,22 +473,24 @@ diperiksa formatnya sama seperti `POST /api/anak`.
 ```
 
 `200` mengembalikan anak hasil pembaruan, `404` `2001` kalau anaknya tidak ada.
-Field lain mengikuti [tabel `anak`](#anak). `satusehat_id` dan `source_data`
+Field lain mengikuti [tabel `anak`](#anak). `id_satusehat` dan `source_data`
 diabaikan — nilai dari SatuSehat tetap dipertahankan. Mengirim `id_orangtua`
 lain memindahkan anak ke orangtua itu. `imd` boleh diubah ke `0`.
 
+Untuk anak yang didaftarkan faskes atau SatuSehat, `nik` dan `id_orangtua`
+diabaikan; field lain tetap diperbarui.
+
 ### PUT /api/orangtua
 
-Dicari lewat `id`. Selain `id`, `nik` dan salah satu dari `nama_ayah` atau
-`nama_ibu` wajib dikirim, sama seperti POST; field lain yang tidak dikirim
-dipertahankan. Field lain mengikuti [tabel `orangtua`](#orangtua);
-`satusehat_id` dan `source_data` diabaikan, `kia` boleh diubah ke `0`.
+Dicari lewat `id`; hanya `id` yang wajib. Field yang tidak dikirim
+dipertahankan, field yang dikirim diperiksa formatnya mengikuti
+[tabel `orangtua`](#orangtua). `id_satusehat` dan `source_data` diabaikan,
+`kia` boleh diubah ke `0`. Untuk orangtua yang didaftarkan faskes atau
+SatuSehat, `nik` juga diabaikan.
 
 ```json
 {
   "id": "8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21",
-  "nik": "3175040101900002",
-  "nama_ibu": "Dewi Lestari",
   "telepon": "081299990000",
   "alamat": "Jl. Kenanga No. 14"
 }
@@ -519,7 +527,7 @@ Penghapusan bersifat soft delete: barisnya ditandai terhapus (`deleted_at`, dan
 | jawaban | arti |
 |---|---|
 | `200` | terhapus |
-| `403` `1008` | kunjungan itu dibuat faskes; sama seperti PUT, jakantro tidak boleh menghapusnya |
+| `403` `1008` | datanya bukan buatan jakantro: kunjungan atau kesehatan buatan pihak lain, atau anak dan orangtua yang didaftarkan faskes atau SatuSehat |
 | `404` `2001` | datanya tidak ada atau sudah dihapus. Menghapus dua kali tidak dianggap berhasil |
 
 Setelah dihapus, data itu dijawab `404` oleh GET dan tidak muncul lagi di

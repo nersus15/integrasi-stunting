@@ -20,7 +20,7 @@ Satu kunjungan beserta seluruh data medisnya, dalam satu transaksi.
 > yang Anda kirim diabaikan, dan key jakantro ditolak `403` `1008`.
 
 Kalau anaknya sudah terdaftar, Anda harus punya
-[hak akses](#hak-akses-anak-dan-orangtua) atas anak itu; kalau tidak, dijawab
+[hak akses](?doc=index#hak-akses-faskes) atas anak itu; kalau tidak, dijawab
 `403` `1008`. Anak yang belum terdaftar dibuat baru tanpa pemeriksaan ini.
 
 Encounter yang dirujuk juga harus milik Anda, dan pelanggarannya dijawab `403`
@@ -52,8 +52,11 @@ Daftar ini lengkap: field yang tidak tercantum tidak dikenali dan diabaikan.
 
 Yang ditentukan sistem selalu diabaikan kalau dikirim: `id`, `id_anak`,
 `id_kunjungan`, `id_induk`, `id_faskes`, `id_faskes_asal`, `id_faskes_tujuan`,
-`id_episode`, `id_rujukan`, `stunting`, dan kolom audit (`created_at`,
-`updated_at`, `deleted_at`, `updated_by`, `deleted_by`). Faskes dirujuk lewat
+`id_episode`, `id_rujukan`, `stunting`, `source_data`, dan kolom audit
+(`created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`,
+`deleted_by`). Data yang Anda kirim tercatat `created_by` orgid Anda dan
+`source_data` `faskes:<orgid>`, lihat [asal data](?doc=index#asal-data-dan-kolom-audit).
+Faskes dirujuk lewat
 `ref_*` berisi **id Organization SatuSehat apa adanya**, mis. `100011` — tanpa
 awalan `Organization/`.
 
@@ -73,7 +76,6 @@ terdaftar. Data anak yang sudah ada tidak diubah oleh endpoint ini; pakai
 | `anak_ke` | bilangan bulat | — | urutan kelahiran |
 | `imd` | `0`/`1` | — | mendapat inisiasi menyusu dini |
 | `bb_lahir`, `tb_lahir`, `lk_lahir` | angka | — | berat (kg), panjang (cm), dan lingkar kepala (cm) saat lahir |
-| `source_data` | teks, maks 36 | — | penanda sumber data |
 | `status_aktif` | teks, maks 20 | — | bawaan `aktif`. Disimpan apa adanya |
 
 `id_orangtua` diabaikan: faskes tidak menentukan keluarga anak. Anak baru tanpa
@@ -270,7 +272,9 @@ per indeks:
 ## PUT /api/faskes/:resourceName
 
 Memperbarui satu resource yang sudah tersimpan. `:resourceName` salah satu dari
-`kunjungan`, `observasi`, `diagnosa`, `layanan`, `rujukan`, `episode`.
+`kunjungan`, `observasi`, `diagnosa`, `layanan`, `rujukan`, `episode`; untuk
+`anak` dan `orangtua` lihat
+[PUT /api/faskes/anak dan PUT /api/faskes/orangtua](#put-apifaskesanak-dan-put-apifaskesorangtua).
 
 ```json
 PUT /api/faskes/diagnosa
@@ -329,7 +333,7 @@ di mana posisinya, atau dihitung sistem — bukan isi klinis.
 | `rujukan` | `id_kunjungan`, `ref_encounter`, `jenis`, `tanggal`, `id_faskes_asal`, `ref_faskes_asal`, `id_faskes_tujuan`, `ref_faskes_tujuan` |
 | `episode` | `id_faskes` |
 
-`jenis` dan `tanggal` rujukan dikunci karena [hak akses](#hak-akses-anak-dan-orangtua)
+`jenis` dan `tanggal` rujukan dikunci karena [hak akses](?doc=index#hak-akses-faskes)
 bergantung pada urutan rujukan dan rujuk balik. Kalau salah satunya keliru,
 perbaiki di SatuSehat — perubahan yang datang lewat Kafka tetap diterima.
 
@@ -356,37 +360,73 @@ ini. Hasil bacanya pun identik; lihat [endpoint GET](?doc=baca).
 
 ---
 
+## POST /api/faskes/orangtua
+
+Mendaftarkan satu orangtua. Field-nya sama dengan
+[tabel `orangtua`](?doc=jakantro#orangtua), dengan syarat berbeda. `id`
+dibangkitkan sistem; yang dikirim diabaikan.
+
+| key | wajib | keterangan |
+|---|---|---|
+| `nik` | ya | 16 digit angka |
+| `nama_ayah`, `nama_ibu` | salah satu | |
+| `telepon` | ya | |
+| `no_kk` | — | kalau dikirim, 16 digit angka |
+| `id_posyandu`, `rt`, `rw`, `alamat` | — | |
+| `kia`, `kia_bayi_kecil` | — | `0`/`1` |
+| `usia_hamil` | — | bilangan bulat ≥ 0 |
+| `id_satusehat` | — | id RelatedPerson SatuSehat |
+
+`created_by` diisi orgid Anda dan `source_data` `faskes:<orgid>`; nilai
+kiriman diabaikan. `201` mengembalikan object orangtua. Seperti
+[POST /api/orangtua](?doc=jakantro#post-apiorangtua), `nik` yang sudah terdaftar
+mengembalikan data yang ada, dan `nik` milik orangtua yang sudah dihapus
+memulihkan baris lamanya.
+
+## POST /api/faskes/anak
+
+Mendaftarkan satu anak pada orangtua yang sudah ada. Field-nya sama dengan
+[tabel `anak`](?doc=jakantro#anak): `id_orangtua`, `nama`, `tanggal_lahir`,
+`jenis_kelamin`, `anak_ke`, `bb_lahir`, `tb_lahir`, dan `lk_lahir` wajib; `nik`
+opsional, kalau dikirim 16 digit angka. `id_satusehat` boleh diisi. `id`
+dibangkitkan sistem; yang dikirim diabaikan.
+
+Anda harus punya [hak akses](?doc=index#hak-akses-faskes) atas keluarga
+`id_orangtua`; kalau tidak, dijawab `403` `1008` dan anaknya tidak disimpan.
+
+`created_by` diisi orgid Anda dan `source_data` `faskes:<orgid>`. `201`
+mengembalikan object anak; NIK yang sudah terdaftar di orangtua lain dijawab
+`409` `3006`.
+
+Anak yang datang bersama pemeriksaan tidak perlu didaftarkan lewat endpoint ini:
+[POST /api/faskes/pemeriksaan](#post-apifaskespemeriksaan) membuatnya sendiri.
+
 ## PUT /api/faskes/anak dan PUT /api/faskes/orangtua
 
 Field-nya sama dengan [PUT /api/anak](?doc=jakantro#put-apianak) dan
-[PUT /api/orangtua](?doc=jakantro#put-apiorangtua): `id` wajib, dan untuk
-orangtua juga `nik` serta salah satu dari `nama_ayah` atau `nama_ibu`. Field yang
-tidak dikirim dipertahankan. Kunci jakantro ditolak `403` `1008` di sini, dan
-kunci faskes ditolak di `PUT /api/anak` dan `PUT /api/orangtua`.
+[PUT /api/orangtua](?doc=jakantro#put-apiorangtua). Barisnya dicari lewat
+`id_satusehat` kalau dikirim, selain itu lewat `id`; salah satunya wajib.
+Field yang tidak dikirim dipertahankan.
 
-Data identitas dari faskes dianggap lebih terpercaya, jadi `nik` dan `no_kk`
-boleh Anda perbaiki. Dua field diabaikan kalau dikirim faskes, karena keduanya
-menentukan siapa yang berhak atas data itu:
+```json
+PUT /api/faskes/anak
+
+{
+  "id_satusehat": "P99001100022",
+  "nama": "Siti Aminah"
+}
+```
+
+`200` mengembalikan data hasil pembaruan, `404` `2001` kalau tidak ditemukan,
+`403` `1008` kalau Anda tidak punya [hak akses](?doc=index#hak-akses-faskes)
+atas data itu. Kunci jakantro ditolak `403` `1008` di sini, dan kunci faskes
+ditolak di `PUT /api/anak` dan `PUT /api/orangtua`.
+
+Data identitas dari faskes dianggap lebih terpercaya, jadi `nik`, `no_kk`, dan
+`id_satusehat` boleh Anda isi atau perbaiki. Dua field diabaikan kalau dikirim
+faskes, karena keduanya menentukan siapa yang berhak atas data itu:
 
 | field | endpoint | alasan |
 |---|---|---|
 | `id_posyandu` | `PUT /api/faskes/orangtua` | memindah keluarga ke wilayah lain |
 | `id_orangtua` | `PUT /api/faskes/anak` | memindah anak ke keluarga lain |
-
-## Hak akses anak dan orangtua
-
-Berlaku untuk `GET /api/anak/:id`, `GET /api/orangtua`, `PUT /api/faskes/anak`,
-`PUT /api/faskes/orangtua`, dan `POST /api/faskes/pemeriksaan` untuk anak yang sudah
-terdaftar. Akses diberikan kalau salah satu terpenuhi:
-
-| pemanggil | syarat |
-|---|---|
-| jakantro | selalu |
-| puskesmas dan pustu | posyandu keluarga itu ada di wilayah kerja Anda |
-| faskes tujuan rujukan (umumnya RS) | ada rujukan untuk anak itu dengan tujuan faskes Anda, dan belum ada rujuk balik dari faskes Anda sesudahnya |
-| faskes yang mencatat kunjungan | hanya untuk anak yang belum terhubung ke orangtua |
-
-Untuk orangtua, rujukan salah satu anaknya sudah cukup. Rujuk balik mencabut
-akses; rujukan baru sesudahnya memberikannya lagi. Rujukan `internal` tidak
-memberi akses.
-

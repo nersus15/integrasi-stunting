@@ -6,6 +6,10 @@ asal data tidak membedakan cara membacanya.
 Semua butuh API key. Yang tidak ketemu selalu `404` `2001 NOT_FOUND`, termasuk
 data yang sudah dihapus.
 
+Jakantro bisa membaca semua data. Faskes hanya bisa membaca anak dan orangtua
+yang ia punya [hak aksesnya](?doc=index#hak-akses-faskes), termasuk riwayat,
+kunjungan, kesehatan, dan summary anak itu; selebihnya dijawab `403` `1008`.
+
 ## GET /api/orangtua/:id
 
 | parameter | tipe | keterangan |
@@ -40,7 +44,8 @@ GET /api/orangtua?nik=3175040101900002
   "created_at": "2026-08-28T04:04:51.489267Z",
   "updated_at": null,
   "deleted_at": null,
-  "source_data": "20f11c5c-5a29-11f0-a136-5749ce66d036",
+  "source_data": "jakantro",
+  "created_by": "jakantro",
   "usia_hamil": null,
   "kia_bayi_kecil": null,
   "updated_by": null,
@@ -95,7 +100,8 @@ riwayat tetap muncul; `anak` berupa `[]` kalau orangtua belum punya anak.
   "created_at": "2026-08-28T04:04:51.489267Z",
   "updated_at": null,
   "deleted_at": null,
-  "source_data": "jakantro                            ",
+  "source_data": "jakantro:kader-01",
+  "created_by": "jakantro",
   "status_aktif": "aktif",
   "updated_by": null,
   "deleted_by": null
@@ -145,7 +151,7 @@ disalin mentah-mentah. Payload siap salin ada di [Contoh Payload](?doc=contoh).
 
 ```json
 {
-  "anak":        { "id": "...", "nama": "Siti Aminah", "satusehat_id": "P99001100022" },
+  "anak":        { "id": "...", "nama": "Siti Aminah", "id_satusehat": "P99001100022" },
   "episode":     [ ... ],
   "kunjungan":   [ ... ],
   "kesehatan":   [ ... ],

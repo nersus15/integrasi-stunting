@@ -180,7 +180,7 @@ dijawab `404` oleh router.
 > `endpoint ini hanya untuk faskes, bukan jakantro` · `Tidak Bisa Verifikasi Akses, Posyandu Tidak ditemukan` · `Tidak bisa verifikasi akses, posyandu tidak terhubung dengan puskesmas`
 
 Key Anda sah dan dikenali, tetapi yang Anda minta di luar kewenangan key itu.
-Dua sebab yang mungkin:
+Sebab yang mungkin:
 
 - **jalur yang salah** — key jakantro dipakai memanggil
   `POST /api/faskes/pemeriksaan`, yang hanya untuk puskesmas dan RS
@@ -188,7 +188,11 @@ Dua sebab yang mungkin:
   dengan wilayah kerja Anda
 - **anak atau orangtua di luar kewenangan** — di luar wilayah kerja Anda dan
   tidak sedang dirujuk ke faskes Anda (lihat
-  [hak akses](?doc=faskes#hak-akses-anak-dan-orangtua))
+  [hak akses](?doc=index#hak-akses-faskes))
+- **bukan pembuat data** — mengubah atau menghapus kunjungan (beserta data
+  medisnya) atau kesehatan yang dibuat pihak lain, atau jakantro menghapus anak
+  dan orangtua yang didaftarkan faskes atau SatuSehat (lihat
+  [asal data](?doc=index#asal-data-dan-kolom-audit))
 - **encounter milik faskes lain** — `kunjungan.id_satusehat` atau
   `ref_encounter` menunjuk kunjungan faskes lain, atau encounter yang belum
   tersimpan sehingga kepemilikannya tidak bisa diverifikasi
@@ -331,7 +335,8 @@ pengelola baru menambahkan aturan, efeknya bisa telat sampai satu menit.
 > Terjadi kesalahan
 
 Ada yang rusak di sisi service. Sebab aslinya cuma masuk log, tidak ikut ke
-response.
+response. Pengecualiannya saat service berjalan dengan logging level `debug`
+(lingkungan dev): `message` berisi galat aslinya supaya mudah ditelusuri.
 
 Termasuk kalau lapisan auth sendiri yang bermasalah. Bedanya dengan `4002`:
 `4002` berarti Anda memang tidak berhak, `5001` berarti service tidak bisa

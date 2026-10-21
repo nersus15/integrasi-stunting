@@ -24,7 +24,7 @@ jangan tertukar.
 | | **Jakantro (posyandu)** | **Faskes (puskesmas & RS)** |
 |---|---|---|
 | halaman | [Jalur Jakantro](?doc=jakantro) | [Jalur Faskes](?doc=faskes) |
-| endpoint kirim | `POST` pada `/api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak`; `PUT` pada `/api/kunjungan/:id`, `/api/kesehatan/:id`, `/api/anak`, `/api/orangtua` | `POST /api/faskes/pemeriksaan`, `PUT /api/faskes/:resource` (termasuk `anak` dan `orangtua`) |
+| endpoint kirim | `POST` pada `/api/kunjungan`, `/api/kesehatan`, `/api/orangtua`, `/api/anak`; `PUT` pada `/api/kunjungan/:id`, `/api/kesehatan/:id`, `/api/anak`, `/api/orangtua`; `DELETE` pada `/api/orangtua/:id`, `/api/anak/:id`, `/api/kunjungan/:id`, `/api/kesehatan/:id` | `POST` pada `/api/faskes/pemeriksaan`, `/api/faskes/orangtua`, `/api/faskes/anak`; `PUT /api/faskes/:resource` (termasuk `anak` dan `orangtua`) |
 | siapa menentukan `id` | **Anda** | **sistem** |
 | kunci pencocokan | `id` kiriman Anda | `id_satusehat` (IHS id) |
 | identitas pengirim | group `jakantro` di API key | group `orgid:<satusehat id>` di API key |
@@ -54,7 +54,7 @@ tidak ada cara lain mencocokkan kiriman dengan data yang sudah tersimpan.
 pencocokan memakai `id_satusehat`. Karena itu `kunjungan.id_satusehat` wajib,
 dan kiriman ulang aman — tidak menggandakan data.
 
-`id` yang telanjur dikirim ke `POST /api/faskes/pemeriksaan` diabaikan.
+`id` yang telanjur dikirim ke endpoint faskes diabaikan.
 Sebaliknya, `id` yang hilang di endpoint jakantro ditolak:
 
 ```json
@@ -103,11 +103,13 @@ Selengkapnya, termasuk `403` `1008` yang berbeda sebab, ada di
 **Tanggal selalu `YYYY-MM-DD`.** Format lain ditolak `422`. Timestamp
 (`created_at`, `updated_at`, `deleted_at`) dikirim balik sebagai RFC 3339 UTC.
 
-**Field yang tidak dikirim jadi `null`,** kecuali `source_data` yang punya
-default di database, serta `kia` dan `imd` yang menjadi `0`.
+**Field yang tidak dikirim jadi `null`,** kecuali `kia` dan `imd` yang menjadi
+`0`, serta `source_data` yang selalu diisi sistem (lihat
+[asal data](#asal-data-dan-kolom-audit)).
 
 **Kolom yang diisi sistem diabaikan kalau dikirim:** `created_at`,
-`updated_at`, `deleted_at`, `updated_by`, dan `deleted_by`, di semua endpoint.
+`updated_at`, `deleted_at`, `created_by`, `updated_by`, dan `deleted_by`, di
+semua endpoint.
 Daftar lengkap field yang diterima tiap endpoint ada di
 [Jalur jakantro](?doc=jakantro#field-per-entitas) dan
 [Jalur faskes](?doc=faskes#field-per-bagian).
@@ -116,25 +118,88 @@ Daftar lengkap field yang diterima tiap endpoint ada di
 yang Anda kirim, tanpa tambahan apa pun. Bandingkan langsung, tidak perlu
 `TRIM()`.
 
-Tiga kolom masih bertipe `character` dan **dipadding spasi sampai panjang
-penuh**:
+`rt`, `rw` (orangtua), dan `jenis_kelamin` masih bertipe `character`, jadi
+dipadding spasi sampai 3 dan 1 karakter. Nilainya memang selalu sepanjang itu,
+jadi biasanya tidak terasa.
 
-| kolom | panjang |
+---
+
+## Aturan akses
+
+Kunci API menentukan jalur Anda: grup `jakantro`, atau `orgid:<satusehat id>`
+untuk faskes. Jalur yang salah ditolak `403` `1008` sebelum aturan di bawah
+berlaku. Data dari SatuSehat masuk lewat Kafka, bukan lewat endpoint.
+
+| data | aksi | jakantro | faskes | SatuSehat (Kafka) |
+|---|---|---|---|---|
+| orangtua | baca | semua | perlu [hak akses](#hak-akses-faskes) | — |
+| | buat | `POST /api/orangtua`, key `orangtua` di POST kunjungan/kesehatan | `POST /api/faskes/orangtua` | dari RelatedPerson |
+| | ubah | semua field; untuk orangtua buatan faskes/SatuSehat, `nik` diabaikan | `PUT /api/faskes/orangtua`, perlu hak akses; `id_posyandu` diabaikan | RelatedPerson selalu menimpa identitas |
+| | hapus | hanya buatan sendiri | — | — |
+| anak | baca | semua | perlu hak akses | — |
+| | buat | `POST /api/anak`, key `anak` di POST kunjungan/kesehatan | `POST /api/faskes/anak` (perlu hak akses atas `id_orangtua`), atau anak baru dari pemeriksaan | dari Patient |
+| | ubah | semua field; untuk anak buatan faskes/SatuSehat, `nik` dan `id_orangtua` diabaikan | `PUT /api/faskes/anak`, perlu hak akses; `id_orangtua` diabaikan | Patient selalu menimpa identitas |
+| | hapus | hanya buatan sendiri | — | — |
+| kunjungan | baca | semua | perlu hak akses atas anaknya | — |
+| | buat | POST kunjungan | `POST /api/faskes/pemeriksaan` | dari Encounter |
+| | ubah | hanya buatan sendiri | `PUT /api/faskes/kunjungan`, hanya pembuatnya | PUT Encounter |
+| | hapus | hanya buatan sendiri | — | — |
+| data medis (observasi, diagnosa, layanan, rujukan, episode) | baca | semua | lewat kunjungan anaknya | — |
+| | ubah | — | `PUT /api/faskes/:resource`, hanya pembuat kunjungannya | PUT per resource |
+| kesehatan | baca | semua | perlu hak akses atas anaknya | — |
+| | buat, ubah, hapus | hanya buatan sendiri | — | — |
+
+Penolakan selalu `403` `1008`. `id_satusehat` dan `source_data` kiriman
+jakantro diabaikan.
+
+### Hak akses faskes
+
+Faskes punya hak atas anak dan orangtua kalau salah satu terpenuhi:
+
+| faskes | syarat |
 |---|---|
-| `source_data` | 36 |
-| `rt`, `rw` | 3 |
-| `jenis_kelamin` | 1 |
+| puskesmas dan pustu | posyandu keluarga itu ada di wilayah kerjanya |
+| faskes tujuan rujukan (umumnya RS) | ada rujukan untuk anak itu ke faskes tersebut dan belum ada rujuk balik dari faskes itu sesudahnya; untuk orangtua, cukup salah satu anaknya |
+| faskes pencatat kunjungan | hanya untuk anak yang belum terhubung ke orangtua |
 
-Padding itu perilaku Postgres untuk tipe `character`, bukan bug. Untuk `rt`,
-`rw`, dan `jenis_kelamin` tidak terasa karena nilainya memang selalu sepanjang
-itu. Tapi `source_data` terasa:
+Rujuk balik mencabut hak; rujukan baru sesudahnya memberikannya lagi. Rujukan
+`internal` tidak memberi hak.
 
-```text
-"source_data": "jakantro                            "
-```
+---
 
-Kalau Anda mencocokkan `source_data` dengan string tertentu, potong dulu spasi
-ekornya.
+## Asal data dan kolom audit
+
+Setiap orangtua, anak, kunjungan, dan kesehatan mencatat pembuatnya di
+`created_by` dan jalur masuknya di `source_data`. Keduanya diisi sistem dan
+tidak pernah berubah; nilai kiriman diabaikan.
+
+| jalur | `created_by` | `source_data` |
+|---|---|---|
+| jakantro | `jakantro` | `jakantro:<source_data kiriman>`, atau `jakantro` kalau tidak dikirim |
+| faskes | orgid faskes | `faskes:<orgid>` |
+| SatuSehat | anak dan orangtua: `satusehat`; kunjungan: orgid faskes pengirim Encounter (`satusehat` kalau tidak ada) | `satusehat` |
+
+`source_data` tersimpan paling panjang 50 karakter, jadi kiriman jakantro paling
+panjang 41 karakter (UUID muat); lebih dari itu `422` `1002`. Data medis tidak
+punya `created_by`; pemiliknya mengikuti kunjungan.
+
+`updated_by` mencatat siapa yang terakhir mengubah:
+
+| jalur | diisi saat |
+|---|---|
+| jakantro | `jakantro`, di PUT orangtua, anak, kunjungan, dan kesehatan |
+| faskes | orgid, di `PUT /api/faskes/orangtua`, `/anak`, dan `/kunjungan` |
+| SatuSehat | `satusehat`, saat Patient atau RelatedPerson menimpa identitas |
+
+Tidak mengubah `updated_by`: PUT Encounter dari SatuSehat (hanya tanggal),
+`anak_ke` dari Observation, penautan anak ke orangtua, kolom ukur kunjungan dari
+observasi, dan pemulihan orangtua yang terhapus. Data medis tidak punya
+`updated_by`; yang berubah hanya `updated_at`.
+
+`deleted_by` diisi `jakantro` saat jakantro menghapus orangtua, anak,
+kunjungan, atau kesehatan. Faskes dan SatuSehat tidak menghapus. Mendaftarkan
+lagi NIK orangtua yang terhapus memulihkan barisnya dan mengosongkan
+`deleted_at` serta `deleted_by`.
 
 ---
 
