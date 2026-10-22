@@ -104,6 +104,9 @@ func (s *StreamService) bacaEntry(entry types2.BundleEntry, update bool, isi *is
 		return bacaKlinis(isi, entry, update, "EncounterToKunjungan", satusehat.EncounterToKunjungan,
 			func(k *types.Kunjungan, ihsFaskes *string) { isi.kunjungan, isi.refFaskes = k, ihsFaskes },
 			func(k *types.Kunjungan) error {
+				// if err := s.aksesEncounterStream(isi, true); err != nil {
+				// 	return err
+				// }
 				_, err := s.repository.UpdateKunjunganBySatusehatId(k.ToPayload().ToEntity(), true)
 				return err
 			})
@@ -275,6 +278,11 @@ func (s *StreamService) bacaObservation(entry types2.BundleEntry, update bool, i
 }
 
 func (s *StreamService) simpanIsiBundle(isi *isiBundle) error {
+	// sebelum anak baru dibuat, supaya yang dicek hanya anak yang sudah ada
+	// if err := s.aksesEncounterStream(isi, false); err != nil {
+	// 	return err
+	// }
+
 	if isi.anak != nil && !utils.IsStrFilled(isi.anak.Id) {
 		a, err := s.PastikanAnak(isi.anak, isi.anakKe)
 		if err != nil {
@@ -304,6 +312,21 @@ func (s *StreamService) simpanIsiBundle(isi *isiBundle) error {
 		s.simpanOrangtua(isi.orangtua, isi.orangtuaPerluUpdate, isi.idAnakSatusehat)
 	}
 	return nil
+}
+
+// stream selalu dipercaya; hanya Encounter yang bisa dicek lewat orgid serviceProvider
+func (s *StreamService) aksesEncounterStream(isi *isiBundle, update bool) error {
+	if isi.kunjungan == nil || !utils.IsFilled(isi.refFaskes) {
+		return nil
+	}
+	orgid := *isi.refFaskes
+	if update {
+		return s.stunting.AksesEncounter(orgid, utils.StrPtr(isi.kunjungan.IdSatusehat), false)
+	}
+	if isi.anak == nil || !utils.IsStrFilled(isi.anak.Id) {
+		return nil
+	}
+	return s.stunting.AksesAnak(orgid, AksiUbah, isi.anak.Id)
 }
 
 func (s *StreamService) perbaruiAnakKe(idAnakSatusehat string, anakKe int) {
