@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/helper/exceptions"
@@ -79,15 +80,16 @@ func (h *HttpHandler) ListAnak(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-// Saat ini hanya by id
+// by id, atau by nik lewat query
 func (h *HttpHandler) FindAnak(c *fiber.Ctx) error {
-	id := c.Params("id", "")
+	id := strings.TrimSpace(c.Params("id", ""))
+	nik := strings.TrimSpace(c.Query("nik", ""))
 
-	if err := validasi.ValidateCariAnak(id); err != nil {
+	if err := validasi.ValidateCariAnak(id, nik); err != nil {
 		return kirimError(c, exceptions.Validasi.WithMessage(err.Error(), err))
 	}
 
-	anak, err := h.service.FindAnak(&id, nil, nil, nil)
+	anak, err := h.service.FindAnak(utils.PtrStr(id, true), utils.PtrStr(nik, true), nil, nil)
 
 	if err != nil {
 		if errors.Is(err, exceptions.ErrTidakDitemukan) {

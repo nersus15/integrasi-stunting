@@ -18,12 +18,12 @@ func ValidateCariOrangtua(id, nik, nokk, namaAyah, namaIbu string) error {
 	return nil
 }
 
-func ValidateCariAnak(id string) error {
-	if utils.IsStrFilled(id) {
-		return nil
+func ValidateCariAnak(id, nik string) error {
+	if !utils.IsStrFilled(id) && !utils.IsStrFilled(nik) {
+		return fmt.Errorf("sebutkan minimal satu kata kunci (id | nik)")
 	}
 
-	return fmt.Errorf("Id Anak Tidak Valid")
+	return nil
 }
 func ValidateOrangtua(p types.OrangtuaPayload) error {
 	// id datang dari jakantro, bukan digenerate server
