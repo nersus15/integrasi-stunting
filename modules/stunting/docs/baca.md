@@ -9,6 +9,7 @@ data yang sudah dihapus.
 Jakantro bisa membaca semua data. Faskes hanya bisa membaca anak dan orangtua
 yang ia punya [hak aksesnya](?doc=index#hak-akses-faskes), termasuk riwayat,
 kunjungan, kesehatan, dan summary anak itu; selebihnya dijawab `403` `1008`.
+Pencarian lewat `nik` mengikuti hak akses yang sama dengan pencarian lewat `id`.
 
 ## GET /api/orangtua/:id
 
@@ -82,6 +83,19 @@ Field orangtua di-flatten ke root, bukan dibungkus object `orangtua`. Anak tanpa
 riwayat tetap muncul; `anak` berupa `[]` kalau orangtua belum punya anak.
 
 ## GET /api/anak/:id
+
+| parameter | tipe | keterangan |
+|---|---|---|
+| `id` | path, opsional | id anak |
+| `nik` | query | NIK anak |
+
+Minimal satu harus diisi; kalau kosong semua kena `422` `1002`. Kalau keduanya
+dikirim, yang dipakai `id`.
+
+```
+GET /api/anak/b7d9e254-3f81-4c6a-8e12-90ab5d3f7c68
+GET /api/anak?nik=3175041503240003
+```
 
 ```json
 {

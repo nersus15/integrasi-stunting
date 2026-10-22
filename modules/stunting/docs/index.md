@@ -132,11 +132,11 @@ berlaku. Data dari SatuSehat masuk lewat Kafka, bukan lewat endpoint.
 
 | data | aksi | jakantro | faskes | SatuSehat (Kafka) |
 |---|---|---|---|---|
-| orangtua | baca | semua | by `nik` terbuka; selain itu perlu [hak akses](#hak-akses-faskes) | — |
+| orangtua | baca | semua | perlu [hak akses](#hak-akses-faskes), juga lewat `nik` | — |
 | | buat | `POST /api/orangtua`, key `orangtua` di POST kunjungan/kesehatan | `POST /api/faskes/orangtua` | dari RelatedPerson |
 | | ubah | semua field; untuk orangtua buatan faskes/SatuSehat, `nik` diabaikan | `PUT /api/faskes/orangtua`, perlu hak akses; `id_posyandu` diabaikan | RelatedPerson selalu menimpa identitas |
 | | hapus | hanya buatan sendiri | — | — |
-| anak | baca | semua | perlu hak akses | — |
+| anak | baca | semua | perlu hak akses, juga lewat `nik` | — |
 | | buat | `POST /api/anak`, key `anak` di POST kunjungan/kesehatan | `POST /api/faskes/anak` (perlu hak akses atas `id_orangtua`), atau anak baru dari pemeriksaan | dari Patient |
 | | ubah | semua field; untuk anak buatan faskes/SatuSehat, `nik` dan `id_orangtua` diabaikan | `PUT /api/faskes/anak`, perlu hak akses; `id_orangtua` diabaikan | Patient selalu menimpa identitas |
 | | hapus | hanya buatan sendiri | — | — |
