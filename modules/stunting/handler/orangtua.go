@@ -73,8 +73,11 @@ func (h *HttpHandler) FindOrangTua(c *fiber.Ctx) error {
 		return kirimError(c, err)
 	}
 
-	if err := h.service.AksesOrangtua(orgidPemanggil(c), service.AksiBaca, orangtua.Id); err != nil {
-		return kirimError(c, err)
+	// by nik terbuka untuk semua, jalan faskes mendapatkan id dan id_satusehat
+	if nik == "" {
+		if err := h.service.AksesOrangtua(orgidPemanggil(c), service.AksiBaca, orangtua.Id); err != nil {
+			return kirimError(c, err)
+		}
 	}
 
 	return c.Status(fiber.StatusOK).JSON(orangtua)
