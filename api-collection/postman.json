@@ -997,6 +997,34 @@
           }
         },
         {
+          "name": "Anak By NIK",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "",
+            "url": {
+              "raw": "{{BASE_URL}}/anak?nik=3175041503240003",
+              "protocol": "",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "anak"
+              ],
+              "query": [
+                {
+                  "key": "nik",
+                  "value": "3175041503240003"
+                }
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
           "name": "Riwayat Kunjungan Anak",
           "request": {
             "method": "GET",
