@@ -79,7 +79,6 @@ func (d *StuntingRepository) HubungkanAnakKeOrangTua(satusehatIdAnak string, idO
 		d.lupakan(keyAnakSatusehat(satusehatIdAnak), keyListAnak(idOrangtua))
 		if a, e := d.FindAnakBySatusehatId(satusehatIdAnak, false); e == nil && a != nil {
 			d.LupakanAnak(a)
-			d.LupakanAksesPerubahanOrangtua(a.ID, idOrangtua)
 		}
 	}
 

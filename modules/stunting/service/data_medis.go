@@ -18,14 +18,14 @@ import (
 func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunjungan *types.Kunjungan,
 	refFaskes *string, observasi []satusehat.HasilObservasi, diagnosa []types.Diagnosa,
 	layanan []types.Layanan, rujukan []types.Rujukan, episode []types.Episode, anakBaru *entity.Anak, asalKunjungan asal) (*string, bool, string, error) {
-	idAnak, idOrangtua := "", ""
+	idAnak := ""
 	if anak != nil {
-		idAnak, idOrangtua = anak.Id, anak.IdOrangtua
+		idAnak = anak.Id
 	}
 	// bundle tanpa Patient: anaknya dicari lewat IHS id dari envelope
 	if !utils.IsStrFilled(idAnak) && utils.IsFilled(ihsAnak) {
 		if a, err := s.repository.FindAnakBySatusehatId(*ihsAnak, false); err == nil && a != nil {
-			idAnak, idOrangtua = a.ID, a.IDOrangtua
+			idAnak = a.ID
 		}
 	}
 	if !utils.IsStrFilled(idAnak) {
@@ -172,31 +172,11 @@ func (s *StreamService) simpanDataMedis(anak *types.Anak, ihsAnak *string, kunju
 		logger.Error("ProsesTransaksiFHIR:SimpanDataMedis => " + err.Error())
 		return nil, false, "", err
 	}
-	s.lupakanAksesKlinis(idAnak, idOrangtua, refFaskes, data.Kunjungan != nil, data.Rujukan)
+	if len(data.Rujukan) > 0 {
+		s.repository.LupakanRujukanTerakhir(idAnak)
+	}
 
 	return idKunjungan, true, "", nil
-}
-
-// hanya rujukan baru dan kunjungan anak tanpa orangtua yang mengubah akses klinis
-func (s *StreamService) lupakanAksesKlinis(idAnak, idOrangtua string, refFaskes *string, kunjunganBaru bool, rujukan []*entity.Rujukan) {
-	if kunjunganBaru && idOrangtua == "" && utils.IsFilled(refFaskes) {
-		s.repository.LupakanAksesKlinis(*refFaskes, idAnak, "")
-	}
-
-	orgid := map[string]bool{}
-	for _, r := range rujukan {
-		for _, ref := range []*string{r.RefFaskesAsal, r.RefFaskesTujuan} {
-			if utils.IsFilled(ref) {
-				orgid[*ref] = true
-			}
-		}
-	}
-	for o := range orgid {
-		s.repository.LupakanAksesKlinis(o, idAnak, "")
-		if idOrangtua != "" {
-			s.repository.LupakanAksesKlinis(o, "", idOrangtua)
-		}
-	}
 }
 
 func (s *StreamService) entityKunjungan(idAnak string, k *types.Kunjungan, refFaskes *string) *entity.Kunjungan {

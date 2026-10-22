@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -33,9 +32,7 @@ func keyListKesehatan(idAnak string) string { return "LIST:KESEHATAN:" + idAnak 
 func keySummaryAnak(idAnak string) string   { return "SUMMARY:ANAK:" + idAnak }
 func keyKunjunganId(id string) string       { return "KUNJUNGAN:ID:" + id }
 func keyKesehatanId(id string) string       { return "KESEHATAN:ID:" + id }
-func keyAksesKlinis(orgid, idAnak, idOrangtua string) string {
-	return fmt.Sprintf("AKSESKLINIS:%s:%s:%s", orgid, idAnak, idOrangtua)
-}
+func keyRujukanTerakhir(idAnak string) string { return "RUJUKAN:TERAKHIR:" + idAnak }
 
 var JedaLupakanUlang = 12 * time.Second
 
@@ -111,8 +108,8 @@ func (d *StuntingRepository) LupakanOrangtua(o *entity.Orangtua) {
 	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID), keyOrangtuaSatusehat(o.SatusehatId))
 }
 
-func (d *StuntingRepository) LupakanAksesKlinis(orgid, idAnak, idOrangtua string) {
-	d.lupakan(keyAksesKlinis(orgid, idAnak, idOrangtua))
+func (d *StuntingRepository) LupakanRujukanTerakhir(idAnak string) {
+	d.lupakan(keyRujukanTerakhir(idAnak))
 }
 func (d *StuntingRepository) GetStringByKey(key string) string {
 	out := new(string)

@@ -407,33 +407,13 @@ func (d *StuntingRepository) UpdateRujukanBySatusehatId(data *entity.Rujukan, st
 		return nil, err
 	}
 	lama.UpdatedAt = waktu
-	// akses klinis hanya bergantung jenis dan tanggal, keduanya hanya berubah lewat stream
-	if stream && (data.Jenis != lama.Jenis || !samaWaktu(data.Tanggal, lama.Tanggal)) {
-		idOrangtua := ""
-		if a, err := d.FindAnak(&lama.IDAnak, nil, nil, nil, true); err == nil && a != nil {
-			idOrangtua = a.IDOrangtua
-		}
-		for _, ref := range []*string{lama.RefFaskesAsal, lama.RefFaskesTujuan} {
-			if utils.IsFilled(ref) {
-				d.LupakanAksesKlinis(*ref, lama.IDAnak, "")
-				if idOrangtua != "" {
-					d.LupakanAksesKlinis(*ref, "", idOrangtua)
-				}
-			}
-		}
-	}
+	// pemegang akses ikut rujukan terakhir
+	d.LupakanRujukanTerakhir(lama.IDAnak)
 
 	if stream {
 		return nil, nil
 	}
 	return lama, nil
-}
-
-func samaWaktu(a, b *time.Time) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	return a.Equal(*b)
 }
 
 func (d *StuntingRepository) UpdateEpisodeBySatusehatId(data *entity.Episode, stream bool) (*entity.Episode, error) {

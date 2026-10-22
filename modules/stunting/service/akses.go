@@ -78,108 +78,141 @@ func (s *StuntingService) aturanBaca(orgid string, t Sasaran) error {
 	return s.hakAksesIdentitas(orgid, t)
 }
 
-// faskes atas anak/orangtua: wilayah posyandu, rujukan aktif, atau kunjungan yang ia catat untuk anak tanpa orangtua
+// faskes atas anak/orangtua: pembuatnya, atau pemegang akses anak itu
 func (s *StuntingService) hakAksesIdentitas(orgid string, t Sasaran) error {
-	idAnak, idOrangtua, idPosyandu := t.IdAnak, t.IdOrangtua, t.IdPosyandu
-
-	if t.Jenis != "orangtua" {
-		if idOrangtua == "" && idAnak != "" {
-			a, err := s.Repository.FindAnak(&idAnak, nil, nil, nil, true)
-			if err != nil {
-				return exceptions.Classify(err)
-			}
-			idOrangtua = a.IDOrangtua
-		}
-		if utils.IsStrFilled(idOrangtua) {
-			o, err := s.Repository.FindOrangTuaById(idOrangtua, true)
-			if err != nil {
-				return exceptions.Classify(err)
-			}
-			idPosyandu = o.IDPosyandu
-		}
-		idOrangtua = ""
-	} else {
-		idAnak = ""
-	}
-
-	errWilayah := s.aksesWilayah(orgid, idPosyandu)
-	if errWilayah == nil {
+	if dibuatOleh(t.Pembuat, orgid) {
 		return nil
 	}
 
-	ada, err := s.Repository.AksesKlinis(orgid, idAnak, idOrangtua)
+	var boleh bool
+	var err error
+	if t.Jenis == "orangtua" {
+		boleh, err = s.pemegangAksesOrangtua(orgid, t.IdOrangtua, t.IdPosyandu)
+	} else {
+		boleh, err = s.pemegangAksesAnak(orgid, t.IdAnak, t.IdOrangtua)
+	}
 	if err != nil {
 		return err
 	}
-	if ada {
-		return nil
+	if !boleh {
+		return exceptions.Forbidden.Messagef("%s %s bukan buatan Anda dan tidak sedang dirujuk ke faskes Anda", t.Jenis, t.Id)
 	}
-	return errWilayah
+	return nil
 }
 
-// puskesmas/pustu atas posyandu di wilayah kerjanya
-func (s *StuntingService) aksesWilayah(orgid string, idPosyandu *string) error {
-	// null berarti belum terikat posyandu, beda dari posyandu tidak dikenal
-	if !utils.IsFilled(idPosyandu) {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, orangtua belum terikat posyandu", nil)
+// tujuan rujukan terakhir; anak yang belum pernah dirujuk dipegang faskes posyandunya
+func (s *StuntingService) pemegangAksesAnak(orgid, idAnak, idOrangtua string) (bool, error) {
+	tujuan, dirujuk, err := s.Repository.TujuanRujukanTerakhir(idAnak)
+	if err != nil {
+		return false, err
+	}
+	if dirujuk {
+		return tujuan == orgid, nil
 	}
 
+	if idOrangtua == "" {
+		a, err := s.Repository.FindAnak(&idAnak, nil, nil, nil, true)
+		if err != nil {
+			return false, exceptions.Classify(err)
+		}
+		idOrangtua = a.IDOrangtua
+	}
+	if !utils.IsStrFilled(idOrangtua) {
+		return false, nil
+	}
+	o, err := s.Repository.FindOrangTuaById(idOrangtua, true)
+	if err != nil {
+		return false, exceptions.Classify(err)
+	}
+	return s.faskesPosyandu(orgid, o.IDPosyandu)
+}
+
+// orangtua ikut anaknya; yang belum punya anak dipegang faskes posyandunya
+func (s *StuntingService) pemegangAksesOrangtua(orgid, idOrangtua string, idPosyandu *string) (bool, error) {
+	semuaAnak, err := s.Repository.IdAnakOrangtua(idOrangtua)
+	if err != nil {
+		return false, err
+	}
+
+	adaBelumDirujuk := len(semuaAnak) == 0
+	for _, idAnak := range semuaAnak {
+		tujuan, dirujuk, err := s.Repository.TujuanRujukanTerakhir(idAnak)
+		if err != nil {
+			return false, err
+		}
+		if dirujuk && tujuan == orgid {
+			return true, nil
+		}
+		adaBelumDirujuk = adaBelumDirujuk || !dirujuk
+	}
+	if !adaBelumDirujuk {
+		return false, nil
+	}
+	return s.faskesPosyandu(orgid, idPosyandu)
+}
+
+// puskesmas yang terikat posyandu, atau sekecamatan bila posyandu tidak terikat; RS sekab/kota
+func (s *StuntingService) faskesPosyandu(orgid string, idPosyandu *string) (bool, error) {
+	if !utils.IsFilled(idPosyandu) {
+		return false, nil
+	}
 	posyandu, err := s.Repository.FindPosyanduDetail(*idPosyandu)
 	if err != nil {
 		if tidakDitemukan(err) {
-			return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Posyandu Tidak ditemukan", nil)
+			return false, nil
 		}
-		return exceptions.Forbidden.WithMessage(err.Error(), err)
+		return false, err
 	}
-	if posyandu == nil {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Posyandu Tidak ditemukan", nil)
-	}
-	if posyandu.Puskesmas == nil {
-		return exceptions.Forbidden.WithMessage("Tidak bisa verifikasi akses, posyandu tidak terhubung dengan puskesmas", nil)
-	}
-
-	puskesmas := posyandu.Puskesmas
-	if utils.StrPtr(puskesmas.SatusehatID) == orgid {
-		return nil
-	}
-	if puskesmas.SatusehatID == nil && puskesmas.Induk != nil && utils.StrPtr(puskesmas.Induk.SatusehatID) == orgid {
-		return nil
-	}
-
-	if !utils.IsFilled(puskesmas.Wilayah) {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Wilayah Faskes posyandu kosong", nil)
-	}
-
 	faskes, err := s.Repository.FindFaskesByOrgid(orgid)
 	if err != nil {
 		if tidakDitemukan(err) {
-			return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Faskes user Tidak ditemukan", nil)
+			return false, nil
 		}
-		return exceptions.Forbidden.WithMessage(err.Error(), err)
+		return false, err
 	}
-	if faskes == nil {
-		return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Faskes user Tidak ditemukan", nil)
-	}
-
-	// RS tidak memakai wilayah kerja, aksesnya lewat rujukan
-	if slices.Contains([]string{"PUSTU", "PUSKESMAS"}, strings.ToUpper(faskes.Jenis)) {
-		if !utils.IsFilled(faskes.Wilayah) {
-			return exceptions.Forbidden.WithMessage("Tidak Bisa Verifikasi Akses, Wilayah Faskes user kosong", nil)
-		}
-		kecamatan := utils.Substr(*faskes.Wilayah, 0, 9) + "0000"
-		switch entity.LevelWilayah(puskesmas.Wilayah) {
-		case 3:
-			if kecamatan == *puskesmas.Wilayah {
-				return nil
-			}
-		case 4:
-			if kecamatan == utils.Substr(*puskesmas.Wilayah, 0, 9)+"0000" {
-				return nil
-			}
-		}
+	if posyandu == nil || faskes == nil {
+		return false, nil
 	}
 
-	return exceptions.Forbidden.WithMessage("Tidak bisa akses data", nil)
+	switch jenisFaskes(faskes.Jenis) {
+	case "rs":
+		return samaWilayah(faskes.Wilayah, posyandu.IDKelurahan, digitKabKota), nil
+	case "puskesmas":
+		if p := posyandu.Puskesmas; p != nil {
+			if p.SatusehatID == nil && p.Induk != nil {
+				p = p.Induk
+			}
+			return utils.StrPtr(p.SatusehatID) == orgid, nil
+		}
+		return samaWilayah(faskes.Wilayah, posyandu.IDKelurahan, digitKecamatan), nil
+	}
+	return false, nil
+}
+
+const (
+	digitKabKota   = 4
+	digitKecamatan = 6
+)
+
+func jenisFaskes(jenis string) string {
+	jenis = strings.ToLower(strings.TrimSpace(jenis))
+	switch {
+	case strings.Contains(jenis, "puskesmas"), jenis == "pustu":
+		return "puskesmas"
+	case strings.Contains(jenis, "rs"):
+		return "rs"
+	}
+	return jenis
+}
+
+// kode wilayah dibandingkan sebagai digit, titik diabaikan
+func samaWilayah(a, b *string, digit int) bool {
+	x, y := digitWilayah(a), digitWilayah(b)
+	return len(x) >= digit && len(y) >= digit && x[:digit] == y[:digit]
+}
+
+func digitWilayah(kode *string) string {
+	return strings.ReplaceAll(strings.TrimSpace(utils.StrPtr(kode)), ".", "")
 }
 
 // jakantro tidak dibatasi baca/ubah, jadi barisnya tidak perlu dimuat

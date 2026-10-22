@@ -42,15 +42,11 @@ func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*typ
 		anak.SatusehatId = ""
 	}
 
-	ortuLama := lama.IDOrangtua
 	lama.Override(*anak, false)
 	lama.UpdatedAt = new(time.Now())
 	lama.UpdatedBy = orgid
 
 	res, err := s.Repository.UpdateAnakById(lama, nil, false)
-	if err == nil && ortuLama != lama.IDOrangtua {
-		s.Repository.LupakanAksesPerubahanOrangtua(lama.ID, ortuLama, lama.IDOrangtua)
-	}
 	return keDTO((*types.Anak).FromEntity, res, err)
 }
 
@@ -87,7 +83,6 @@ func (s *StuntingService) DeleteAnakByID(id string, orgid string) error {
 	s.Background.Run("delete_cache_anak", func() {
 		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil); err == nil && anak != nil {
 			s.Repository.LupakanAnak(anak)
-			s.Repository.LupakanAksesPerubahanOrangtua(anak.ID, anak.IDOrangtua)
 		}
 	})
 	return nil
