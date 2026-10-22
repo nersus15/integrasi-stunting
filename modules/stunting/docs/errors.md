@@ -59,7 +59,7 @@ itulah yang perlu Anda tampilkan ke operator.
 | 422 | 1005 | `REFERENCE_NOT_FOUND` | Referensi tidak ditemukan | Foreign key menunjuk baris yang tidak ada | Kirim data induknya lebih dulu |
 | 422 | 1006 | `CONSTRAINT_VIOLATION` | Data tidak memenuhi aturan database | Melanggar check constraint (umumnya nilai enum), atau nilai di luar batas kolom | Perbaiki nilainya sesuai daftar atau batas yang sah |
 | 422 | 1007 | `PARAM_REQUIRED` | Parameter harus dikirim | Path parameter wajib terbaca kosong | Sertakan parameter pada URL |
-| 403 | 1008 | `FORBIDDEN` | User tidak memiliki akses | Key sah, tapi Anda tidak berwenang atas posyandu atau faskes itu | Jangan retry. Periksa keterkaitan posyandu–faskes |
+| 403 | 1008 | `FORBIDDEN` | User tidak memiliki akses | Key sah, tapi data itu bukan buatan Anda dan pasiennya tidak sedang menjadi tanggung jawab Anda (lihat hak akses faskes) | Jangan retry. Periksa rujukan terakhir pasien dan keterkaitan posyandu–faskes |
 | 404 | 2001 | `NOT_FOUND` | Data tidak ditemukan | Tidak ada baris yang cocok | Lanjutkan sesuai alur, ini bukan kegagalan |
 | 409 | 3001 | `DUPLICATE_ID` | Id sudah dipakai | Primary key sudah ada | Abaikan kalau kiriman ulang; kalau data baru, terbitkan id baru |
 | 409 | 3002 | `DUPLICATE_NIK_ORANGTUA` | nik orangtua sudah terdaftar | NIK orangtua dipakai baris lain | Coba ulang sekali; kalau tetap, laporkan |
@@ -75,7 +75,7 @@ itulah yang perlu Anda tampilkan ke operator.
 
 Dua kode sama-sama `403` `FORBIDDEN` tapi berbeda sebab: `4002` berarti role
 Anda tidak boleh memanggil endpoint itu sama sekali, `1008` berarti endpointnya
-boleh tapi data yang Anda minta milik posyandu atau faskes lain.
+boleh tapi data yang Anda minta milik atau sedang dipegang faskes lain.
 
 ---
 

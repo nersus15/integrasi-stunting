@@ -433,8 +433,8 @@ faskes, karena keduanya menentukan siapa yang berhak atas data itu:
 
 ## Hak akses anak dan orangtua
 
-Faskes bisa membaca dan memperbarui anak serta orangtua kalau posyandu
-keluarganya ada di wilayah kerja Anda, anak itu sedang dirujuk ke faskes Anda,
-atau Anda mencatat kunjungan anak yang belum terhubung ke orangtua. Rincian
+Faskes bisa membaca dan memperbarui anak serta orangtua yang Anda buat, dan
+pasien yang sedang menjadi tanggung jawab Anda: tujuan rujukan terakhirnya, atau
+faskes posyandunya kalau anak belum pernah dirujuk. Rincian
 syaratnya ada di [Hak akses faskes](?doc=index#hak-akses-faskes), dan aturan
 untuk setiap endpoint di [Aturan akses](?doc=index#aturan-akses).

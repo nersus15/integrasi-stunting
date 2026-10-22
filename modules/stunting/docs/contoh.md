@@ -582,7 +582,7 @@ Penjelasan setiap key, termasuk nilai yang sah dan field yang diabaikan, ada di
 | `observasi[7]` | **panel berkomponen** — induk tanpa nilai, anaknya di `component` |
 | `diagnosa` | `jenis` `diagnosis` dan `alergi`. Alergi memakai `kritikalitas` |
 | `layanan` | empat dari lima `jenis` yang sah; `service_request` tidak ikut karena rujukan sudah punya arraynya sendiri |
-| `rujukan` | `jenis` boleh `rujukan`, `rujuk_balik`, atau `internal`. Faskes tujuan dari `ref_faskes_tujuan`, bukan id internal |
+| `rujukan` | `jenis` boleh `rujukan`, `rujuk_balik`, atau `internal`. Faskes tujuan dari `ref_faskes_tujuan`, bukan id internal. Setelah rujukan ini tersimpan, [hak akses](?doc=index#hak-akses-faskes) atas anak pindah ke `200022` sampai dirujuk balik |
 | `episode` | `EpisodeOfCare`, memakai CodeSystem episodeofcare-type milik Kemkes |
 
 Field yang boleh dihilangkan: seluruh array (`observasi`, `diagnosa`, `layanan`,

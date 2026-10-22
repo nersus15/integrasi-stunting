@@ -132,7 +132,7 @@ berlaku. Data dari SatuSehat masuk lewat Kafka, bukan lewat endpoint.
 
 | data | aksi | jakantro | faskes | SatuSehat (Kafka) |
 |---|---|---|---|---|
-| orangtua | baca | semua | perlu [hak akses](#hak-akses-faskes) | — |
+| orangtua | baca | semua | by `nik` terbuka; selain itu perlu [hak akses](#hak-akses-faskes) | — |
 | | buat | `POST /api/orangtua`, key `orangtua` di POST kunjungan/kesehatan | `POST /api/faskes/orangtua` | dari RelatedPerson |
 | | ubah | semua field; untuk orangtua buatan faskes/SatuSehat, `nik` diabaikan | `PUT /api/faskes/orangtua`, perlu hak akses; `id_posyandu` diabaikan | RelatedPerson selalu menimpa identitas |
 | | hapus | hanya buatan sendiri | — | — |
@@ -141,7 +141,7 @@ berlaku. Data dari SatuSehat masuk lewat Kafka, bukan lewat endpoint.
 | | ubah | semua field; untuk anak buatan faskes/SatuSehat, `nik` dan `id_orangtua` diabaikan | `PUT /api/faskes/anak`, perlu hak akses; `id_orangtua` diabaikan | Patient selalu menimpa identitas |
 | | hapus | hanya buatan sendiri | — | — |
 | kunjungan | baca | semua | perlu hak akses atas anaknya | — |
-| | buat | POST kunjungan | `POST /api/faskes/pemeriksaan` | dari Encounter |
+| | buat | POST kunjungan, untuk anak siapa pun | `POST /api/faskes/pemeriksaan`, perlu hak akses atas anaknya | dari Encounter |
 | | ubah | hanya buatan sendiri | `PUT /api/faskes/kunjungan`, hanya pembuatnya | PUT Encounter |
 | | hapus | hanya buatan sendiri | — | — |
 | data medis (observasi, diagnosa, layanan, rujukan, episode) | baca | semua | lewat kunjungan anaknya | — |
@@ -154,16 +154,27 @@ jakantro diabaikan.
 
 ### Hak akses faskes
 
-Faskes punya hak atas anak dan orangtua kalau salah satu terpenuhi:
+Faskes punya hak atas anak dan orangtua yang ia buat sendiri, dan atas pasien
+yang sedang menjadi tanggung jawabnya:
 
-| faskes | syarat |
+| kondisi anak | yang memegang hak |
 |---|---|
-| puskesmas dan pustu | posyandu keluarga itu ada di wilayah kerjanya |
-| faskes tujuan rujukan (umumnya RS) | ada rujukan untuk anak itu ke faskes tersebut dan belum ada rujuk balik dari faskes itu sesudahnya; untuk orangtua, cukup salah satu anaknya |
-| faskes pencatat kunjungan | hanya untuk anak yang belum terhubung ke orangtua |
+| sudah pernah dirujuk | faskes tujuan rujukan terakhir (`rujukan` atau `rujuk_balik`) |
+| belum pernah dirujuk | puskesmas yang terikat dengan posyandu keluarganya; kalau posyandu itu tidak terikat puskesmas, puskesmas/pustu sekecamatan dengan kelurahan posyandu. RS yang sekabupaten/kota dengan posyandu juga memegang hak |
 
-Rujuk balik mencabut hak; rujukan baru sesudahnya memberikannya lagi. Rujukan
-`internal` tidak memberi hak.
+Hak ini dipakai untuk baca, `PUT /api/faskes/anak` dan `/orangtua`, `POST
+/api/faskes/anak` (atas `id_orangtua`), dan pemeriksaan baru. Rujukan
+memindahkan hak ke tujuannya: faskes yang merujuk, termasuk puskesmas posyandu,
+kehilangan hak sampai pasien dirujuk balik kepadanya. Pembuat data tidak pernah
+kehilangan hak. Rujukan `internal` dan rujukan tanpa tujuan tidak memindahkan
+hak.
+
+Orangtua mengikuti anaknya: faskes memegang hak atas orangtua kalau memegang
+hak atas salah satu anaknya. Orangtua yang belum punya anak dipegang faskes
+posyandunya.
+
+Kunjungan, kesehatan, dan data medis tetap hanya bisa diubah pembuatnya. Faskes
+tidak pernah menghapus identitas.
 
 ---
 
