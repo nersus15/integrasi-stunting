@@ -42,11 +42,16 @@ func (s *StuntingService) UpdateAnakById(anak *entity.Anak, orgid *string) (*typ
 		anak.SatusehatId = ""
 	}
 
+	sebelum := *lama
 	lama.Override(*anak, false)
 	lama.UpdatedAt = new(time.Now())
 	lama.UpdatedBy = orgid
 
 	res, err := s.Repository.UpdateAnakById(lama, nil, false)
+	if err == nil {
+		// kunci lama (orangtua, nik, urutan) ikut dibuang, dipakai cek akses
+		s.Repository.LupakanAnak(&sebelum)
+	}
 	return keDTO((*types.Anak).FromEntity, res, err)
 }
 
@@ -77,8 +82,8 @@ func (s *StuntingService) DeleteAnakByID(id string, orgid string) error {
 	if err := s.Repository.DeleteAnakByID(id, orgid); err != nil {
 		return err
 	}
-	// kunci id dihapus seketika karena dipakai cek akses; kunci lain menyusul di job latar
-	s.Repository.LupakanAnak(&entity.Anak{ID: id})
+	// dibuang seketika karena dipakai cek akses, termasuk daftar anak orangtuanya; job latar mengulang dari baris DB
+	s.Repository.LupakanAnak(lama)
 
 	s.Background.Run("delete_cache_anak", func() {
 		if anak, err := s.Repository.FindDeletedAnak(&id, nil, nil, nil); err == nil && anak != nil {

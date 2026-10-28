@@ -198,10 +198,13 @@ func (s *StreamService) bacaPatient(entry types2.BundleEntry, update bool, isi *
 	isi.anak = anakDTO(lama, nil)
 	if isi.anak != nil {
 		if timpaAnakDariFHIR(isi.anak, tmp) && isi.anak.IdSatusehat != nil {
+			sebelum := *lama
 			lama.Override(*isi.anak.ToPayload().ToEntity(), false)
 			lama.UpdatedBy = new(pembuatSatusehat)
 			if _, err := s.repository.UpdateAnakById(lama, nil, false); err != nil {
 				logger.Error("ProsesTransaksiFHIR:UpdateDataAnak => " + err.Error())
+			} else {
+				s.repository.LupakanAnak(&sebelum)
 			}
 		}
 		return
@@ -338,9 +341,12 @@ func (s *StreamService) perbaruiAnakKe(idAnakSatusehat string, anakKe int) {
 		return
 	}
 
+	sebelum := *anak
 	anak.AnakKe = int16(anakKe)
 	if _, err := s.repository.UpdateAnakById(anak, nil, true); err != nil {
 		logger.Error("ProsesTransaksiFHIR:UpdateDataAnak => " + err.Error())
+	} else {
+		s.repository.LupakanAnak(&sebelum)
 	}
 }
 
