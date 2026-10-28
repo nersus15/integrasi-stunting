@@ -212,10 +212,47 @@ func (d *StuntingRepository) DeleteOrangTua(id *string) error {
 		return err
 	}
 
-	d.lupakan(keyOrangtuaId(*id), keyListAnak(*id))
+	d.lupakan(keyOrangtuaId(*id), keyListAnak(*id), keyListIdAnak(*id))
 
 	return nil
 }
+
+func (d *StuntingRepository) ListIdAnak(idOrangtua string) ([]string, error) {
+	ids := make([]string, 0)
+	memkey := keyListIdAnak(idOrangtua)
+
+	if d, ada := d.GetArrayStr(memkey); ada {
+		return d, nil
+	}
+
+	ctx, cancel := context.WithTimeout(d.Context.Context, 5*time.Second)
+	defer cancel()
+
+	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
+	if !ok {
+		return ids, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
+	}
+
+	model := new(entity.Anak{})
+
+	// Ambil id anak saja
+	err := bunDB.NewSelect().
+		Model(model).
+		Column("id").
+		Where("id_orangtua = ?", idOrangtua).
+		OrderBy("anak_ke", bun.OrderAsc).
+		Scan(ctx, &ids)
+
+	if err != nil {
+		return ids, exceptions.Classify(err)
+	}
+
+	// simpan cache
+	d.SetArrayStr(memkey, ids, time.Hour*24)
+
+	return ids, nil
+}
+
 func (d *StuntingRepository) DeleteOrangtuaByID(id string, orgid string) error {
 	ctx, cancel := context.WithTimeout(d.Context.Context, time.Second*5)
 	defer cancel()
@@ -242,6 +279,6 @@ func (d *StuntingRepository) DeleteOrangtuaByID(id string, orgid string) error {
 	if affected < 1 {
 		return exceptions.TidakDitemukan.Messagef("Orangtua dengan id #%s tidak ditemukan", id)
 	}
-
+	d.lupakan(keyOrangtuaId(id), keyListAnak(id), keyListIdAnak(id))
 	return nil
 }

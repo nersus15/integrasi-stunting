@@ -26,12 +26,13 @@ func keyAnakUrutan(idOrangtua string, urutan int16) string {
 	return "ANAK:ORANGTUA:" + idOrangtua + ":" + strconv.Itoa(int(urutan))
 }
 
-func keyListAnak(idOrangtua string) string  { return "LIST:ANAK:ORTU:" + idOrangtua }
-func keyListKunjungan(idAnak string) string { return "LIST:KUNJUNGAN:" + idAnak }
-func keyListKesehatan(idAnak string) string { return "LIST:KESEHATAN:" + idAnak }
-func keySummaryAnak(idAnak string) string   { return "SUMMARY:ANAK:" + idAnak }
-func keyKunjunganId(id string) string       { return "KUNJUNGAN:ID:" + id }
-func keyKesehatanId(id string) string       { return "KESEHATAN:ID:" + id }
+func keyListAnak(idOrangtua string) string    { return "LIST:ANAK:ORTU:" + idOrangtua }
+func keyListIdAnak(idOrangtua string) string  { return "LIST:IDANAK:ORTU:" + idOrangtua }
+func keyListKunjungan(idAnak string) string   { return "LIST:KUNJUNGAN:" + idAnak }
+func keyListKesehatan(idAnak string) string   { return "LIST:KESEHATAN:" + idAnak }
+func keySummaryAnak(idAnak string) string     { return "SUMMARY:ANAK:" + idAnak }
+func keyKunjunganId(id string) string         { return "KUNJUNGAN:ID:" + id }
+func keyKesehatanId(id string) string         { return "KESEHATAN:ID:" + id }
 func keyRujukanTerakhir(idAnak string) string { return "RUJUKAN:TERAKHIR:" + idAnak }
 
 var JedaLupakanUlang = 12 * time.Second
@@ -74,7 +75,7 @@ func (d *StuntingRepository) LupakanAnak(anak *entity.Anak) {
 		keys = append(keys, keyAnakSatusehat(anak.SatusehatId))
 	}
 	if anak.IDOrangtua != "" {
-		keys = append(keys, keyAnakUrutan(anak.IDOrangtua, anak.AnakKe), keyListAnak(anak.IDOrangtua))
+		keys = append(keys, keyAnakUrutan(anak.IDOrangtua, anak.AnakKe), keyListAnak(anak.IDOrangtua), keyListIdAnak(anak.IDOrangtua))
 	}
 
 	d.lupakan(keys...)
@@ -105,7 +106,7 @@ func (d *StuntingRepository) LupakanOrangtua(o *entity.Orangtua) {
 	if o == nil {
 		return
 	}
-	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID), keyOrangtuaSatusehat(o.SatusehatId))
+	d.lupakan(keyOrangtuaId(o.ID), keyOrangtuaNik(o.NIK), keyListAnak(o.ID), keyOrangtuaSatusehat(o.SatusehatId), keyListIdAnak(o.ID))
 }
 
 func (d *StuntingRepository) LupakanRujukanTerakhir(idAnak string) {
@@ -124,12 +125,37 @@ func (d *StuntingRepository) GetBool(key string) (nilai bool, ada bool) {
 		return false, false
 	}
 	return *out, true
-
 }
+
+func (d *StuntingRepository) GetArrayStr(key string) (value []string, ada bool) {
+	out := new([]string{})
+	if ok := d.Memory.Get(key, out); !ok {
+		return nil, false
+	}
+
+	return *out, true
+}
+
+func (d *StuntingRepository) GetArrayInt(key string) (value []int, ada bool) {
+	out := make([]int, 0)
+	if ok := d.Memory.Get(key, out); !ok {
+		return nil, false
+	}
+
+	return out, true
+}
+
 func (d *StuntingRepository) SetStringByKey(key, value string, ttl time.Duration) {
 	d.Memory.Set(key, value, ttl)
 }
 func (d *StuntingRepository) SetBool(key string, value bool, ttl time.Duration) {
+	d.Memory.Set(key, value, ttl)
+}
+
+func (d *StuntingRepository) SetArrayStr(key string, value []string, ttl time.Duration) {
+	d.Memory.Set(key, value, ttl)
+}
+func (d *StuntingRepository) SetArrayInt(key string, value []int, ttl time.Duration) {
 	d.Memory.Set(key, value, ttl)
 }
 

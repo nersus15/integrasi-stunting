@@ -76,7 +76,7 @@ func (d *StuntingRepository) HubungkanAnakKeOrangTua(satusehatIdAnak string, idO
 	jml, err := d.Connection.Update(ctx, entity.Anak{}.TableName(), filter, data)
 	if err == nil && jml > 0 {
 		// id_orangtua ikut di cache anak, jadi semua kunci anak dibuang termasuk nik dan urutan
-		d.lupakan(keyAnakSatusehat(satusehatIdAnak), keyListAnak(idOrangtua))
+		d.lupakan(keyAnakSatusehat(satusehatIdAnak), keyListAnak(idOrangtua), keyListIdAnak(idOrangtua))
 		if a, e := d.FindAnakBySatusehatId(satusehatIdAnak, false); e == nil && a != nil {
 			d.LupakanAnak(a)
 		}
