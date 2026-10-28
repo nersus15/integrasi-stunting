@@ -333,9 +333,14 @@ di mana posisinya, atau dihitung sistem — bukan isi klinis.
 | `rujukan` | `id_kunjungan`, `ref_encounter`, `jenis`, `tanggal`, `id_faskes_asal`, `ref_faskes_asal`, `id_faskes_tujuan`, `ref_faskes_tujuan` |
 | `episode` | `id_faskes` |
 
-`jenis` dan `tanggal` rujukan dikunci karena [hak akses](?doc=index#hak-akses-faskes)
-bergantung pada urutan rujukan dan rujuk balik. Kalau salah satunya keliru,
-perbaiki di SatuSehat — perubahan yang datang lewat Kafka tetap diterima.
+`jenis`, `tanggal`, dan faskes tujuan rujukan dikunci karena
+[hak akses](?doc=index#hak-akses-faskes) bergantung pada urutan rujukan dan rujuk
+balik: kalau tujuan bisa diubah, faskes yang sudah merujuk bisa mengarahkan
+rujukannya kembali ke dirinya sendiri. Faskes rujukan hanya ditentukan saat dibuat,
+dari `ref_faskes_asal`/`ref_faskes_tujuan` (id SatuSehat Organization); `id_faskes_*`
+tidak perlu dikirim. Kalau `jenis` atau `tanggal` keliru, perbaiki di SatuSehat —
+perubahan yang datang lewat Kafka tetap diterima. Kalau tujuannya keliru, buat
+rujukan baru.
 
 ---
 
