@@ -129,26 +129,33 @@ func (s *StuntingService) pemegangAksesAnak(orgid, idAnak, idOrangtua string) (b
 
 // orangtua ikut anaknya; yang belum punya anak dipegang faskes posyandunya
 func (s *StuntingService) pemegangAksesOrangtua(orgid, idOrangtua string, idPosyandu *string) (bool, error) {
-	semuaAnak, err := s.Repository.IdAnakOrangtua(idOrangtua)
+	idAnak, err := s.Repository.ListIdAnak(idOrangtua)
+	if err != nil {
+		return false, exceptions.Classify(err)
+	}
+
+	if len(idAnak) == 0 {
+		return s.faskesPosyandu(orgid, idPosyandu)
+	}
+
+	tujuan, err := s.Repository.TujuanRujukan(idAnak)
 	if err != nil {
 		return false, err
 	}
 
-	adaBelumDirujuk := len(semuaAnak) == 0
-	for _, idAnak := range semuaAnak {
-		tujuan, dirujuk, err := s.Repository.TujuanRujukanTerakhir(idAnak)
-		if err != nil {
-			return false, err
-		}
-		if dirujuk && tujuan == orgid {
+	adaBelumDirujuk := false
+	for _, id := range idAnak {
+		t, dirujuk := tujuan[id]
+		if dirujuk && t == orgid {
 			return true, nil
 		}
 		adaBelumDirujuk = adaBelumDirujuk || !dirujuk
 	}
-	if !adaBelumDirujuk {
-		return false, nil
+	if adaBelumDirujuk {
+		// anak yang belum dirujuk dipegang faskes posyandunya
+		return s.faskesPosyandu(orgid, idPosyandu)
 	}
-	return s.faskesPosyandu(orgid, idPosyandu)
+	return false, nil
 }
 
 // puskesmas yang terikat posyandu, atau sekecamatan bila posyandu tidak terikat; RS sekab/kota
@@ -163,6 +170,20 @@ func (s *StuntingService) faskesPosyandu(orgid string, idPosyandu *string) (bool
 		}
 		return false, err
 	}
+	if posyandu == nil {
+		return false, nil
+	}
+
+	// kasus paling sering: puskesmas posyandu itu sendiri, tidak perlu memuat faskes pemanggil
+	if p := posyandu.Puskesmas; p != nil {
+		if p.SatusehatID == nil && p.Induk != nil {
+			p = p.Induk
+		}
+		if utils.StrPtr(p.SatusehatID) == orgid {
+			return true, nil
+		}
+	}
+
 	faskes, err := s.Repository.FindFaskesByOrgid(orgid)
 	if err != nil {
 		if tidakDitemukan(err) {
@@ -170,7 +191,7 @@ func (s *StuntingService) faskesPosyandu(orgid string, idPosyandu *string) (bool
 		}
 		return false, err
 	}
-	if posyandu == nil || faskes == nil {
+	if faskes == nil {
 		return false, nil
 	}
 
@@ -178,13 +199,8 @@ func (s *StuntingService) faskesPosyandu(orgid string, idPosyandu *string) (bool
 	case "rs":
 		return samaWilayah(faskes.Wilayah, posyandu.IDKelurahan, digitKabKota), nil
 	case "puskesmas":
-		if p := posyandu.Puskesmas; p != nil {
-			if p.SatusehatID == nil && p.Induk != nil {
-				p = p.Induk
-			}
-			return utils.StrPtr(p.SatusehatID) == orgid, nil
-		}
-		return samaWilayah(faskes.Wilayah, posyandu.IDKelurahan, digitKecamatan), nil
+		// posyandu yang terikat hanya milik puskesmasnya, sudah dicek di atas
+		return posyandu.Puskesmas == nil && samaWilayah(faskes.Wilayah, posyandu.IDKelurahan, digitKecamatan), nil
 	}
 	return false, nil
 }

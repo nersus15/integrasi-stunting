@@ -14,43 +14,34 @@ import (
 	"github.com/webcore-go/webcore/infra/logger"
 )
 
-// orgid tujuan rujukan keluar/rujuk balik terakhir; ada false kalau anak belum pernah dirujuk.
-// rujukan tanpa tujuan tidak memindah akses ke siapa pun, jadi tidak dihitung
+// orgid tujuan rujukan keluar/rujuk balik terakhir; ada false kalau anak belum pernah dirujuk
 func (d *StuntingRepository) TujuanRujukanTerakhir(idAnak string) (tujuan string, ada bool, err error) {
-	// "-" belum pernah dirujuk, "+orgid" sudah
-	memkey := keyRujukanTerakhir(idAnak)
-	if v := d.GetStringByKey(memkey); v != "" {
-		return strings.TrimPrefix(v, "+"), v != "-", nil
+	semua, err := d.TujuanRujukan([]string{idAnak})
+	if err != nil {
+		return "", false, err
 	}
-
-	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
-	if !ok {
-		return "", false, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
-	}
-	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
-	defer cancel()
-
-	var hasil []string
-	err = bunDB.NewRaw(`SELECT coalesce(f.satusehat_id, r.ref_faskes_tujuan) FROM stunting.rujukan r
-		LEFT JOIN stunting.faskes f ON f.id = r.id_faskes_tujuan
-		WHERE r.id_anak = ? AND r.jenis IN (?, ?) AND r."deletedAt" IS NULL
-			AND coalesce(f.satusehat_id, r.ref_faskes_tujuan) IS NOT NULL
-		ORDER BY coalesce(r.tanggal, r."createdAt") DESC, r."createdAt" DESC
-		LIMIT 1`, idAnak, entity.RujukanKeluar, entity.RujukBalik).Scan(ctx, &hasil)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		logger.Error(fmt.Sprintf("TujuanRujukanTerakhir (%s): ", idAnak) + err.Error())
-		return "", false, exceptions.Classify(err)
-	}
-
-	simpan := "-"
-	if len(hasil) > 0 {
-		tujuan, ada, simpan = hasil[0], true, "+"+hasil[0]
-	}
-	d.SetStringByKey(memkey, simpan, 24*time.Hour)
+	tujuan, ada = semua[idAnak]
 	return tujuan, ada, nil
 }
 
-func (d *StuntingRepository) IdAnakOrangtua(idOrangtua string) ([]string, error) {
+func (d *StuntingRepository) TujuanRujukan(idAnak []string) (map[string]string, error) {
+	tujuan := make(map[string]string, len(idAnak))
+
+	// cache per anak: "-" belum pernah dirujuk, "+orgid" sudah
+	var belum []string
+	for _, id := range idAnak {
+		if v := d.GetStringByKey(keyRujukanTerakhir(id)); v != "" {
+			if v != "-" {
+				tujuan[id] = strings.TrimPrefix(v, "+")
+			}
+			continue
+		}
+		belum = append(belum, id)
+	}
+	if len(belum) == 0 {
+		return tujuan, nil
+	}
+
 	bunDB, ok := d.Connection.GetConnection().(*bun.DB)
 	if !ok {
 		return nil, exceptions.Internal.Messagef("koneksi database tidak dalam bentuk yang diharapkan")
@@ -58,11 +49,36 @@ func (d *StuntingRepository) IdAnakOrangtua(idOrangtua string) ([]string, error)
 	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
 	defer cancel()
 
-	var id []string
-	err := bunDB.NewRaw(`SELECT id FROM stunting.anak WHERE id_orangtua = ? AND "deletedAt" IS NULL`, idOrangtua).Scan(ctx, &id)
+	var hasil []struct {
+		IdAnak string `bun:"id_anak"`
+		Tujuan string `bun:"tujuan"`
+	}
+	// model memberi alias rj dan filter soft delete
+	err := bunDB.NewSelect().
+		Model((*entity.Rujukan)(nil)).
+		DistinctOn("rj.id_anak").
+		ColumnExpr("rj.id_anak").
+		ColumnExpr("coalesce(f.satusehat_id, rj.ref_faskes_tujuan) AS tujuan").
+		Join("LEFT JOIN stunting.faskes AS f ON f.id = rj.id_faskes_tujuan").
+		Where("rj.id_anak IN (?)", bun.List(belum)).
+		Where("rj.jenis IN (?)", bun.List([]string{entity.RujukanKeluar, entity.RujukBalik})).
+		Where("coalesce(f.satusehat_id, rj.ref_faskes_tujuan) IS NOT NULL").
+		OrderExpr(`rj.id_anak, coalesce(rj.tanggal, rj."createdAt") DESC, rj."createdAt" DESC`).
+		Scan(ctx, &hasil)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		logger.Error(fmt.Sprintf("IdAnakOrangtua (%s): ", idOrangtua) + err.Error())
+		logger.Error(fmt.Sprintf("TujuanRujukan (%v): ", belum) + err.Error())
 		return nil, exceptions.Classify(err)
 	}
-	return id, nil
+
+	for _, h := range hasil {
+		tujuan[h.IdAnak] = h.Tujuan
+	}
+	for _, id := range belum {
+		simpan := "-"
+		if t, ok := tujuan[id]; ok {
+			simpan = "+" + t
+		}
+		d.SetStringByKey(keyRujukanTerakhir(id), simpan, 24*time.Hour)
+	}
+	return tujuan, nil
 }
