@@ -39,7 +39,7 @@ func (d *StuntingRepository) FindPosyanduDetail(id string) (*entity.Posyandu, er
 	return posyandu, nil
 }
 func (d *StuntingRepository) FindFaskesByOrgid(orgid string) (*entity.Faskes, error) {
-	ctx, cancel := context.WithTimeout(d.Context.Context, 10*time.Second)
+	ctx, cancel := context.WithTimeout(d.Context.Context, 5*time.Second)
 	defer cancel()
 
 	memkey := "Faskes::" + orgid
