@@ -6,6 +6,9 @@ info:
 http:
   method: GET
   url: "{{BASE_URL}}/orangtua/8f3a1c40-6b2e-4d19-9a77-1e5c8b0d4a21"
+  headers:
+    - name: X-Transaction-ID
+      value: testing-log-manager
   auth: inherit
 
 settings:
