@@ -1,16 +1,21 @@
 package stunting
 
 import (
+	"context"
 	"fmt"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/nersus15/integrasi/mod-stunting/config"
 	"github.com/nersus15/integrasi/mod-stunting/handler"
+	"github.com/nersus15/integrasi/mod-stunting/helper/logtransaksi"
 	"github.com/nersus15/integrasi/mod-stunting/helper/utils"
 	"github.com/nersus15/integrasi/mod-stunting/repository"
 	"github.com/nersus15/integrasi/mod-stunting/service"
 	backgroundworker "github.com/nersus15/lib-background-worker"
 	cron "github.com/nersus15/lib-go-cron"
 	kafka "github.com/webcore-go/lib-kafka"
+	libredis "github.com/webcore-go/lib-redis"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/helper"
 	appConfig "github.com/webcore-go/webcore/infra/config"
@@ -33,6 +38,7 @@ type Module struct {
 	cron       *cron.CronLibrary
 	background *backgroundworker.BackgroundWorker
 	kafka      *handler.KafkaHandler
+	log        *logtransaksi.Sender
 }
 
 func NewModule() *Module {
@@ -53,18 +59,15 @@ func (m *Module) Dependencies() []string {
 
 func (m *Module) Init(ctx *core.AppContext) error {
 	m.config = &config.ModuleConfig{}
-	if err := appConfig.LoadDefaultConfigModule("fhir", m.config); err != nil {
+	if err := appConfig.LoadDefaultConfigModule("stunting", m.config); err != nil {
 		return err
 	}
 
-	libMem, ok := core.Instance().Context.GetDefaultSingletonInstance("cache:redis")
-	if !ok {
-		return fmt.Errorf("Gagal memuat instance Redis")
+	if err := m.loadMemory(); err != nil {
+		return err
 	}
 
 	utils.SetDumpAktif(ctx.Config.App.Logging.Level)
-
-	m.memory = libMem.(port.ICacheMemory)
 	lib, ok := core.Instance().Context.GetDefaultSingletonInstance("database")
 
 	if !ok {
@@ -145,7 +148,57 @@ func (m *Module) Init(ctx *core.AppContext) error {
 	return nil
 }
 
+// PreAuth jalan sebelum Init, jadi Redis diambil di sini dan Init memakai yang sama
+func (m *Module) loadMemory() error {
+	if m.memory != nil {
+		return nil
+	}
+	libMem, ok := core.Instance().Context.GetDefaultSingletonInstance("cache:redis")
+	if !ok {
+		return fmt.Errorf("Gagal memuat instance Redis")
+	}
+	m.memory = libMem.(port.ICacheMemory)
+	return nil
+}
+
+// log transaksi dipasang sebelum autentikasi webcore supaya request 401 ikut tercatat
+func (m *Module) PreAuth(ctx *core.AppContext) ([]fiber.Handler, error) {
+	cfg := &config.ModuleConfig{}
+	if err := appConfig.LoadDefaultConfigModule("stunting", cfg); err != nil {
+		return nil, err
+	}
+	logCfg := cfg.LogTransaksi
+	if !logCfg.Enabled {
+		return nil, nil
+	}
+
+	push := func(logtransaksi.Record) {}
+	if logCfg.Endpoint != "" {
+		if err := m.loadMemory(); err != nil {
+			return nil, err
+		}
+		rdb, ok := m.memory.(*libredis.Redis)
+		if !ok {
+			return nil, fmt.Errorf("log transaksi butuh cache:redis sebagai antrean")
+		}
+		sender, err := logtransaksi.New(logCfg, rdb.Client)
+		if err != nil {
+			return nil, err
+		}
+		m.log = sender
+		push = sender.Push
+	} else {
+		logger.Info("Log transaksi aktif tanpa endpoint, hanya memasang header id transaksi")
+	}
+	return []fiber.Handler{handler.LogTransaksi(logCfg, ctx.Config.Auth.APIKeyHeader, push)}, nil
+}
+
 func (m *Module) Destroy() error {
+	if m.log != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		m.log.Close(ctx)
+	}
 	return nil
 }
 

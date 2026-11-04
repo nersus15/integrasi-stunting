@@ -1,4 +1,4 @@
-package app
+package stunting
 
 import (
 	stunting "github.com/nersus15/integrasi/mod-stunting"

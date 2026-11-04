@@ -1,4 +1,4 @@
-package app
+package stunting
 
 import (
 	authstoragedb "github.com/nersus15/lib-authstoredb"
