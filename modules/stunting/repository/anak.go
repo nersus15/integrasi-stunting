@@ -290,12 +290,9 @@ func (d *StuntingRepository) ListAnak(orangtua, nikorangtua, nokk *string) (*ent
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, exceptions.TidakDitemukan.Messagef("Data Orang tua dengan id/nik/nokk %s/%s/%s tidak ditemukan",
-				utils.Nilai(orangtua), utils.Nilai(nikorangtua), utils.Nilai(nokk))
+			return nil, exceptions.TidakDitemukan.Messagef("Data Orang tua tidak ditemukan")
 		}
 
-		logger.Error(fmt.Sprintf("ListAnak (id_orangtua=%s, nik_orangtua=%s, nokk=%s): ",
-			utils.Nilai(orangtua), utils.Nilai(nikorangtua), utils.Nilai(nokk)) + helper.ToLogJSON(err))
 		return nil, err
 	}
 	if memkey != "" {
