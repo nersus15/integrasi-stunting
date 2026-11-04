@@ -6,7 +6,8 @@ import (
 	"log"
 	"os"
 
-	stunting "github.com/nersus15/integrasi/stunting"
+	"github.com/nersus15/integrasi/satusehat"
+	"github.com/nersus15/integrasi/stunting"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/out"
 	"github.com/webcore-go/webcore/infra/config"
@@ -20,7 +21,8 @@ func main() {
 
 	service := os.Args[1]
 	validServices := map[string]bool{
-		"stunting": true,
+		"satusehat": true,
+		"stunting":  true,
 	}
 
 	if !validServices[service] {
@@ -40,8 +42,20 @@ func main() {
 	var libraries map[string]core.LibraryLoader
 	var packages []core.Module
 
-	libraries = stunting.APP_LIBRARIES
-	packages = stunting.APP_PACKAGES
+	switch service {
+	case "stunting":
+		if cfg.Server.Port == 2021 {
+			cfg.Server.Port = 2022
+		}
+		libraries = stunting.APP_LIBRARIES
+		packages = stunting.APP_PACKAGES
+	case "satusehat":
+		libraries = satusehat.APP_LIBRARIES
+		packages = satusehat.APP_PACKAGES
+	default:
+		libraries = stunting.APP_LIBRARIES
+		packages = stunting.APP_PACKAGES
+	}
 
 	// Initialize application
 	application := core.NewApp(ctx, &cfg, libraries, packages)
