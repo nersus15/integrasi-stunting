@@ -1,7 +1,8 @@
-tests/
+# tests/
 tmp/
 libraries/
 config.yaml
 simulasi/
 modules/stunting/docs/laporan.html
 .env-satusehat
+.env-*
