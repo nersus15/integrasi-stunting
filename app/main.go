@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/nersus15/integrasi/satusehat"
 	"github.com/nersus15/integrasi/stunting"
 	"github.com/webcore-go/webcore/app/core"
 	"github.com/webcore-go/webcore/app/out"
@@ -21,8 +20,7 @@ func main() {
 
 	service := os.Args[1]
 	validServices := map[string]bool{
-		"satusehat": true,
-		"stunting":  true,
+		"stunting": true,
 	}
 
 	if !validServices[service] {
@@ -49,9 +47,6 @@ func main() {
 		}
 		libraries = stunting.APP_LIBRARIES
 		packages = stunting.APP_PACKAGES
-	case "satusehat":
-		libraries = satusehat.APP_LIBRARIES
-		packages = satusehat.APP_PACKAGES
 	default:
 		libraries = stunting.APP_LIBRARIES
 		packages = stunting.APP_PACKAGES
