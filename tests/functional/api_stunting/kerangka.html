@@ -1,0 +1,250 @@
+<title>Uji endpoint modul stunting</title>
+<style>
+:root{
+  --ink:#17181C; --ink2:#4A4E58; --ink3:#787D89;
+  --paper:#F5F5F2; --surface:#FFFFFF; --surface2:#FAFAF8;
+  --line:#DEDED8; --line2:#EAEAE4;
+  --accent:#3B4E8F; --accent-soft:#E9EBF5;
+  --ok:#2E7350; --ok-bg:#E4F0E9;
+  --c4:#8A6520; --c4-bg:#F4EBD9;
+  --c9:#7A4A86; --c9-bg:#EFE6F2;
+  --c5:#9A3A2C; --c5-bg:#F6E3DF;
+  --serif:ui-serif,Charter,"Bitstream Charter",Cambria,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#E8E8E3; --ink2:#ABAFB8; --ink3:#7E838E;
+    --paper:#121317; --surface:#1A1C21; --surface2:#15171B;
+    --line:#2C2F36; --line2:#23262C;
+    --accent:#93A1DA; --accent-soft:#22273A;
+    --ok:#6FC293; --ok-bg:#18291F;
+    --c4:#D8AD60; --c4-bg:#2A2317;
+    --c9:#BE9BCB; --c9-bg:#251C29;
+    --c5:#E38574; --c5-bg:#2C1B17;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E8E8E3; --ink2:#ABAFB8; --ink3:#7E838E;
+  --paper:#121317; --surface:#1A1C21; --surface2:#15171B;
+  --line:#2C2F36; --line2:#23262C;
+  --accent:#93A1DA; --accent-soft:#22273A;
+  --ok:#6FC293; --ok-bg:#18291F;
+  --c4:#D8AD60; --c4-bg:#2A2317;
+  --c9:#BE9BCB; --c9-bg:#251C29;
+  --c5:#E38574; --c5-bg:#2C1B17;
+}
+:root[data-theme="light"]{
+  --ink:#17181C; --ink2:#4A4E58; --ink3:#787D89;
+  --paper:#F5F5F2; --surface:#FFFFFF; --surface2:#FAFAF8;
+  --line:#DEDED8; --line2:#EAEAE4;
+  --accent:#3B4E8F; --accent-soft:#E9EBF5;
+  --ok:#2E7350; --ok-bg:#E4F0E9;
+  --c4:#8A6520; --c4-bg:#F4EBD9;
+  --c9:#7A4A86; --c9-bg:#EFE6F2;
+  --c5:#9A3A2C; --c5-bg:#F6E3DF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.bungkus{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+
+header.atas{padding:56px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 14px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4.2vw,40px);line-height:1.15;
+  margin:0 0 12px;text-wrap:balance;letter-spacing:-.01em}
+.subjudul{margin:0;color:var(--ink2);max-width:64ch}
+.subjudul code{font-family:var(--mono);font-size:.88em;background:var(--accent-soft);
+  padding:.12em .38em;border-radius:3px;color:var(--accent)}
+
+.ringkas{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 0}
+.kartu{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:12px 16px;min-width:112px;display:flex;flex-direction:column;gap:2px}
+.kartu .angka{font-family:var(--mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.kartu .ket{font-size:12px;color:var(--ink3)}
+.kartu.utama{background:var(--accent-soft);border-color:transparent}
+.kartu.utama .angka{color:var(--accent)}
+.angka.ok{color:var(--ok)}.angka.c4{color:var(--c4)}.angka.c9{color:var(--c9)}.angka.c5{color:var(--c5)}
+
+.legenda{margin:22px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px 20px;
+  font-size:12.5px;color:var(--ink2)}
+.legenda li{display:flex;align-items:center;gap:7px}
+
+nav.lompat{position:sticky;top:0;z-index:5;background:var(--paper);
+  border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:4px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+nav.lompat a{flex:0 0 auto;font-size:12.5px;color:var(--ink2);text-decoration:none;
+  padding:5px 11px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+nav.lompat a:hover{color:var(--accent);border-color:var(--accent)}
+nav.lompat a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.saring{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:14px 0 16px}
+.saring .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink3);margin-right:2px}
+.saring button{font-family:var(--mono);font-size:12px;padding:5px 11px;border-radius:99px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink2);cursor:pointer}
+.saring button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.saring button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.saring .pisah{width:1px;height:20px;background:var(--line);margin:0 5px}
+
+.bagian{margin:34px 0 0;scroll-margin-top:64px}
+.bagian-kepala{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding-bottom:10px;border-bottom:1px solid var(--line2)}
+.bagian-kepala h2{font-family:var(--serif);font-size:20px;font-weight:600;margin:0;letter-spacing:-.005em}
+.hitung{font-family:var(--mono);font-size:11.5px;color:var(--ink3);font-variant-numeric:tabular-nums;flex:0 0 auto}
+
+.skenario{border-bottom:1px solid var(--line2)}
+.skenario summary{display:grid;
+  grid-template-columns:40px minmax(160px,1.1fr) minmax(0,1.35fr) 52px 48px 62px;
+  gap:10px;align-items:center;padding:10px 4px;cursor:pointer;list-style:none}
+.skenario summary::-webkit-details-marker{display:none}
+.skenario summary:hover{background:var(--surface2)}
+.skenario summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tag{font-family:var(--mono);font-size:11.5px;color:var(--ink3);font-weight:600}
+.judul{font-size:13.5px;display:flex;flex-direction:column;gap:1px}
+.rute{font-family:var(--mono);font-size:10.5px;color:var(--ink3)}
+.pesan{font-family:var(--mono);font-size:11.5px;color:var(--ink3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pesan em{font-style:normal;color:var(--ok)}
+.ecode{font-family:var(--mono);font-size:11px;font-weight:600;text-align:center;
+  padding:2px 0;border-radius:4px;font-variant-numeric:tabular-nums;display:block}
+.ecode.k1{color:var(--c4);background:var(--c4-bg)}
+.ecode.k2{color:var(--accent);background:var(--accent-soft)}
+.ecode.k3{color:var(--c9);background:var(--c9-bg)}
+.ecode.k5{color:var(--c5);background:var(--c5-bg)}
+.kode{font-family:var(--mono);font-size:12px;font-weight:600;text-align:center;
+  padding:2px 0;border-radius:4px;font-variant-numeric:tabular-nums}
+.kode.ok{color:var(--ok);background:var(--ok-bg)}
+.kode.c4{color:var(--c4);background:var(--c4-bg)}
+.kode.c9{color:var(--c9);background:var(--c9-bg)}
+.kode.c5{color:var(--c5);background:var(--c5-bg)}
+.verdikt{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-align:right;color:var(--ink3)}
+.verdikt.beda{color:var(--c5);font-weight:600}
+
+.isi{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:4px 4px 20px}
+.kolom h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink3);margin:0 0 7px;font-weight:600}
+.blok{font-family:var(--mono);font-size:11.5px;line-height:1.5;margin:0;
+  background:var(--surface);border:1px solid var(--line2);border-radius:7px;
+  padding:12px 14px;overflow-x:auto;max-height:440px;overflow-y:auto;white-space:pre}
+details.stack{margin-top:8px}
+details.stack summary{font-family:var(--mono);font-size:11px;color:var(--ink3);cursor:pointer;padding:5px 0}
+details.stack summary:hover{color:var(--accent)}
+details.stack .blok{max-height:300px;font-size:10.5px;color:var(--ink3)}
+
+.tabel-bungkus{margin:24px 0 0}
+.tabel-bungkus h3{font-family:var(--serif);font-size:16px;margin:0 0 4px;font-weight:600}
+.catatan{margin:0 0 10px;font-size:12.5px;color:var(--ink3);max-width:70ch}
+.gulir{overflow-x:auto;border:1px solid var(--line2);border-radius:7px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11.5px}
+th{text-align:left;font-weight:600;color:var(--ink3);padding:9px 12px;
+  border-bottom:1px solid var(--line);white-space:nowrap;font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase}
+td{padding:7px 12px;border-bottom:1px solid var(--line2);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+td.null{color:var(--ink3);font-style:italic}
+td.warn{color:var(--c5);font-weight:600}
+
+footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);
+  color:var(--ink3);font-size:12.5px}
+footer p{margin:0 0 8px;max-width:76ch}
+footer code{font-family:var(--mono);font-size:.92em}
+
+@media (max-width:900px){
+  .skenario summary{grid-template-columns:36px 1fr 46px 46px;
+    grid-template-areas:"tag judul ecode kode" "pesan pesan pesan pesan";row-gap:4px}
+  .tag{grid-area:tag}.judul{grid-area:judul}.ecode{grid-area:ecode}.kode{grid-area:kode}
+  .pesan{grid-area:pesan;font-size:11px}
+  .verdikt{display:none}
+  .isi{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.kredensial{margin:0 0 .5rem;font-size:.78rem;color:var(--redup,#8a8f98);letter-spacing:.01em}
+.kredensial::before{content:"\1F511  ";opacity:.7}
+</style>
+
+<div class="bungkus">
+<header class="atas">
+  <p class="eyebrow">Laporan uji &middot; integrasi-stunting</p>
+  <h1>__TOTAL__ skenario terhadap seluruh endpoint modul stunting</h1>
+  <p class="subjudul">Dijalankan ke service pada <code>localhost:2022</code> dengan Postgres sungguhan,
+  mencakup <code>POST /api/kunjungan</code>, <code>POST /api/orangtua</code>, <code>POST /api/anak</code>,
+  dan <code>GET /api/orangtua</code>. Setiap baris menyimpan payload yang dikirim beserta response utuh,
+  termasuk seluruh kasus negatif. Database dikosongkan sebelum uji dimulai.</p>
+  <div class="ringkas">__KARTU__</div>
+  <ul class="legenda"><li><strong style="font-weight:600;color:var(--ink)">errorCode</strong></li>__LEGENDA__</ul>
+</header>
+
+<nav class="lompat">__NAV__</nav>
+
+<div class="saring">
+  <span class="lbl">http</span>
+  <button data-t="semua" data-v="" aria-pressed="true">semua</button>
+  __FHTTP__
+  <span class="pisah"></span>
+  <span class="lbl">errorCode</span>
+  __FCODE__
+  <span class="pisah"></span>
+  <button data-act="buka">buka semua</button>
+  <button data-act="tutup">tutup semua</button>
+</div>
+
+__BARIS__
+
+<section class="bagian" id="basis-data">
+  <header class="bagian-kepala"><h2>Data tersimpan setelah uji</h2>
+  <span class="hitung">keadaan akhir database</span></header>
+  __DB__
+</section>
+
+<footer>
+  <p><strong>Cara membaca.</strong> Kode 4xx dan 409 di sini bukan kegagalan uji &mdash; sebagian besar
+  skenario memang menguji penolakan. Kolom paling kanan menandai apakah kode, nama, dan pesan yang
+  diterima sama dengan yang diharapkan. Skenario sukses tidak menampilkan errorCode karena
+  response-nya berisi data, bukan kesalahan.</p>
+  <p><strong>httpCode dan errorCode berbeda.</strong> HTTP menentukan sikap umum; errorCode lebih rinci.
+  <code>1002 VALIDATION_ERROR</code> dan <code>1005 REFERENCE_NOT_FOUND</code> sama-sama HTTP 400, tapi
+  yang pertama berarti isinya salah dan yang kedua berarti data rujukan belum dikirim. Katalog
+  lengkapnya ada di <code>errors.md</code>.</p>
+  <p><strong>Bentuk response ini adalah bentuk produksi.</strong> Uji dijalankan dengan
+  <code>environment: production</code>, jadi webcore membuang field <code>details</code> dan
+  <code>stack</code>. Pada <code>development</code> keduanya muncul: <code>stack</code> berisi sekitar
+  60 baris jejak Go, dan <code>details</code> berisi pesan yang sama dengan <code>message</code> &mdash;
+  pesan mentah dari Postgres tidak lagi ikut, karena yang diteruskan ke response adalah objek kesalahan
+  yang sudah diterjemahkan. Sebab aslinya tetap tersimpan untuk log.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var tombol = document.querySelectorAll('.saring button[data-t]');
+  var skenario = Array.prototype.slice.call(document.querySelectorAll('.skenario'));
+  function terapkan(t, v){
+    skenario.forEach(function(s){
+      var tampil = !t || (t === 'http' ? s.dataset.http === v : s.dataset.code === v);
+      s.style.display = tampil ? '' : 'none';
+    });
+    document.querySelectorAll('.bagian').forEach(function(sec){
+      if (sec.id === 'basis-data') return;
+      var ada = sec.querySelectorAll('.skenario:not([style*="none"])').length;
+      sec.style.display = ada ? '' : 'none';
+    });
+  }
+  tombol.forEach(function(b){
+    b.addEventListener('click', function(){
+      tombol.forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+      b.setAttribute('aria-pressed','true');
+      terapkan(b.dataset.t === 'semua' ? '' : b.dataset.t, b.dataset.v);
+    });
+  });
+  document.querySelectorAll('.saring button[data-act]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var buka = b.dataset.act === 'buka';
+      skenario.forEach(function(s){ if (s.style.display !== 'none') s.open = buka; });
+    });
+  });
+})();
+</script>
