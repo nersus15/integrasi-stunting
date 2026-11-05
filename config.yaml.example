@@ -125,3 +125,20 @@ cron:
   #   credentials: ""
   #   max_messages_per_pull: 50
   #   sleep_time_between_pulls: 10s
+# Log transaksi endpoint /api ke service log terpisah (satu POST JSON per transaksi).
+# Setiap transaksi masuk antrean Redis dulu, lalu dikirim worker di background.
+# module:
+#   stunting:
+#     log_transaksi:
+#       enabled: false                 # env LOG_TRANSAKSI_ENABLED
+#       endpoint: ""                   # env LOG_TRANSAKSI_ENDPOINT; kosong = hanya memasang header id transaksi
+#       header: "X-Transaction-ID"     # env LOG_TRANSAKSI_HEADER; nama header id transaksi di respons
+#       headers:                       # header tambahan ke service log, tidak tampil di /stunting/info
+#         x-api-key: "<key>"           # env LOG_TRANSAKSI_HEADERS="x-api-key=<key>,x-api-name=<nama>", menimpa yang di sini
+#       blacklist:                     # env LOG_TRANSAKSI_BLACKLIST; "/api/x" persis, "/api/x/*" awalan, boleh "GET /api/x/*"
+#         - "/api/kafka/*"
+#       mask: [nik, no_kk, nama, nama_ayah, nama_ibu, telepon, alamat]  # env LOG_TRANSAKSI_MASK
+#       timeout: 5s                    # env LOG_TRANSAKSI_TIMEOUT; batas tiap kiriman ke service log
+#       redis_key: stunting:log_transaksi  # env LOG_TRANSAKSI_REDIS_KEY; list antrean, bersama semua pod
+#       retry_interval: 10s            # env LOG_TRANSAKSI_RETRY_INTERVAL; jeda sebelum mencoba lagi saat service log gagal
+#       workers: 10                    # env LOG_TRANSAKSI_WORKERS; pengirim paralel per pod, naikkan kalau antrean menumpuk

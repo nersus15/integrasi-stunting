@@ -10,4 +10,5 @@ use (
 	./libraries/redis
 	./libraries/webcore
 	./modules/stunting
+	./modules/satusehat
 )

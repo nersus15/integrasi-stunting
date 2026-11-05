@@ -84,6 +84,7 @@ RUN apk add --no-cache \
     libcrypto3 \
     zlib \
     libstdc++ \
+    curl \
     libgcc
 
 # Create user and group with limited privileges (non-root)
@@ -101,6 +102,7 @@ COPY --from=builder /app/migrate /usr/local/bin/migrate
 COPY --from=builder /app/config.yaml.example ./config.yaml
 COPY --from=builder /app/access.yaml.example ./access.yaml
 COPY --from=builder /app/app/init .
+COPY --from=builder /app/migration ./migration
 
 # Set ownership of working directory to webcore user
 RUN chown -R webcore:webcore /app
